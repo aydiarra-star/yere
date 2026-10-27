@@ -16,6 +16,11 @@ YÉRÉ commence par aider les tailleurs et ateliers de couture au Sénégal à g
 - [Cahier des charges maître](docs/CAHIER_DES_CHARGES_MAITRE.md) — vision, périmètre fonctionnel et exigences.
 - [Feuille de route](docs/FEUILLE_DE_ROUTE.md) — lots de travail et critères de sortie.
 
+## Documents de pilotage technique
+- [Décision d'architecture](docs/DECISION_ARCHITECTURE.md) — proposition à confirmer avant de figer la stack.
+- [Backlog MVP](docs/BACKLOG_MVP.md) — tâches testables pour la première version.
+- [Plan pilote terrain](docs/PLAN_PILOTE_TERRAIN.md) — entretiens, démonstration et indicateurs d'adoption.
+
 ## Principes
 - Produit mobile d'abord, simple à apprendre et utile dès la première utilisation.
 - Sécurité, confidentialité et isolation stricte des données entre ateliers.
