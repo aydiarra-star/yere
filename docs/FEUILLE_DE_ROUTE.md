@@ -168,6 +168,16 @@ Référence : [Banque d'idées stratégiques](./BANQUE_IDEES_STRATEGIQUES.md).
 - [ ] Implémenter authentification et isolation multi-atelier, puis faire réussir les tests d'accès inter-ateliers.
 - [ ] Exécuter et documenter un exercice réel de restauration avant toute donnée client réelle.
 
+## Stockage local — validation de forme au chargement
+
+- [x] Ajouter des gardes d'exécution pour la structure des listes de clients et de commandes récupérées depuis le stockage navigateur.
+- [x] Contrôler la forme des mensurations et de leur historique, les dates calendaires, les statuts de commande et la cohérence des montants avant de réutiliser les données JSON.
+- [x] Appliquer une validation aux états locaux du profil d'atelier et de l'onboarding.
+- [x] Ajouter des tests unitaires sur les données persistées mal formées et les montants incohérents.
+- [ ] Confirmer la CI complète sur le dernier commit ; l'absence de résultat retourné par la vérification actuelle ne vaut pas succès.
+- [ ] Prévoir une stratégie explicite de récupération/export avant toute migration de données réelles : ce garde-fou protège le prototype mais ne remplace pas une sauvegarde.
+- [ ] Ajouter les validations côté serveur lors de l'intégration du backend.
+
 ## Commandes — validation métier avant persistance locale
 
 - [x] Centraliser la validation de création de commande dans `src/domain.ts`.
