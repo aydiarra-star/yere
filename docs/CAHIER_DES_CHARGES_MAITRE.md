@@ -266,3 +266,8 @@ Ces décisions doivent être prises à partir du dépôt, des contraintes techni
 4. Mesure commerciale puis, éventuellement, intégrations de messagerie après validation dédiée.
 
 **Critère bloquant avant usage réel :** authentification, isolation serveur par atelier, préférences de contact, journal de contact, sauvegarde et tests d'accès croisé validés.
+
+
+## Banque d'idées stratégiques (hors périmètre automatique du MVP)
+
+La vision long terme, les concepts « Que dois-je faire aujourd'hui ? », client VIP, fiche client enrichie, mémoire de l'atelier, bibliothèque de mensurations, calculateur de prix, carnet des réussites, calendrier des saisons couture, portfolio Avant/Après, collections, score de santé de l'atelier, tendances anonymisées et commandes diaspora sont conservés dans [la banque d'idées stratégiques](./BANQUE_IDEES_STRATEGIQUES.md). Ce document est une réserve d'idées, pas une autorisation de développer toutes les fonctionnalités immédiatement. Chaque proposition doit passer le filtre « plus simple que le cahier, plus rapide que le cahier, apporte quelque chose que le cahier ne peut pas faire » et être priorisée selon les retours terrain. Les fondations de sécurité, sauvegarde/restauration, isolation multi-atelier et fiabilité des données restent prioritaires.
