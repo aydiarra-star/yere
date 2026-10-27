@@ -50,6 +50,7 @@ Ces commandes doivent être exécutées dans un environnement Node avant de cons
 - [Modèle de données MVP](docs/MODELE_DONNEES_MVP.md)
 - [Plan de persistance serveur et sécurité](docs/PLAN_PERSISTENCE_ET_SECURITE.md)
 - [Charte graphique bleu et blanc](docs/CHARTE_GRAPHIQUE.md)
+- [Plan du mode hors ligne et critères de vérification](docs/PLAN_MODE_HORS_LIGNE.md)
 
 ## Principes
 - Produit mobile d'abord, simple à apprendre et utile dès la première utilisation.
