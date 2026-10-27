@@ -38,10 +38,20 @@ describe("validation d'une nouvelle commande", () => {
     expect(isOrderInputValid({ ...validInput, deposit: 26000 }, ["c-1"])).toBe(false);
     expect(isOrderInputValid({ ...validInput, deposit: 10.5 }, ["c-1"])).toBe(false);
     expect(isOrderInputValid({ ...validInput, deposit: -1 }, ["c-1"])).toBe(false);
+    expect(isOrderInputValid({ ...validInput, deposit: Number.POSITIVE_INFINITY }, ["c-1"])).toBe(false);
+  });
+
+  it("accepte un acompte nul ou égal au prix", () => {
+    expect(isOrderInputValid({ ...validInput, deposit: 0 }, ["c-1"])).toBe(true);
+    expect(isOrderInputValid({ ...validInput, deposit: validInput.price }, ["c-1"])).toBe(true);
   });
 
   it("refuse une date inexistante, un client inconnu ou un vêtement vide", () => {
     expect(isOrderInputValid({ ...validInput, dueDate: "2026-02-31" }, ["c-1"])).toBe(false);
+    expect(isOrderInputValid({ ...validInput, dueDate: "2026-2-01" }, ["c-1"])).toBe(false);
+    expect(isOrderInputValid({ ...validInput, dueDate: "2024-02-29" }, ["c-1"])).toBe(true);
+    expect(isOrderInputValid({ ...validInput, dueDate: "2025-02-29" }, ["c-1"])).toBe(false);
+    expect(isOrderInputValid({ ...validInput, clientId: "" }, ["c-1"])).toBe(false);
     expect(isOrderInputValid({ ...validInput, clientId: "missing" }, ["c-1"])).toBe(false);
     expect(isOrderInputValid({ ...validInput, garment: "   " }, ["c-1"])).toBe(false);
   });
