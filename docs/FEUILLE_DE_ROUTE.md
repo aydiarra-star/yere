@@ -156,3 +156,11 @@ Référence : [Banque d'idées stratégiques](./BANQUE_IDEES_STRATEGIQUES.md).
 - [x] Extraire les règles de l'assistant quotidien dans une fonction métier testable : retards, échéances du jour, soldes des commandes prêtes et dates invalides.
 - [x] Ajouter des tests unitaires ciblés sur les priorités et les dates incohérentes ; étapes « Run unit tests » et « Build application » réussies dans GitHub Actions #40532188592 (nettoyage du job encore en cours lors du contrôle).
 - [ ] Valider les règles de priorité avec des ateliers pilotes et relier l'assistant à des paiements/stocks fiables après le backend.
+
+
+## Backend — contrat de sécurité et critères bloquants
+
+- [x] Ajouter `docs/CONTRAT_SECURITE_BACKEND.md` : modèle d'autorisation par atelier, tests d'isolation, validation serveur, secrets, paiements idempotents, sauvegarde/restauration et critères de pilote.
+- [ ] Confirmer le fournisseur et créer un environnement dédié à YÉRÉ ; ne pas réutiliser Dekk Food.
+- [ ] Implémenter authentification et isolation multi-atelier, puis faire réussir les tests d'accès inter-ateliers.
+- [ ] Exécuter et documenter un exercice réel de restauration avant toute donnée client réelle.
