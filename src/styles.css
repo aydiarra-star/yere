@@ -795,3 +795,102 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .breadcrumb > span,.breadcrumb > b{font-size:12px;padding:0 1px}
   .breadcrumb > span:nth-child(2),.breadcrumb > span:nth-child(4){font-size:11px}
 }
+
+
+/* Finition produit : typographie homogène, navigation mobile sur une seule rangée. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+.topbar .breadcrumb,
+.topbar .breadcrumb > span,
+.topbar .breadcrumb > b {
+  font-family: Inter, sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.25;
+  color: #fff;
+}
+.topbar .breadcrumb > span:nth-child(2),
+.topbar .breadcrumb > span:nth-child(4) {
+  font-size: 18px;
+  font-weight: 600;
+  color: #dbeafe;
+}
+.welcome-action,
+.primary-button.welcome-action {
+  font-family: Inter, sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.mobile-bottom-nav {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 2px;
+}
+.mobile-nav-item,
+.mobile-nav-item:visited {
+  min-width: 0;
+  color: #3558E8;
+  background: transparent;
+  border: 0;
+}
+.mobile-nav-item > span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 28px;
+  color: #3558E8;
+  font-size: 21px;
+  line-height: 1;
+}
+.mobile-nav-item > small {
+  max-width: 100%;
+  color: #3558E8;
+  font-family: Inter, sans-serif;
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.mobile-nav-item.active {
+  background: #EEF2FF;
+  color: #3558E8;
+}
+.mobile-nav-item.active > span,
+.mobile-nav-item.active > small {
+  color: #3558E8;
+}
+.mobile-nav-item.active > small { font-weight: 600; }
+@media (max-width: 760px) {
+  .topbar .breadcrumb,
+  .topbar .breadcrumb > span,
+  .topbar .breadcrumb > b {
+    font-size: 18px;
+  }
+  .topbar .breadcrumb > span:nth-child(2),
+  .topbar .breadcrumb > span:nth-child(4) { font-size: 18px; }
+  .mobile-bottom-nav {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0;
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+  .mobile-nav-item {
+    min-height: 52px;
+    padding: 3px 0;
+    gap: 3px;
+    border-radius: 9px;
+  }
+  .mobile-nav-item > span { width: 27px; height: 25px; font-size: 20px; }
+  .mobile-nav-item > small { font-size: 8px; }
+}
+@media (max-width: 390px) {
+  .topbar .breadcrumb,
+  .topbar .breadcrumb > span,
+  .topbar .breadcrumb > b,
+  .topbar .breadcrumb > span:nth-child(2),
+  .topbar .breadcrumb > span:nth-child(4) { font-size: 16px; }
+  .mobile-nav-item > small { font-size: 7px; }
+}
+.section-heading h2 { font-size: 20px; line-height: 1.35; }
+.account-form ~ .privacy-note { font-size: 13px; line-height: 1.5; }
