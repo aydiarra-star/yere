@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isMeasurementValid, isOrderInputValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
+import { balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
 import { usePersistentState } from "./usePersistentState";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", note: "" };
@@ -22,6 +22,21 @@ type View = "overview" | "clients" | "orders" | "cash" | "account" | "reminders"
 type AtelierProfile = { name: string; phone: string; city: string };
 const emptyAtelier: AtelierProfile = { name: "", phone: "", city: "" };
 
+function isAtelierProfileValid(value: unknown): value is AtelierProfile {
+  return typeof value === "object" && value !== null
+    && "name" in value && typeof value.name === "string"
+    && "phone" in value && typeof value.phone === "string"
+    && "city" in value && typeof value.city === "string";
+}
+
+function isBooleanValue(value: unknown): value is boolean {
+  return typeof value === "boolean";
+}
+
+function isNullableTimestamp(value: unknown): value is number | null {
+  return value === null || (typeof value === "number" && Number.isFinite(value) && value >= 0);
+}
+
 function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   useEffect(() => {
@@ -34,11 +49,11 @@ function App() {
     };
   }, []);
 
-  const [clients, setClients] = usePersistentState<Client[]>("yere-demo-clients-v1", []);
-  const [orders, setOrders] = usePersistentState<Order[]>("yere-demo-orders-v1", []);
-  const [atelier, setAtelier] = usePersistentState<AtelierProfile>("yere-demo-atelier-v1", emptyAtelier);
-  const [onboardingComplete, setOnboardingComplete] = usePersistentState<boolean>("yere-demo-onboarding-complete-v1", false);
-  const [onboardingStartedAt, setOnboardingStartedAt] = usePersistentState<number | null>("yere-demo-onboarding-started-at-v1", null);
+  const [clients, setClients] = usePersistentState<Client[]>("yere-demo-clients-v1", [], isClientListValid);
+  const [orders, setOrders] = usePersistentState<Order[]>("yere-demo-orders-v1", [], isOrderListValid);
+  const [atelier, setAtelier] = usePersistentState<AtelierProfile>("yere-demo-atelier-v1", emptyAtelier, isAtelierProfileValid);
+  const [onboardingComplete, setOnboardingComplete] = usePersistentState<boolean>("yere-demo-onboarding-complete-v1", false, isBooleanValue);
+  const [onboardingStartedAt, setOnboardingStartedAt] = usePersistentState<number | null>("yere-demo-onboarding-started-at-v1", null, isNullableTimestamp);
   const [view, setView] = useState<View>("overview");
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
