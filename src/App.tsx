@@ -221,9 +221,9 @@ function App() {
     { id: "overview", label: "Accueil", icon: "⌂" },
     { id: "clients", label: "Clients", icon: "♙" },
     { id: "orders", label: "Commandes", icon: "▤" },
+    { id: "marketplace", label: "Marketplace", icon: "◇" },
     { id: "cash", label: "Caisse", icon: "₣" },
     { id: "account", label: "Compte", icon: "●" },
-    { id: "marketplace", label: "Marketplace", icon: "◇" },
     { id: "reminders", label: "Relances clients", icon: "↻" }
   ];
   const mobileNavItems = navItems.filter((item) => item.id !== "reminders");
@@ -325,7 +325,7 @@ function App() {
           </section>}
 
           {view === "account" && <section className="content-card account-page">
-            <div className="section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div></div>
+            <div className="section-heading account-section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div></div>
             <form className="account-form" onSubmit={(event) => { event.preventDefault(); setNotice("Profil d'atelier mis à jour sur cet appareil uniquement."); }}>
               <label>Nom de l'atelier<input required value={atelier.name} onChange={(event) => setAtelier((current) => ({ ...current, name: event.target.value }))} /></label>
               <label>Téléphone<input value={atelier.phone} onChange={(event) => setAtelier((current) => ({ ...current, phone: event.target.value }))} /></label>
