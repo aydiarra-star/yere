@@ -159,3 +159,38 @@ describe("suggestions de relance client", () => {
     expect(getClientReminderSuggestions(clients, invalidDateOrder, "2026-10-27")).toHaveLength(0);
   });
 });
+
+
+describe("assistant quotidien", () => {
+  const clients: Client[] = [{ ...client, id: "daily-client", name: "Awa Sow" }];
+  const orders: Order[] = [
+    { id: "late", clientId: "daily-client", garment: "Robe", dueDate: "2026-10-26", orderedAt: "2026-10-20", price: 30000, deposit: 10000, status: "En confection" },
+    { id: "today", clientId: "daily-client", garment: "Boubou", dueDate: "2026-10-27", orderedAt: "2026-10-20", price: 25000, deposit: 25000, status: "Prêt" },
+    { id: "balance", clientId: "daily-client", garment: "Ensemble", dueDate: "2026-10-29", orderedAt: "2026-10-20", price: 40000, deposit: 10000, status: "Prêt" },
+    { id: "delivered", clientId: "daily-client", garment: "Tenue livrée", dueDate: "2026-10-20", orderedAt: "2026-10-10", price: 20000, deposit: 0, status: "Livré" }
+  ];
+
+  it("signale les retards, les livraisons du jour et les soldes des commandes prêtes", async () => {
+    const { getDailyTasks } = await import("./domain");
+    const tasks = getDailyTasks(clients, orders, "2026-10-27");
+    expect(tasks.map((task) => task.id)).toEqual(["retard-late", "today-today", "balance-balance"]);
+    expect(tasks[0].kind).toBe("critical");
+    expect(tasks[1].detail).toContain("Awa Sow");
+    expect(tasks[2].action).toBe("cash");
+    expect(tasks[2].title).toContain("30");
+  });
+
+  it("n'affiche pas les commandes livrées et ignore les dates invalides", async () => {
+    const { getDailyTasks } = await import("./domain");
+    const tasks = getDailyTasks(clients, [
+      { ...orders[0], dueDate: "2026-02-31" },
+      orders[3]
+    ], "2026-10-27");
+    expect(tasks).toHaveLength(0);
+  });
+
+  it("renvoie une liste vide si la date du jour est invalide", async () => {
+    const { getDailyTasks } = await import("./domain");
+    expect(getDailyTasks(clients, orders, "aujourd'hui")).toEqual([]);
+  });
+});
