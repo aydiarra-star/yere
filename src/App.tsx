@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { balanceDue, formatXof, isMeasurementValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
+import { balanceDue, formatXof, getClientReminderSuggestions, isMeasurementValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
 import { usePersistentState } from "./usePersistentState";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", note: "" };
@@ -7,16 +7,18 @@ const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder:
 const initialClients: Client[] = [
   { id: "c-1", name: "Aïssatou Ndiaye", phone: "+221 77 123 45 67", createdAt: "2026-10-22", measurement: { bust: "92", waist: "74", hips: "100", shoulder: "38", sleeve: "58", length: "145", note: "Préférence : coupe ample" } },
   { id: "c-2", name: "Mamadou Ba", phone: "+221 76 234 56 78", createdAt: "2026-10-23", measurement: { bust: "98", waist: "86", hips: "102", shoulder: "44", sleeve: "62", length: "150", note: "Boubou traditionnel" } },
-  { id: "c-3", name: "Fatou Sarr", phone: "+221 70 345 67 89", createdAt: "2026-10-25", measurement: { bust: "88", waist: "70", hips: "96", shoulder: "36", sleeve: "56", length: "138", note: "" } }
+  { id: "c-3", name: "Fatou Sarr", phone: "+221 70 345 67 89", createdAt: "2026-10-25", measurement: { bust: "88", waist: "70", hips: "96", shoulder: "36", sleeve: "56", length: "138", note: "" } },
+  { id: "c-4", name: "Mariama Diallo", phone: "+221 77 456 78 90", createdAt: "2025-10-01", measurement: { bust: "90", waist: "72", hips: "98", shoulder: "37", sleeve: "57", length: "142", note: "Tenue de cérémonie" } }
 ];
 
 const initialOrders: Order[] = [
-  { id: "YR-1024", clientId: "c-1", garment: "Ensemble deux pièces", dueDate: "2026-10-29", price: 35000, deposit: 20000, status: "En confection" },
-  { id: "YR-1025", clientId: "c-2", garment: "Boubou brodé", dueDate: "2026-10-30", price: 45000, deposit: 15000, status: "À préparer" },
-  { id: "YR-1026", clientId: "c-3", garment: "Robe sur mesure", dueDate: "2026-10-27", price: 25000, deposit: 25000, status: "Prêt" }
+  { id: "YR-1024", clientId: "c-1", garment: "Ensemble deux pièces", dueDate: "2026-10-29", orderedAt: "2026-10-20", price: 35000, deposit: 20000, status: "En confection" },
+  { id: "YR-1025", clientId: "c-2", garment: "Boubou brodé", dueDate: "2026-10-30", orderedAt: "2026-10-22", price: 45000, deposit: 15000, status: "À préparer" },
+  { id: "YR-1026", clientId: "c-3", garment: "Robe sur mesure", dueDate: "2026-10-27", orderedAt: "2026-10-24", price: 25000, deposit: 25000, status: "Prêt" },
+  { id: "YR-1027", clientId: "c-4", garment: "Tenue de mariage", dueDate: "2025-11-01", orderedAt: "2025-10-01", price: 50000, deposit: 50000, status: "Livré" }
 ];
 
-type View = "overview" | "clients" | "orders";
+type View = "overview" | "clients" | "orders" | "reminders";
 
 function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -44,6 +46,10 @@ function App() {
   const visibleClients = useMemo(() => clients.filter((client) => matchesClient(client, query)), [clients, query]);
   const outstanding = orders.reduce((sum, order) => sum + balanceDue(order), 0);
   const selected = clients.find((client) => client.id === selectedClient);
+  const reminderSuggestions = useMemo(
+    () => getClientReminderSuggestions(clients, orders, new Date().toISOString().slice(0, 10)),
+    [clients, orders]
+  );
 
   useEffect(() => {
     const client = clients.find((item) => item.id === selectedClient);
@@ -96,7 +102,8 @@ function App() {
   const navItems: { id: View; label: string; icon: string }[] = [
     { id: "overview", label: "Vue d'ensemble", icon: "⌂" },
     { id: "clients", label: "Clients & mesures", icon: "♙" },
-    { id: "orders", label: "Commandes", icon: "▤" }
+    { id: "orders", label: "Commandes", icon: "▤" },
+    { id: "reminders", label: "Relances clients", icon: "↻" }
   ];
 
   return (
@@ -117,7 +124,7 @@ function App() {
       <main className="main-content">
         <header className="topbar"><div className="breadcrumb">YÉRÉ <span>/</span> Atelier <span>/</span> <b>{navItems.find((item) => item.id === view)?.label}</b></div><div className="topbar-right"><span className="demo-pill"><i /> Démonstration</span><span className="demo-pill" role="status" aria-live="polite"><i /> {isOnline ? "En ligne" : "Hors ligne"}</span><button className="avatar-button" aria-label="Profil de démonstration">AD</button></div></header>
         <div className="page-wrap">
-          <div className="welcome-row"><div><p className="eyebrow">MARDI 27 OCTOBRE 2026</p><h1>{view === "overview" ? "Votre atelier, en un coup d’œil." : view === "clients" ? "Vos clients & mensurations" : "Suivi des commandes"}</h1><p className="page-subtitle">{view === "overview" ? "Gardez le fil de vos commandes et de votre activité." : view === "clients" ? "Retrouvez les fiches clients et leurs dernières mesures." : "Suivez chaque pièce, de la préparation à la livraison."}</p></div><button className="primary-button" onClick={() => { setShowForm(true); setView("clients"); }}><span>＋</span> Nouveau client</button></div>
+          <div className="welcome-row"><div><p className="eyebrow">MARDI 27 OCTOBRE 2026</p><h1>{view === "overview" ? "Votre atelier, en un coup d’œil." : view === "clients" ? "Vos clients & mensurations" : view === "orders" ? "Suivi des commandes" : "Faites revenir vos clients."}</h1><p className="page-subtitle">{view === "overview" ? "Gardez le fil de vos commandes et de votre activité." : view === "clients" ? "Retrouvez les fiches clients et leurs dernières mesures." : view === "orders" ? "Suivez chaque pièce, de la préparation à la livraison." : "Des occasions concrètes de reprendre contact, sans envoyer de message automatiquement."}</p></div><button className="primary-button" onClick={() => { setShowForm(true); setView("clients"); }}><span>＋</span> Nouveau client</button></div>
           {notice && <div className="notice"><span>ⓘ</span><p>{notice}</p><button aria-label="Fermer le message" onClick={() => setNotice("")}>×</button></div>}
 
           {view === "overview" && <>
@@ -142,6 +149,13 @@ function App() {
           </section>}
 
           {view === "orders" && <section className="content-card"><div className="section-heading"><div><h2>Commandes de l’atelier</h2><p>Modifiez le statut pour tester le suivi de production.</p></div><span className="demo-pill">Données de démonstration</span></div><OrderTable orders={orders} clients={clients} onStatusChange={updateStatus} /></section>}
+
+          {view === "reminders" && <section className="reminders-page">
+            <div className="reminders-intro content-card"><div className="reminders-intro-icon">↻</div><div><h2>Votre carnet de relance</h2><p>YÉRÉ repère les clients à recontacter à partir des commandes datées et propose un message que vous pouvez relire et copier. Rien n'est envoyé automatiquement.</p></div></div>
+            <div className="reminder-summary"><div><strong>{reminderSuggestions.length}</strong><span>suggestions à examiner</span></div><div><strong>{new Set(reminderSuggestions.map((item) => item.clientId)).size}</strong><span>clients concernés</span></div><p>Les dates et règles sont indicatives. Vérifiez le contexte avant chaque prise de contact.</p></div>
+            {reminderSuggestions.length === 0 ? <div className="content-card empty-reminders"><h2>Pas de relance suggérée pour le moment</h2><p>Quand des commandes datées seront enregistrées, YÉRÉ pourra repérer les clients sans commande récente ou les anciennes commandes liées à une occasion.</p></div> : <div className="reminder-list">{reminderSuggestions.map((item, index) => <article className="content-card reminder-card" key={item.clientId + "-" + item.kind + "-" + index}><div className="reminder-card-top"><span className={item.kind === "inactive" ? "reminder-kind inactive" : "reminder-kind occasion"}>{item.kind === "inactive" ? "À réactiver" : "Occasion à anticiper"}</span><span className="reminder-age">{item.daysSinceOrder} jours</span></div><h2>{item.title}</h2><p className="reminder-client-name">{item.clientName}</p><p className="reminder-detail">{item.detail}</p><div className="reminder-contact">{item.phone ? <span>☎ {item.phone}</span> : <span className="missing-phone">Téléphone non renseigné</span>}<span>Dernière commande : {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(item.lastOrderAt + "T12:00:00"))}</span></div><div className="message-preview"><span>MESSAGE PROPOSÉ</span><p>{item.suggestedMessage}</p></div><button className="primary-button reminder-copy" disabled={!item.phone} onClick={() => { if (!navigator.clipboard?.writeText) { setNotice("La copie automatique n'est pas disponible dans ce navigateur. Vous pouvez sélectionner le texte du message."); return; } void navigator.clipboard.writeText(item.suggestedMessage).then(() => setNotice("Message copié. Relisez-le et personnalisez-le avant de l'envoyer vous-même.")).catch(() => setNotice("Impossible de copier le message automatiquement. Sélectionnez le texte pour le copier manuellement.")); }}>Copier le message</button></article>)}</div>}
+            <p className="privacy-note">Prototype uniquement : les suggestions sont calculées dans ce navigateur à partir des données de démonstration. Aucun SMS, WhatsApp ou rappel programmé n'est envoyé.</p>
+          </section>}
           <footer className="footer"><span>YÉRÉ Atelier <span>·</span> La couture, mieux organisée.</span><span>Prototype de démonstration · stockage local uniquement</span></footer>
         </div>
       </main>
