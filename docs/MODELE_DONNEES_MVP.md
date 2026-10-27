@@ -67,6 +67,34 @@
 - `id`, `atelier_id`, `stock_item_id`, `movement_type` (entrée, sortie, perte, correction), `quantity`, `occurred_at`, `reason`, `recorded_by`.
 - Le stock courant est dérivé des mouvements ou maintenu avec une stratégie de cohérence explicitement testée.
 
+
+### Préférences de contact client
+- `id`, `atelier_id`, `client_id`, `preferred_channel` facultatif, `contact_status`, `do_not_contact`, `updated_by`, `updated_at`.
+- Valeurs de canal limitées aux canaux effectivement pris en charge ; aucune valeur ne doit laisser croire qu'un envoi est possible s'il ne l'est pas.
+- Le refus de contact bloque les suggestions marketing et toute future action d'envoi.
+- L'appartenance atelier de la préférence doit correspondre à celle du client, vérifiée par contrainte et contrôle d'accès.
+
+### Campagne et calendrier d'événements
+- `id`, `atelier_id`, `name`, `occasion_type`, `event_date`, `preparation_starts_at`, `preparation_ends_at`, `timezone`, `status`, `created_by`, `created_at`, `updated_at`.
+- Les dates d'événements religieux ou variables sont confirmées ou modifiables par l'atelier ; pas de dates annuelles codées en dur.
+- Le délai de préparation doit pouvoir être adapté au type de vêtement et au délai réel de l'atelier.
+
+### Suggestion de relance
+- `id`, `atelier_id`, `client_id`, `campaign_id` facultatif, `source_order_id` facultatif, `rule_key`, `created_at`, `scheduled_for` facultatif, `status`, `dismissed_at` facultatif, `handled_at` facultatif.
+- Statuts initiaux proposés : proposée, reportée, ignorée, traitée.
+- Prévoir une clé de déduplication métier (atelier, client, campagne/règle et période) afin de ne pas afficher indéfiniment la même suggestion.
+- Une suggestion ne prouve ni qu'un client a été contacté ni qu'une vente a été réalisée.
+
+### Tentative de contact
+- `id`, `atelier_id`, `client_id`, `campaign_id` facultatif, `reminder_suggestion_id` facultatif, `channel`, `contacted_at`, `message_snapshot` facultatif, `outcome`, `recorded_by`, `created_at`.
+- La création de cet enregistrement signifie qu'un contact a été déclaré comme réellement effectué ; la simple copie d'un texte ne doit pas le créer automatiquement.
+- Résultats proposés : sans réponse, réponse reçue, devis demandé, commande liée, pas intéressé, refus de contact.
+
+### Attribution commerciale
+- Relation facultative entre une commande et une campagne ou tentative de contact, avec `attribution_rule`, `linked_at` et l'auteur du lien.
+- Les tableaux de bord distinguent suggestions, contacts réels, devis et commandes ; le revenu attribué suit une règle visible et ne constitue pas une preuve de causalité.
+
+
 ## Contraintes et validations
 - `quantity > 0`; prix, paiement et dépense doivent être des entiers valides dans la devise retenue.
 - Une échéance, si fournie, doit être une date valide.
@@ -93,3 +121,41 @@ Si Supabase est retenu, activer RLS sur chaque table exposée. Les politiques UP
 - Politique de remboursement et de paiement excédentaire.
 - Durée de conservation, export et suppression des données.
 - Entités à inclure dans la première migration selon la stack choisie.
+
+
+## Scénarios d'acceptation à rendre automatisables
+
+Ces scénarios sont les critères minimaux pour accepter l'implémentation serveur. Ils ne sont pas encore des tests exécutés contre une base YÉRÉ.
+
+### Isolation des ateliers
+- Un utilisateur authentifié membre de l'atelier A peut lire ses propres clients.
+- Un utilisateur de l'atelier B ne peut pas lire un client A même s'il connaît son UUID.
+- L'utilisateur B ne peut pas modifier un client A ni changer son `atelier_id` pour s'approprier une ligne.
+- Une commande de B ne peut pas référencer un client de A.
+- Les mensurations, paiements, dépenses et mouvements de stock sont également isolés.
+- Les requêtes non authentifiées ne peuvent pas lire ni écrire des données privées.
+
+### Historique des mensurations et commandes
+- Une seconde prise de mensurations crée une nouvelle version et laisse l'ancienne consultable.
+- Les valeurs négatives, non finies et les unités non reconnues sont rejetées.
+- Les quantités nulles, négatives ou non entières sont rejetées.
+- Les transitions de statut invalides sont refusées ; les transitions valides ont un événement historisé.
+- L'archivage d'un client ne détruit pas son historique de commandes et de paiements.
+
+### Intégrité financière
+- Un acompte et un paiement complémentaire donnent un solde exact, calculé à partir des événements valides.
+- Les montants sont des entiers XOF ; aucune arithmétique financière ne dépend de nombres flottants.
+- Un paiement nul ou négatif est rejeté.
+- La politique sur le paiement supérieur au solde est explicite et testée.
+- Une correction financière crée une contrepassation liée à l'opération initiale.
+- Des paiements concurrents ne peuvent pas dépasser le solde autorisé à cause d'une course entre vérification et écriture.
+
+### Exploitation et récupération
+- Les migrations s'appliquent à une base de test vierge de façon reproductible.
+- Un export réalisé par un propriétaire ne contient que les données de son atelier.
+- Une sauvegarde est restaurée dans un environnement de test et le nombre de lignes et les totaux financiers sont rapprochés.
+- Une erreur réseau ne doit jamais afficher « enregistré » si le serveur n'a pas confirmé l'écriture.
+
+## Garde-fou de livraison
+
+La présence de cette spécification n'est pas la preuve d'une base de données, d'une authentification, de politiques RLS ou de tests multi-atelier déjà déployés. Ne pas utiliser de données réelles avant l'intégration du backend choisi et la réussite des scénarios de sécurité.
