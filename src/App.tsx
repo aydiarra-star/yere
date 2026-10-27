@@ -221,9 +221,9 @@ function App() {
     { id: "overview", label: "Accueil", icon: "⌂" },
     { id: "clients", label: "Clients", icon: "♙" },
     { id: "orders", label: "Commandes", icon: "▤" },
+    { id: "marketplace", label: "Marketplace", icon: "◇" },
     { id: "cash", label: "Caisse", icon: "₣" },
     { id: "account", label: "Compte", icon: "●" },
-    { id: "marketplace", label: "Marketplace", icon: "◇" },
     { id: "reminders", label: "Relances clients", icon: "↻" }
   ];
   const mobileNavItems = navItems.filter((item) => item.id !== "reminders");
