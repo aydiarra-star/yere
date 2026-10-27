@@ -42,6 +42,12 @@ function App() {
   const [view, setView] = useState<View>("overview");
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [showOrderForm, setShowOrderForm] = useState(false);
+  const [newOrderClientId, setNewOrderClientId] = useState("");
+  const [newOrderGarment, setNewOrderGarment] = useState("");
+  const [newOrderDueDate, setNewOrderDueDate] = useState(() => new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
+  const [newOrderPrice, setNewOrderPrice] = useState("");
+  const [newOrderDeposit, setNewOrderDeposit] = useState("0");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -77,6 +83,7 @@ function App() {
       measurement: { ...emptyMeasurement }
     };
     setClients((current) => [client, ...current]);
+    setNewOrderClientId(client.id);
     setClientName("");
     setClientPhone("");
     setShowForm(false);
@@ -88,6 +95,32 @@ function App() {
           : " Le premier client a été créé après 3 minutes : ce parcours doit être examiné pour simplifier l'adoption.")
       : "";
     setNotice(`Fiche de ${name} créée dans la démonstration.${firstClientMessage}`);
+  }
+
+  function addOrder(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const price = Number(newOrderPrice);
+    const deposit = Number(newOrderDeposit);
+    if (!newOrderClientId || !newOrderGarment.trim() || !Number.isFinite(price) || price <= 0 || !Number.isFinite(deposit) || deposit < 0 || deposit > price) {
+      setNotice("Vérifiez le client, le vêtement, le prix et l'acompte. L'acompte ne peut pas dépasser le prix.");
+      return;
+    }
+    const order: Order = {
+      id: `YR-${Date.now()}`,
+      clientId: newOrderClientId,
+      garment: newOrderGarment.trim(),
+      dueDate: newOrderDueDate,
+      orderedAt: new Date().toISOString().slice(0, 10),
+      price,
+      deposit,
+      status: "À préparer"
+    };
+    setOrders((current) => [order, ...current]);
+    setNewOrderGarment("");
+    setNewOrderPrice("");
+    setNewOrderDeposit("0");
+    setShowOrderForm(false);
+    setNotice("Première commande créée dans le stockage local de la démonstration. Aucune sauvegarde serveur n'est active.");
   }
 
   function updateStatus(orderId: string, status: OrderStatus) {
@@ -110,7 +143,10 @@ function App() {
     setClients((current) => current.map((client) => client.id === selected.id
       ? saveMeasurementVersion(client, draftMeasurement, measuredAt, versionId)
       : client));
-    setNotice(`Mensurations de ${selected.name} enregistrées dans l'historique local du prototype. Aucune sauvegarde serveur n'est active.`);
+    setNewOrderClientId(selected.id);
+    setShowOrderForm(true);
+    setView("orders");
+    setNotice(`Mensurations de ${selected.name} enregistrées localement. Troisième étape : créez maintenant une commande.`);
   }
 
   const navItems: { id: View; label: string; icon: string }[] = [
@@ -182,7 +218,18 @@ function App() {
             {selected && <div className="measurement-panel"><div className="section-heading"><div><h2>Mensurations de {selected.name}</h2><p>Dernière fiche de mesures enregistrée en démonstration</p></div><span className="demo-pill">Exemple</span></div><form className="measurement-form" onSubmit={saveMeasurements}><div className="measurement-grid">{[["Tour de poitrine","bust"],["Tour de taille","waist"],["Tour de hanches","hips"],["Épaules","shoulder"],["Longueur de manche","sleeve"],["Longueur du vêtement","length"]].map(([label, key]) => <label className="measure-field" key={key}><span>{label} (cm)</span><input type="number" min="0" step="any" inputMode="decimal" aria-label={label} value={draftMeasurement[key as keyof Measurement] as string} onChange={(event) => updateMeasurement(key as keyof Measurement, event.target.value)} placeholder="—" /></label>)}</div><label className="measure-notes-field">Notes pour la prochaine commande<textarea value={draftMeasurement.note} onChange={(event) => updateMeasurement("note", event.target.value)} placeholder="Préférences, coupe, tissu…" rows={2} /></label><div className="form-actions"><button type="submit" className="primary-button">Enregistrer les mensurations</button></div></form><section className="measurement-history" aria-label="Historique des mensurations"><h3>Historique des prises de mesures</h3>{(selected.measurementHistory ?? []).length === 0 ? <p className="history-empty">Aucune prise de mesures enregistrée. Complétez les champs puis enregistrez une première version.</p> : <ol>{[...(selected.measurementHistory ?? [])].reverse().map((version) => <li key={version.id}><b>{new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(version.measuredAt + "T12:00:00"))}</b><span>{[version.measurement.bust && `Poitrine ${version.measurement.bust}`, version.measurement.waist && `Taille ${version.measurement.waist}`, version.measurement.hips && `Hanches ${version.measurement.hips}`].filter(Boolean).join(" · ") || "Notes uniquement"}</span></li>)}</ol>}</section><p className="privacy-note">Prototype uniquement : l'historique est conservé dans le stockage local de ce navigateur, sans compte ni sauvegarde serveur. N'utilise pas de données clients réelles.</p></div>}
           </section>}
 
-          {view === "orders" && <section className="content-card"><div className="section-heading"><div><h2>Commandes de l’atelier</h2><p>Modifiez le statut pour tester le suivi de production.</p></div><span className="demo-pill">Données de démonstration</span></div><OrderTable orders={orders} clients={clients} onStatusChange={updateStatus} /></section>}
+          {view === "orders" && <section className="content-card"><div className="section-heading"><div><h2>Commandes de l’atelier</h2><p>Modifiez le statut pour tester le suivi de production.</p></div><button className="primary-button" onClick={() => { setShowOrderForm((value) => !value); setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); }}>＋ Nouvelle commande</button></div>
+            {showOrderForm && <form className="new-order-form" onSubmit={addOrder}>
+              <h3>Créer une commande</h3>
+              <label>Client<select required value={newOrderClientId} onChange={(event) => setNewOrderClientId(event.target.value)}><option value="">Choisir un client</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select></label>
+              <label>Vêtement / création<input required value={newOrderGarment} onChange={(event) => setNewOrderGarment(event.target.value)} placeholder="Ex. Boubou brodé" /></label>
+              <label>Date de livraison<input required type="date" value={newOrderDueDate} onChange={(event) => setNewOrderDueDate(event.target.value)} /></label>
+              <label>Prix convenu (FCFA)<input required type="number" min="1" step="1" value={newOrderPrice} onChange={(event) => setNewOrderPrice(event.target.value)} placeholder="25000" /></label>
+              <label>Acompte reçu (FCFA)<input required type="number" min="0" step="1" value={newOrderDeposit} onChange={(event) => setNewOrderDeposit(event.target.value)} /></label>
+              <div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowOrderForm(false)}>Annuler</button><button type="submit" className="primary-button" disabled={clients.length === 0}>Enregistrer la commande</button></div>
+              {clients.length === 0 && <p className="history-empty">Créez d'abord un client pour lui associer une commande.</p>}
+            </form>}
+            <OrderTable orders={orders} clients={clients} onStatusChange={updateStatus} /></section>}
 
           {view === "reminders" && <section className="reminders-page">
             <div className="reminders-intro content-card"><div className="reminders-intro-icon">↻</div><div><h2>Votre carnet de relance</h2><p>YÉRÉ repère les clients à recontacter à partir des commandes datées et propose un message que vous pouvez relire et copier. Rien n'est envoyé automatiquement.</p></div></div>
