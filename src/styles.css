@@ -674,3 +674,124 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .marketplace-tile p{font-size:12px;line-height:1.65;color:#78877e;min-height:58px;margin:0 0 14px;}
 .marketplace-tile .text-button{padding:0;color:var(--yere-blue);}
 @media(max-width:760px){.breadcrumb{grid-template-columns:minmax(0,1fr) 10px minmax(0,1fr) 10px minmax(0,1fr);font-size:13px;}.marketplace-hero{padding:18px;gap:12px}.marketplace-mark{flex-basis:42px;width:42px;height:42px;font-size:24px}.marketplace-hero h2{font-size:19px}.marketplace-hero p:not(.eyebrow){font-size:12px}.marketplace-grid{grid-template-columns:1fr}.marketplace-tile p{min-height:0}}
+
+
+/* Uniformisation finale : typographie commune et icônes parfaitement alignées. */
+:root{
+  --nav-blue:#2563eb;
+  --nav-blue-dark:#1d4ed8;
+}
+.topbar{
+  display:flex;
+  align-items:stretch;
+  gap:12px;
+  padding:0 20px;
+  background:var(--nav-blue);
+}
+.breadcrumb{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 14px minmax(0,1fr) 14px minmax(0,1fr);
+  align-items:stretch;
+  flex:1 1 auto;
+  min-width:0;
+  width:100%;
+  min-height:64px;
+  gap:0;
+  font-family:'DM Sans',sans-serif;
+  font-size:14px;
+  font-weight:700;
+  line-height:1.2;
+  white-space:nowrap;
+}
+.breadcrumb > span,
+.breadcrumb > b{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:0;
+  height:100%;
+  margin:0;
+  padding:0 4px;
+  color:#fff;
+  font-family:'DM Sans',sans-serif;
+  font-size:14px;
+  font-weight:700;
+  text-align:center;
+}
+.breadcrumb > span:nth-child(2),
+.breadcrumb > span:nth-child(4){color:#dbeafe;font-size:14px;font-weight:600}
+.breadcrumb .breadcrumb-brand{justify-content:flex-start}
+.breadcrumb > b{justify-content:flex-end}
+.topbar-right{display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-left:0}
+.avatar-button{width:40px;height:40px;flex-shrink:0;background:#fff;color:var(--nav-blue);font:700 14px 'DM Sans',sans-serif}
+.primary-button{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700}
+
+/* Les libellés de navigation partagent la même police, taille et graisse. */
+.sidebar nav{display:grid;gap:8px;align-content:start}
+.nav-item,
+.nav-item.active,
+.nav-item:not(.active){
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-height:46px;
+  padding:10px 12px;
+  font-family:'DM Sans',sans-serif;
+  font-size:14px;
+  line-height:1.25;
+  font-weight:700;
+  text-align:left;
+  color:#fff;
+  background:var(--nav-blue);
+  border:1px solid var(--nav-blue);
+  border-radius:10px;
+}
+.nav-item:hover{background:var(--nav-blue-dark);border-color:var(--nav-blue-dark);color:#fff}
+.nav-item.active{background:var(--nav-blue-dark);border-color:var(--nav-blue-dark);box-shadow:inset 4px 0 0 #bfdbfe}
+.nav-icon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 24px;
+  width:24px;
+  height:24px;
+  margin:0;
+  color:#fff;
+  font-family:'DM Sans',sans-serif;
+  font-size:18px;
+  line-height:1;
+  text-align:center;
+}
+.nav-count{flex:0 0 auto;background:#fff;color:var(--nav-blue);font:700 12px 'DM Sans',sans-serif}
+
+/* Sur mobile, les boutons d'icônes restent centrés sur une grille unique. */
+@media(max-width:760px){
+  .topbar{min-height:58px;padding:0 10px;gap:8px}
+  .breadcrumb{min-height:58px;grid-template-columns:minmax(0,1fr) 8px minmax(0,1fr) 8px minmax(0,1fr);font-size:14px;gap:0}
+  .breadcrumb > span,.breadcrumb > b{font-size:14px;padding:0 2px}
+  .breadcrumb > span:nth-child(2),.breadcrumb > span:nth-child(4){font-size:13px}
+  .avatar-button{width:36px;height:36px;font-size:14px}
+  .sidebar nav{width:100%;gap:8px;align-items:center}
+  .nav-item,.nav-item.active,.nav-item:not(.active){
+    display:flex;
+    width:46px;
+    height:46px;
+    min-height:46px;
+    margin:0 auto;
+    padding:0;
+    justify-content:center;
+    align-items:center;
+    gap:0;
+    border-radius:12px;
+    font-size:0;
+    line-height:1;
+  }
+  .nav-icon{flex:0 0 24px;width:24px;height:24px;font-size:21px;color:#fff;line-height:1}
+  .nav-item.active{box-shadow:inset 0 -4px 0 #bfdbfe}
+}
+@media(max-width:390px){
+  .topbar{padding:0 7px;gap:5px}
+  .breadcrumb{font-size:12px;grid-template-columns:minmax(0,1fr) 6px minmax(0,1fr) 6px minmax(0,1fr)}
+  .breadcrumb > span,.breadcrumb > b{font-size:12px;padding:0 1px}
+  .breadcrumb > span:nth-child(2),.breadcrumb > span:nth-child(4){font-size:11px}
+}
