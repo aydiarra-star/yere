@@ -108,6 +108,49 @@ L'isolation des données entre ateliers est une exigence bloquante avant le pilo
 - Les données de démonstration sont distinctes des données créées par l'utilisateur et ne sont pas chargées silencieusement.
 - Les fonctionnalités non livrées (alertes, comptabilité complète, inspirations, serveur) sont annoncées comme prévues, jamais comme actives.
 
+
+## 5.2 Charte visuelle officielle YÉRÉ Atelier
+
+### Positionnement
+YÉRÉ est un outil professionnel de gestion d'atelier, pas un réseau social ni une application de divertissement. L'interface doit inspirer confiance, organisation, fiabilité, simplicité et professionnalisme ; elle doit rassurer sur le traitement des clients, mensurations, paiements et informations commerciales. La clarté et l'usage quotidien priment sur l'effet spectaculaire.
+
+### Palette de marque
+- **Bleu YÉRÉ — #3B5BDB :** couleur de marque et d'action. Logo, navigation, boutons principaux, éléments interactifs, états actifs et actions importantes. Le bleu existant est conservé comme signature de confiance, stabilité, sérieux et crédibilité.
+- **Or textile — #D4A017 :** accent parcimonieux inspiré des broderies et finitions. Badges valorisants, statistiques positives, offres premium, marketplace et détails de réussite. Il ne doit jamais remplacer les couleurs de statut fonctionnelles.
+- **Vert — succès uniquement :** paiement reçu, solde réglé, opération validée et bénéfice explicitement identifié comme estimé.
+- **Orange — attention :** retard de livraison, paiement partiel, action requise ou stock bas.
+- **Rouge — critique :** erreurs, suppression, opération échouée et dette nécessitant une alerte explicite.
+- Les états ne reposent jamais uniquement sur la couleur : ajouter un libellé, une icône ou une explication accessible.
+
+### Règles d'interface
+- Écrans épurés, grandes zones tactiles, typographie lisible, contraste suffisant, peu de texte non essentiel et actions primaires clairement identifiées.
+- Priorité à une utilisation d'une seule main, au téléphone et dans un atelier bruyant ; ne pas dépendre uniquement de sons, animations ou gestes complexes.
+- Libellés directs en français, erreurs formulées de manière compréhensible et confirmation explicite pour les actions destructrices.
+- Les éléments or sont des accents, jamais une décoration omniprésente. Pas de gradients ou d'animations qui nuisent à la lecture ou à la rapidité.
+- Accessibilité clavier et focus visible, respect de la préférence de réduction des animations et validation du contraste avant le pilote.
+
+### Navigation mobile
+Sur petit écran, utiliser une barre inférieure fixe à cinq entrées principales :
+1. Accueil
+2. Clients
+3. Commandes
+4. Caisse
+5. Compte
+
+Chaque entrée doit disposer d'une icône et d'un libellé visible. Prévoir les zones de sécurité iOS, éviter le chevauchement avec les formulaires et permettre l'accès aux fonctions secondaires (dont les relances) depuis un endroit explicite. Sur grand écran, conserver une navigation latérale claire.
+
+### Principes fonctionnels associés
+- La caisse ne doit pas être présentée comme une comptabilité complète tant que les encaissements multiples, dépenses, mouvements et rapports ne sont pas implémentés et testés.
+- La navigation, les boutons et les couleurs de statut doivent rester cohérents entre l'onboarding et les modules.
+- Toute information financière doit être exacte, explicable et distinguée des valeurs estimées ou des données de démonstration.
+
+### Critères d'acceptation
+- Bleu de marque #3B5BDB utilisé de manière cohérente pour les actions primaires et les états actifs.
+- Or textile #D4A017 limité aux accents valorisants.
+- Vert, orange et rouge employés selon les rôles fonctionnels ci-dessus et accompagnés d'un libellé.
+- Sur mobile, cinq destinations principales visibles en permanence sans masquer le contenu ni les boutons d'action.
+- Les tests terrain confirment que des tailleurs peuvent identifier les actions principales sans formation.
+
 ## 6. Sécurité et confiance
 - Authentification sécurisée et gestion des rôles.
 - Contrôles d'accès côté serveur/base de données.
