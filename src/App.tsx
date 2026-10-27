@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { balanceDue, formatXof, matchesClient, orderStatuses, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
+import { usePersistentState } from "./usePersistentState";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", note: "" };
 
@@ -18,8 +19,8 @@ const initialOrders: Order[] = [
 type View = "overview" | "clients" | "orders";
 
 function App() {
-  const [clients, setClients] = useState(initialClients);
-  const [orders, setOrders] = useState(initialOrders);
+  const [clients, setClients] = usePersistentState<Client[]>("yere-demo-clients-v1", initialClients);
+  const [orders, setOrders] = usePersistentState<Order[]>("yere-demo-orders-v1", initialOrders);
   const [view, setView] = useState<View>("overview");
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -54,6 +55,13 @@ function App() {
 
   function updateStatus(orderId: string, status: OrderStatus) {
     setOrders((current) => current.map((order) => order.id === orderId ? { ...order, status } : order));
+  }
+
+  function updateMeasurement(clientId: string, field: keyof Measurement, value: string) {
+    setClients((current) => current.map((client) => client.id === clientId
+      ? { ...client, measurement: { ...client.measurement, [field]: value } }
+      : client));
+    setNotice("Mensurations mises à jour sur cet appareil. Aucune synchronisation serveur n'est encore active.");
   }
 
   const navItems: { id: View; label: string; icon: string }[] = [
@@ -101,7 +109,7 @@ function App() {
             <div className="client-list">{visibleClients.map((client, index) => <button key={client.id} className={selectedClient === client.id ? "client-row selected" : "client-row"} onClick={() => setSelectedClient(selectedClient === client.id ? null : client.id)}><span className={`client-avatar avatar-${index % 4}`}>{client.name.split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</span><span className="client-main"><b>{client.name}</b><small>{client.phone || "Pas de téléphone renseigné"}</small></span><span className="client-measurements"><b>{Object.values(client.measurement).filter(Boolean).length - (client.measurement.note ? 1 : 0)}/6</b><small>mesures saisies</small></span><span className="row-chevron">›</span></button>)}
               {visibleClients.length === 0 && <div className="empty-state"><span>⌕</span><b>Aucun client trouvé</b><p>Essayez un autre nom ou numéro.</p></div>}
             </div>
-            {selected && <div className="measurement-panel"><div className="section-heading"><div><h2>Mensurations de {selected.name}</h2><p>Dernière fiche de mesures enregistrée en démonstration</p></div><span className="demo-pill">Exemple</span></div><div className="measurement-grid">{[["Tour de poitrine","bust"],["Tour de taille","waist"],["Tour de hanches","hips"],["Épaules","shoulder"],["Longueur de manche","sleeve"],["Longueur du vêtement","length"]].map(([label, key]) => <div className="measure-field" key={key}><span>{label}</span><b>{selected.measurement[key as keyof Measurement] || "—"} <small>{selected.measurement[key as keyof Measurement] ? "cm" : ""}</small></b></div>)}</div>{selected.measurement.note && <p className="measure-note"><b>Note :</b> {selected.measurement.note}</p>}<p className="privacy-note">Les mesures sont des données personnelles. Dans la vraie application, leur accès devra être protégé par le compte de l’atelier.</p></div>}
+            {selected && <div className="measurement-panel"><div className="section-heading"><div><h2>Mensurations de {selected.name}</h2><p>Dernière fiche de mesures enregistrée en démonstration</p></div><span className="demo-pill">Exemple</span></div><div className="measurement-grid">{[["Tour de poitrine","bust"],["Tour de taille","waist"],["Tour de hanches","hips"],["Épaules","shoulder"],["Longueur de manche","sleeve"],["Longueur du vêtement","length"]].map(([label, key]) => <label className="measure-field" key={key}><span>{label} (cm)</span><input inputMode="decimal" aria-label={label} value={selected.measurement[key as keyof Measurement] as string} onChange={(event) => updateMeasurement(selected.id, key as keyof Measurement, event.target.value)} placeholder="—" /></label>)}</div><label className="measure-notes-field">Notes pour la prochaine commande<textarea value={selected.measurement.note} onChange={(event) => updateMeasurement(selected.id, "note", event.target.value)} placeholder="Préférences, coupe, tissu…" rows={2} /></label><p className="privacy-note">Prototype uniquement : ces informations sont conservées dans le stockage local de ce navigateur, sans compte ni sauvegarde serveur. N'utilise pas de données clients réelles.</p></div>}
           </section>}
 
           {view === "orders" && <section className="content-card"><div className="section-heading"><div><h2>Commandes de l’atelier</h2><p>Modifiez le statut pour tester le suivi de production.</p></div><span className="demo-pill">Données de démonstration</span></div><OrderTable orders={orders} clients={clients} onStatusChange={updateStatus} /></section>}
