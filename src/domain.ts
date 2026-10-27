@@ -112,7 +112,7 @@ export function isOrderListValid(value: unknown): value is Order[] {
     && typeof item.price === "number" && Number.isSafeInteger(item.price) && item.price > 0
     && typeof item.deposit === "number" && Number.isSafeInteger(item.deposit)
     && item.deposit >= 0 && item.deposit <= item.price
-    && typeof item.status === "string" && ["À préparer", "En confection", "Prêt", "Livré"].includes(item.status)
+    && typeof item.status === "string" && ["À préparer", "En confection", "Prêt", "Livré"].some((status) => status === item.status)
   );
 }
 
