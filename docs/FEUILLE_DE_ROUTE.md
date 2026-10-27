@@ -21,7 +21,10 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 - [ ] Ajouter la configuration sûre et la gestion des secrets côté backend.
 - [x] Définir les premiers modèles de données et la stratégie de migrations dans la documentation.
 - [x] Mettre en place les tests unitaires et la CI ; dernier run consulté réussi.
-- [x] Déployer le commit `bd3165af85a6b9594c0560b075d9056292a89035` avec l'historique des mensurations et le centre de relance (déploiement Render réussi).\n- [ ] Tester la PWA en mode avion sur mobile et ordinateur.\n- [x] Définir les règles MVP du module Relances clients, ses limites anti-spam et ses critères d'acceptation dans `docs/RELANCES_CLIENTS.md`.\n- [ ] Tester les parcours du centre de relance sur la prévisualisation et corriger les anomalies éventuelles.
+- [x] Déployer le commit `bd3165af85a6b9594c0560b075d9056292a89035` avec l'historique des mensurations et le centre de relance (déploiement Render réussi).
+- [ ] Tester la PWA en mode avion sur mobile et ordinateur.
+- [x] Définir les règles MVP du module Relances clients, ses limites anti-spam et ses critères d'acceptation dans `docs/RELANCES_CLIENTS.md`.
+- [ ] Tester les parcours du centre de relance sur la prévisualisation et corriger les anomalies éventuelles.
 
 **Critère de sortie :** projet reproductible, testable, documenté, sans choix techniques inventés. Le lot 0 n'est pas encore terminé.
 
@@ -31,7 +34,8 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 - [ ] Création et configuration d'un atelier.
 - [ ] Isolation des données par atelier.
 - [ ] CRUD client et recherche avec persistance serveur.
-- [ ] Mensurations datées, types de vêtement et historique côté serveur.\n- [ ] Ajouter les dates de commande fiables et l'historique serveur nécessaires aux suggestions de relance.
+- [ ] Mensurations datées, types de vêtement et historique côté serveur.
+- [ ] Ajouter les dates de commande fiables et l'historique serveur nécessaires aux suggestions de relance.
 - [ ] Tests d'accès et validation des données.
 
 Le prototype actuel permet de tester l'interface clients/mesures localement, mais ne valide aucun de ces critères serveur.
@@ -87,6 +91,20 @@ Le prototype actuel permet de tester l'interface clients/mesures localement, mai
 - [ ] Demandes de confection.
 - [ ] Étude puis développement des paiements et livraisons, y compris diaspora.
 
-## Lot 4 bis — Relances clients et campagnes saisonnières\n\n- [x] Documenter le concept, les règles MVP, les garde-fous et les critères d'acceptation.\n- [x] Ajouter au prototype des suggestions d'inactivité (seuil initial de 180 jours) et de souvenir d'occasion à partir des commandes datées.\n- [x] Prévisualiser un message et permettre sa copie manuelle ; aucun envoi automatique.\n- [ ] Ajouter préférences de contact, option « ne pas contacter », suggestions traitées/ignorées et historique de contact côté serveur.\n- [ ] Ajouter un calendrier d'événements configurable par atelier ; confirmer les dates des fêtes à calendrier variable.\n- [ ] Mesurer les contacts réellement effectués, réponses, devis et commandes attribuées, sans assimiler une suggestion à un revenu.\n\n**Critère de sortie :** les relances sont explicables, non intrusives, isolées par atelier et mesurables sur des résultats réels.\n\n## Règle de priorisation
+## Lot 4 bis — Relances clients et campagnes saisonnières
+
+- [x] Ajouter les exigences YÉRÉ Relances au cahier des charges maître et les entités candidates au modèle de données.
+
+
+- [x] Documenter le concept, les règles MVP, les garde-fous et les critères d'acceptation.
+- [x] Ajouter au prototype des suggestions d'inactivité (seuil initial de 180 jours) et de souvenir d'occasion à partir des commandes datées.
+- [x] Prévisualiser un message et permettre sa copie manuelle ; aucun envoi automatique.
+- [ ] Ajouter préférences de contact, refus (« ne pas contacter »), suggestions reportées/ignorées/traitées et historique de contact côté serveur.
+- [ ] Ajouter un calendrier d'événements configurable par atelier ; confirmer les dates des fêtes à calendrier variable.
+- [ ] Mesurer les contacts réellement effectués, réponses, devis et commandes attribuées, sans assimiler une suggestion à un revenu.
+
+**Critère de sortie :** les relances sont explicables, non intrusives, isolées par atelier et mesurables sur des résultats réels.
+
+## Règle de priorisation
 
 Toute nouvelle demande est évaluée selon : fréquence du problème, impact sur le temps ou l'argent, nombre d'utilisateurs concernés, risque, coût de développement et dépendances. La sécurité, l'intégrité financière et la protection des données passent avant les fonctions de visibilité.
