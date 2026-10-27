@@ -9,11 +9,11 @@ YÉRÉ commence par aider les tailleurs et ateliers de couture au Sénégal à g
 Le premier socle est une application web React + TypeScript + Vite, conçue mobile-first. Cette branche contient un prototype interactif pour explorer le parcours atelier :
 - tableau de bord et indicateurs de démonstration ;
 - recherche de clients par nom ou téléphone ;
-- création de fiches client dans l'état local ;
-- consultation d'un exemple de mensurations ;
+- création de fiches client conservées dans le stockage local du navigateur ;
+- édition des mensurations et notes client, conservées localement ;
 - commandes, statut de confection et calcul du reste dû en FCFA.
 
-**Limites importantes :** les données sont fictives et non persistantes ; aucune authentification, base de données, sauvegarde ou isolation multi-atelier n'est encore intégrée. Ne saisissez aucune donnée réelle de client. Ce prototype n'est pas prêt pour la production.
+**Limites importantes :** les données de démonstration et les modifications sont conservées uniquement dans le stockage local de ce navigateur ; aucune authentification, base de données, sauvegarde serveur ou isolation multi-atelier n'est encore intégrée. Ne saisissez aucune donnée réelle de client. Ce prototype n'est pas prêt pour la production.
 
 ### Démarrer en local
 
