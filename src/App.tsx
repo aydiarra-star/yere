@@ -229,7 +229,7 @@ function App() {
     setNotice(`Mensurations de ${selected.name} enregistrées localement. Troisième étape : créez maintenant une commande.`);
   }
 
-  const navItems: { id: View; label: string; icon: string }[] = [
+  const navItems: { id: View; label: string; icon: IconName }[] = [
     { id: "overview", label: "Accueil", icon: "home" },
     { id: "clients", label: "Clients", icon: "users" },
     { id: "orders", label: "Commandes", icon: "package" },
