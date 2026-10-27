@@ -66,6 +66,23 @@ function App() {
     [clients, orders]
   );
 
+  // Assistant quotidien : suggestions explicables, calculées uniquement à partir des commandes locales.
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const todayLabel = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" }).format(today);
+  const dailyTasks = [
+    ...orders
+      .filter((order) => order.status !== "Livré" && order.dueDate < todayKey)
+      .map((order) => ({ id: `retard-${order.id}`, title: `Commande en retard : ${order.garment}`, detail: `${clients.find((client) => client.id === order.clientId)?.name ?? "Client non retrouvé"} · échéance dépassée`, kind: "critical" as const, action: "orders" as const })),
+    ...orders
+      .filter((order) => order.status !== "Livré" && order.dueDate === todayKey)
+      .map((order) => ({ id: `today-${order.id}`, title: `Livraison prévue aujourd'hui : ${order.garment}`, detail: `${clients.find((client) => client.id === order.clientId)?.name ?? "Client non retrouvé"} · statut : ${order.status}`, kind: "today" as const, action: "orders" as const })),
+    ...orders
+      .filter((order) => order.status === "Prêt" && balanceDue(order) > 0)
+      .map((order) => ({ id: `balance-${order.id}`, title: `Solde à encaisser : ${formatXof(balanceDue(order))}`, detail: `${order.garment} · ${clients.find((client) => client.id === order.clientId)?.name ?? "Client non retrouvé"}`, kind: "money" as const, action: "cash" as const }))
+  ];
+  const dailyTaskCount = dailyTasks.length;
+
   useEffect(() => {
     const client = clients.find((item) => item.id === selectedClient);
     setDraftMeasurement(client ? { ...client.measurement } : { ...emptyMeasurement });
@@ -201,6 +218,15 @@ function App() {
           {notice && <div className="notice"><span>ⓘ</span><p>{notice}</p><button aria-label="Fermer le message" onClick={() => setNotice("")}>×</button></div>}
 
           {view === "overview" && <>
+            <section className="daily-assistant content-card" aria-labelledby="daily-assistant-title">
+              <div className="section-heading">
+                <div><p className="eyebrow">VOTRE PRIORITÉ DU JOUR</p><h2 id="daily-assistant-title">Que dois-je faire aujourd'hui ?</h2><p>{todayLabel.charAt(0).toUpperCase() + todayLabel.slice(1)} · suggestions calculées depuis les commandes enregistrées sur cet appareil.</p></div>
+                <span className="daily-count">{dailyTaskCount} action{dailyTaskCount > 1 ? "s" : ""}</span>
+              </div>
+              {dailyTasks.length > 0 ? <ul className="daily-task-list">{dailyTasks.slice(0, 6).map((task) => <li key={task.id} className={`daily-task ${task.kind}`}><span className="daily-task-marker" aria-hidden="true">{task.kind === "critical" ? "!" : task.kind === "money" ? "₣" : "→"}</span><span className="daily-task-copy"><b>{task.title}</b><small>{task.detail}</small></span><button className="text-button" onClick={() => setView(task.action)}>{task.action === "cash" ? "Voir la caisse" : "Voir la commande"} <span>→</span></button></li>)}</ul> : <div className="daily-empty"><b>Aucune urgence détectée dans les données disponibles.</b><p>Les commandes, paiements et stocks non enregistrés ici ne sont pas pris en compte.</p><button className="secondary-button" onClick={() => setView("orders")}>Vérifier les commandes</button></div>}
+              {dailyTaskCount > 6 && <p className="daily-overflow">Et {dailyTaskCount - 6} autre{dailyTaskCount - 6 > 1 ? "s" : ""} action{dailyTaskCount - 6 > 1 ? "s" : ""} à consulter dans les commandes et la caisse.</p>}
+              <p className="daily-disclaimer">Aide indicative du prototype : les données restent locales, ne sont pas synchronisées et peuvent être incomplètes. Vérifiez les échéances avec votre cahier.</p>
+            </section>
             <section className="stats-grid" aria-label="Indicateurs de l'atelier">
               <article className="stat-card"><div className="stat-top"><span>Commandes en cours</span><span className="stat-icon green">▤</span></div><strong>{orders.filter((order) => order.status !== "Livré").length.toString().padStart(2, "0")}</strong><small><span className="stat-dot green-dot" /> À suivre cette semaine</small></article>
               <article className="stat-card"><div className="stat-top"><span>Clients enregistrés</span><span className="stat-icon purple">♙</span></div><strong>{clients.length.toString().padStart(2, "0")}</strong><small>Vos fiches et mensurations</small></article>
