@@ -19,6 +19,8 @@ const initialOrders: Order[] = [
 ];
 
 type View = "overview" | "clients" | "orders" | "reminders";
+type AtelierProfile = { name: string; phone: string; city: string };
+const emptyAtelier: AtelierProfile = { name: "", phone: "", city: "" };
 
 function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -32,8 +34,10 @@ function App() {
     };
   }, []);
 
-  const [clients, setClients] = usePersistentState<Client[]>("yere-demo-clients-v1", initialClients);
-  const [orders, setOrders] = usePersistentState<Order[]>("yere-demo-orders-v1", initialOrders);
+  const [clients, setClients] = usePersistentState<Client[]>("yere-demo-clients-v1", []);
+  const [orders, setOrders] = usePersistentState<Order[]>("yere-demo-orders-v1", []);
+  const [atelier, setAtelier] = usePersistentState<AtelierProfile>("yere-demo-atelier-v1", emptyAtelier);
+  const [onboardingComplete, setOnboardingComplete] = usePersistentState<boolean>("yere-demo-onboarding-complete-v1", false);
   const [view, setView] = useState<View>("overview");
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -106,6 +110,26 @@ function App() {
     { id: "reminders", label: "Relances clients", icon: "↻" }
   ];
 
+  if (!onboardingComplete) {
+    return <Onboarding
+      atelier={atelier}
+      onAtelierChange={setAtelier}
+      onFinish={() => {
+        setOnboardingComplete(true);
+        setView("clients");
+        setShowForm(true);
+        setNotice("Atelier configuré dans cette démonstration locale. Créez votre premier client pour continuer.");
+      }}
+      onExploreDemo={() => {
+        setClients(initialClients);
+        setOrders(initialOrders);
+        setOnboardingComplete(true);
+        setView("overview");
+        setNotice("Données fictives chargées pour explorer la démonstration. N'utilisez pas de vraies données clients.");
+      }}
+    />;
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -161,6 +185,62 @@ function App() {
       </main>
     </div>
   );
+}
+
+function Onboarding({ atelier, onAtelierChange, onFinish, onExploreDemo }: {
+  atelier: AtelierProfile;
+  onAtelierChange: (value: AtelierProfile) => void;
+  onFinish: () => void;
+  onExploreDemo: () => void;
+}) {
+  const [step, setStep] = useState(0);
+  const [draft, setDraft] = useState<AtelierProfile>(atelier);
+  const steps = [
+    { eyebrow: "BIENVENUE", title: "YÉRÉ Atelier", subtitle: "La couture, mieux organisée.", body: "Retrouvez vos clients, leurs mensurations, vos commandes et vos paiements en un seul endroit.", detail: "Un outil de travail pensé pour le quotidien de votre atelier." },
+    { eyebrow: "GAGNEZ DU TEMPS", title: "Fini les cahiers perdus et les recherches interminables.", subtitle: "Tout retrouver en quelques secondes.", body: "Mensurations, anciennes commandes, acomptes et dates de livraison : les informations utiles sont réunies.", detail: "Moins de recherches, moins d'oublis et moins d'erreurs de saisie." },
+    { eyebrow: "SUIVI DE PRODUCTION", title: "Gardez chaque commande sous contrôle.", subtitle: "De la coupe à la livraison.", body: "Suivez les étapes de confection : coupe, couture, essayage et livraison.", detail: "Le prototype illustre le suivi. Les alertes automatiques de retard restent à développer." },
+    { eyebrow: "GESTION DE L'ARGENT", title: "Comprenez ce que votre atelier gagne réellement.", subtitle: "Des chiffres plus clairs.", body: "Préparez le suivi des acomptes, paiements, dépenses et recettes.", detail: "Dans cette version de démonstration, les indicateurs financiers restent limités aux commandes et soldes simulés." },
+    { eyebrow: "INSPIRATIONS COUTURE", title: "Retrouvez les modèles au bon moment.", subtitle: "Un outil de travail, pas un réseau social.", body: "À terme, classez les photos envoyées par les clients, les modèles enregistrés et les créations réalisées.", detail: "Le catalogue d'inspirations est prévu dans la feuille de route ; il n'est pas encore disponible." },
+    { eyebrow: "VOTRE ATELIER", title: "Créons votre premier atelier.", subtitle: "Quelques informations pour commencer.", body: "Renseignez le nom de votre atelier, un téléphone et une ville. Vous pourrez ensuite créer votre premier client.", detail: "Prototype : ces informations restent sur cet appareil. Aucun compte ni sauvegarde serveur n'est créé." }
+  ];
+  const current = steps[step];
+  const isSetup = step === steps.length - 1;
+  function update(field: keyof AtelierProfile, value: string) {
+    setDraft((previous) => ({ ...previous, [field]: value }));
+  }
+  return <main className="onboarding-shell">
+    <header className="onboarding-brand"><span className="brand-mark">Y</span><span><strong>YÉRÉ</strong><small>ATELIER</small></span><span className="onboarding-step">Étape {step + 1} sur {steps.length}</span></header>
+    <div className="onboarding-layout">
+      <section className="onboarding-copy">
+        <p className="eyebrow">{current.eyebrow}</p>
+        <h1>{current.title}</h1>
+        <h2>{current.subtitle}</h2>
+        <p className="onboarding-body">{current.body}</p>
+        {step === 1 && <ul className="onboarding-benefits"><li>Mensurations</li><li>Anciennes commandes</li><li>Acomptes</li><li>Dates de livraison</li></ul>}
+        {step === 2 && <div className="onboarding-flow"><span>Coupe</span><b>→</b><span>Couture</span><b>→</b><span>Essayage</span><b>→</b><span>Livraison</span></div>}
+        {step === 3 && <ul className="onboarding-benefits"><li>Acomptes</li><li>Paiements</li><li>Dépenses</li><li>Recettes</li></ul>}
+        {step === 4 && <div className="onboarding-inspiration"><span>✦</span><div><b>Vos références couture</b><small>Photos, modèles et créations — fonctionnalité prévue, pas encore active.</small></div></div>}
+        {isSetup && <form className="onboarding-form" onSubmit={(event) => { event.preventDefault(); onAtelierChange(draft); onFinish(); }}>
+          <label>Nom de l'atelier<input required autoFocus value={draft.name} onChange={(event) => update("name", event.target.value)} placeholder="Ex. Atelier Aminata" /></label>
+          <label>Téléphone<input value={draft.phone} onChange={(event) => update("phone", event.target.value)} placeholder="+221 77 000 00 00" /></label>
+          <label>Ville<input value={draft.city} onChange={(event) => update("city", event.target.value)} placeholder="Ex. Dakar" /></label>
+          <button className="primary-button onboarding-primary" type="submit">Commencer à utiliser YÉRÉ <span>→</span></button>
+        </form>}
+        {!isSetup && <p className="onboarding-detail">{current.detail}</p>}
+        <div className="onboarding-actions">
+          {step > 0 && <button className="secondary-button" onClick={() => setStep((value) => value - 1)}>Précédent</button>}
+          {!isSetup && <button className="primary-button onboarding-primary" onClick={() => setStep((value) => Math.min(value + 1, steps.length - 1))}>{step === 0 ? "Commencer" : "Continuer"} <span>→</span></button>}
+        </div>
+        {step === 0 && <button className="onboarding-demo-link" onClick={onExploreDemo}>Explorer la démonstration avec des exemples</button>}
+        <p className="onboarding-disclaimer">Démonstration uniquement · stockage local · ne pas saisir de vraies données clients</p>
+      </section>
+      <aside className="onboarding-visual" aria-label="Illustration conceptuelle d'un atelier de couture organisé">
+        <div className="visual-glow"></div><div className="visual-card visual-phone"><span className="visual-phone-top"></span><b>YÉRÉ Atelier</b><small>Vos commandes</small><div className="visual-task"><i></i><span>Tenue de cérémonie<small>En confection</small></span></div><div className="visual-task"><i></i><span>Boubou brodé<small>Essayage</small></span></div><div className="visual-task"><i></i><span>Robe sur mesure<small>À livrer</small></span></div></div>
+        <div className="visual-card visual-notebook"><span>FICHE CLIENT</span><b>Mensurations</b><div className="visual-lines"></div><div className="visual-lines short"></div><div className="visual-lines"></div><small>Retrouvées en quelques secondes</small></div>
+        <div className="visual-fabric fabric-one"></div><div className="visual-fabric fabric-two"></div><div className="visual-scissors">✂</div><p>Un atelier mieux organisé,<br/>sans perdre le fil.</p>
+      </aside>
+    </div>
+  </main>;
 }
 
 function OrderTable({ orders, clients, onStatusChange }: { orders: Order[]; clients: Client[]; onStatusChange: (id: string, status: OrderStatus) => void }) {
