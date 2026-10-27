@@ -60,6 +60,7 @@ export type Order = {
   clientId: string;
   garment: string;
   dueDate: string;
+  orderedAt?: string;
   price: number;
   deposit: number;
   status: OrderStatus;
@@ -87,4 +88,90 @@ export function matchesClient(client: Client, query: string): boolean {
   if (!normalized) return true;
   return client.name.toLocaleLowerCase("fr-FR").includes(normalized)
     || client.phone.replace(/\s/g, "").includes(normalized.replace(/\s/g, ""));
+}
+
+
+export type ClientReminderSuggestion = {
+  clientId: string;
+  clientName: string;
+  phone: string;
+  kind: "inactive" | "occasion";
+  title: string;
+  detail: string;
+  suggestedMessage: string;
+  lastOrderAt: string;
+  daysSinceOrder: number;
+};
+
+const occasionKeywords: Array<{ pattern: RegExp; label: string }> = [
+  { pattern: /mariage|mariée|marié/i, label: "tenue de mariage" },
+  { pattern: /bapt[eê]me/i, label: "tenue de baptême" },
+  { pattern: /tabaski/i, label: "tenue de Tabaski" },
+  { pattern: /korit[eé]/i, label: "tenue de Korité" },
+  { pattern: /rentr[eé]e/i, label: "tenue de rentrée" }
+];
+
+export function getClientReminderSuggestions(
+  clients: Client[],
+  orders: Order[],
+  today: string,
+  inactivityDays = 180
+): ClientReminderSuggestion[] {
+  const todayDate = new Date(`${today}T12:00:00Z`);
+  if (!Number.isFinite(todayDate.getTime())) return [];
+
+  const suggestions: ClientReminderSuggestion[] = [];
+  for (const client of clients) {
+    const datedOrders = orders
+      .filter((order) => order.clientId === client.id && order.orderedAt && order.status !== "À préparer")
+      .filter((order) => Number.isFinite(new Date(`${order.orderedAt}T12:00:00Z`).getTime()))
+      .sort((a, b) => (b.orderedAt ?? "").localeCompare(a.orderedAt ?? ""));
+    const latestOrder = datedOrders[0];
+    if (!latestOrder?.orderedAt) continue;
+
+    const daysSinceOrder = Math.floor(
+      (todayDate.getTime() - new Date(`${latestOrder.orderedAt}T12:00:00Z`).getTime()) / 86_400_000
+    );
+    if (daysSinceOrder < 0) continue;
+
+    if (daysSinceOrder >= inactivityDays) {
+      suggestions.push({
+        clientId: client.id,
+        clientName: client.name,
+        phone: client.phone,
+        kind: "inactive",
+        title: "Client à réactiver",
+        detail: `Dernière commande : ${latestOrder.garment}, il y a ${daysSinceOrder} jours.`,
+        suggestedMessage: `Bonjour ${client.name}, j’espère que vous allez bien ! Cela fait quelque temps depuis votre dernière commande chez nous. Nous serions ravis de vous accompagner pour votre prochaine tenue. Avez-vous un événement ou une occasion à préparer ?`,
+        lastOrderAt: latestOrder.orderedAt,
+        daysSinceOrder
+      });
+    }
+
+    const previousOccasionOrder = datedOrders.find((order) =>
+      (todayDate.getTime() - new Date(`${order.orderedAt}T12:00:00Z`).getTime()) / 86_400_000 >= 180
+      && occasionKeywords.some(({ pattern }) => pattern.test(order.garment))
+    );
+    if (previousOccasionOrder?.orderedAt) {
+      const occasion = occasionKeywords.find(({ pattern }) => pattern.test(previousOccasionOrder.garment))?.label ?? previousOccasionOrder.garment;
+      const occasionAge = Math.floor(
+        (todayDate.getTime() - new Date(`${previousOccasionOrder.orderedAt}T12:00:00Z`).getTime()) / 86_400_000
+      );
+      if (occasionAge >= 300) {
+        suggestions.push({
+          clientId: client.id,
+          clientName: client.name,
+          phone: client.phone,
+          kind: "occasion",
+          title: "Occasion à anticiper",
+          detail: `Vous aviez confectionné une ${occasion} il y a environ un an.`,
+          suggestedMessage: `Bonjour ${client.name}, l’année dernière nous avions préparé pour vous une ${occasion}. Si une nouvelle cérémonie approche, nous pouvons anticiper le modèle, les mesures et le délai ensemble.`,
+          lastOrderAt: previousOccasionOrder.orderedAt,
+          daysSinceOrder: occasionAge
+        });
+      }
+    }
+  }
+
+  return suggestions.sort((a, b) => b.daysSinceOrder - a.daysSinceOrder);
 }
