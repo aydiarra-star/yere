@@ -94,8 +94,6 @@ Le prototype actuel permet de tester l'interface clients/mesures localement, mai
 ## Lot 4 bis — Relances clients et campagnes saisonnières
 
 - [x] Ajouter les exigences YÉRÉ Relances au cahier des charges maître et les entités candidates au modèle de données.
-
-
 - [x] Documenter le concept, les règles MVP, les garde-fous et les critères d'acceptation.
 - [x] Ajouter au prototype des suggestions d'inactivité (seuil initial de 180 jours) et de souvenir d'occasion à partir des commandes datées.
 - [x] Prévisualiser un message et permettre sa copie manuelle ; aucun envoi automatique.
