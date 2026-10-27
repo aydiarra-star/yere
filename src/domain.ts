@@ -77,6 +77,19 @@ export function balanceDue(order: Pick<Order, "price" | "deposit">): number {
   return Math.max(0, order.price - order.deposit);
 }
 
+/** Validate a new order before it enters the prototype's local state. */
+export function isOrderInputValid(
+  input: { clientId: string; garment: string; dueDate: string; price: number; deposit: number },
+  clientIds: string[]
+): boolean {
+  if (!input.clientId || !clientIds.includes(input.clientId) || !input.garment.trim()) return false;
+  if (!Number.isSafeInteger(input.price) || input.price <= 0) return false;
+  if (!Number.isSafeInteger(input.deposit) || input.deposit < 0 || input.deposit > input.price) return false;
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(input.dueDate)) return false;
+  const dueDate = new Date(`${input.dueDate}T12:00:00Z`);
+  return Number.isFinite(dueDate.getTime()) && dueDate.toISOString().slice(0, 10) === input.dueDate;
+}
+
 export function formatXof(amount: number): string {
   return new Intl.NumberFormat("fr-FR", {
     maximumFractionDigits: 0
