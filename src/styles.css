@@ -532,3 +532,20 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .order-card-heading{flex-direction:column;gap:9px}
   .order-card-details{grid-template-columns:1fr 1fr}
 }
+
+
+/* Finition accessibilité mobile : éviter les petits textes secondaires. */
+@media(max-width:760px){
+  .stat-top,.stat-card>small,.snapshot-item small,.daily-task-copy small,
+  .order-card-client>span,.order-card-details>div>span,.page-subtitle,
+  .section-heading p,.daily-assistant .section-heading p,.table-secondary,
+  .footer,.privacy-note{font-size:16px;line-height:1.45}
+  .eyebrow{font-size:14px}
+  .order-status-chip{font-size:16px}
+  .daily-count{font-size:16px}
+}
+@media(max-width:390px){
+  .stat-top,.stat-card>small,.snapshot-item small,.daily-task-copy small,
+  .order-card-client>span,.order-card-details>div>span,.page-subtitle,
+  .section-heading p,.daily-assistant .section-heading p,.footer,.privacy-note{font-size:16px}
+}
