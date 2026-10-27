@@ -108,3 +108,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 @media(max-width:760px){
   .nav-item.active{background:var(--yere-sky);color:var(--yere-blue)}
 }
+
+
+/* Versioned measurement history — local prototype only */
+.measurement-form .form-actions{margin-top:14px}
+.measurement-form .form-actions .primary-button{min-height:40px}
+.measurement-history{margin-top:22px;padding-top:17px;border-top:1px solid var(--yere-border)}
+.measurement-history h3{font:700 12px Manrope,sans-serif;color:var(--yere-navy);margin:0 0 10px}
+.measurement-history ol{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.measurement-history li{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:10px 12px;background:#f8fbff;border:1px solid #e6edf8;border-radius:8px}
+.measurement-history li b{font-size:10px;color:#334155;white-space:nowrap}
+.measurement-history li span{font-size:10px;line-height:1.5;color:#64748b;text-align:right}
+.history-empty{font-size:10px;line-height:1.6;color:#8793a6;margin:0}
+@media(max-width:760px){.measurement-history li{flex-direction:column;gap:5px}.measurement-history li span{text-align:left}}
