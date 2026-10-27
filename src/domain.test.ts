@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { balanceDue, formatXof, isMeasurementValid, matchesClient, saveMeasurementVersion, type Client, type Measurement, type Order } from "./domain";
+import { balanceDue, formatXof, getClientReminderSuggestions, isMeasurementValid, matchesClient, saveMeasurementVersion, type Client, type Measurement, type Order } from "./domain";
 
 const client: Client = {
   id: "c-1",
@@ -77,5 +77,38 @@ describe("historique des mensurations", () => {
     expect(isMeasurementValid({ ...blankMeasurement, waist: "abc" })).toBe(false);
     expect(isMeasurementValid({ ...blankMeasurement, hips: "90.5" })).toBe(true);
     expect(isMeasurementValid(blankMeasurement)).toBe(true);
+  });
+});
+
+
+describe("suggestions de relance client", () => {
+  const clients: Client[] = [
+    { ...client, id: "c-old", name: "Mariama Diallo", phone: "+221 77 000 00 00" },
+    { ...client, id: "c-new", name: "Ousmane Ba", phone: "+221 76 000 00 00" }
+  ];
+  const orders: Order[] = [
+    { id: "old-wedding", clientId: "c-old", garment: "Tenue de mariage", dueDate: "2025-11-01", orderedAt: "2025-10-01", price: 50000, deposit: 50000, status: "Livré" },
+    { id: "recent", clientId: "c-new", garment: "Boubou", dueDate: "2026-10-30", orderedAt: "2026-10-01", price: 25000, deposit: 10000, status: "En confection" }
+  ];
+
+  it("propose une réactivation après 180 jours sans commande", () => {
+    const results = getClientReminderSuggestions(clients, orders, "2026-10-27");
+    expect(results.some((item) => item.clientId === "c-old" && item.kind === "inactive")).toBe(true);
+    expect(results.some((item) => item.clientId === "c-new")).toBe(false);
+  });
+
+  it("rappelle une ancienne commande liée à une occasion", () => {
+    const results = getClientReminderSuggestions(clients, orders, "2026-10-27");
+    const occasion = results.find((item) => item.clientId === "c-old" && item.kind === "occasion");
+    expect(occasion?.detail).toContain("tenue de mariage");
+    expect(occasion?.suggestedMessage).toContain("Mariama Diallo");
+  });
+
+  it("ne crée pas de rappel pour une date future ou une commande sans date", () => {
+    const results = getClientReminderSuggestions(clients, [
+      { ...orders[0], orderedAt: "2027-01-01" },
+      { ...orders[1], orderedAt: undefined }
+    ], "2026-10-27");
+    expect(results).toHaveLength(0);
   });
 });
