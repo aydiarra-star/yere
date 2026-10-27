@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
-import { balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
+import { areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
 import { usePersistentState } from "./usePersistentState";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", note: "" };
@@ -156,6 +156,7 @@ function App() {
       const data = parsed.data;
       if (!isClientListValid(data.clients)
         || !isOrderListValid(data.orders)
+        || !areClientOrderRelationsValid(data.clients, data.orders)
         || !isAtelierProfileValid(data.atelier)
         || !isBooleanValue(data.onboardingComplete)
         || !isNullableTimestamp(data.onboardingStartedAt)) {
