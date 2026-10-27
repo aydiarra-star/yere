@@ -116,6 +116,15 @@ export function isOrderListValid(value: unknown): value is Order[] {
   );
 }
 
+/** Reject duplicate record identifiers and orders pointing to missing clients during restore. */
+export function areClientOrderRelationsValid(clients: Client[], orders: Order[]): boolean {
+  const clientIds = new Set(clients.map((client) => client.id));
+  const orderIds = new Set(orders.map((order) => order.id));
+  return clientIds.size === clients.length
+    && orderIds.size === orders.length
+    && orders.every((order) => clientIds.has(order.clientId));
+}
+
 export const orderStatuses: OrderStatus[] = [
   "À préparer",
   "En confection",
