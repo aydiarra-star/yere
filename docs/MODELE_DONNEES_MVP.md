@@ -67,6 +67,34 @@
 - `id`, `atelier_id`, `stock_item_id`, `movement_type` (entrée, sortie, perte, correction), `quantity`, `occurred_at`, `reason`, `recorded_by`.
 - Le stock courant est dérivé des mouvements ou maintenu avec une stratégie de cohérence explicitement testée.
 
+
+### Préférences de contact client
+- `id`, `atelier_id`, `client_id`, `preferred_channel` facultatif, `contact_status`, `do_not_contact`, `updated_by`, `updated_at`.
+- Valeurs de canal limitées aux canaux effectivement pris en charge ; aucune valeur ne doit laisser croire qu'un envoi est possible s'il ne l'est pas.
+- Le refus de contact bloque les suggestions marketing et toute future action d'envoi.
+- L'appartenance atelier de la préférence doit correspondre à celle du client, vérifiée par contrainte et contrôle d'accès.
+
+### Campagne et calendrier d'événements
+- `id`, `atelier_id`, `name`, `occasion_type`, `event_date`, `preparation_starts_at`, `preparation_ends_at`, `timezone`, `status`, `created_by`, `created_at`, `updated_at`.
+- Les dates d'événements religieux ou variables sont confirmées ou modifiables par l'atelier ; pas de dates annuelles codées en dur.
+- Le délai de préparation doit pouvoir être adapté au type de vêtement et au délai réel de l'atelier.
+
+### Suggestion de relance
+- `id`, `atelier_id`, `client_id`, `campaign_id` facultatif, `source_order_id` facultatif, `rule_key`, `created_at`, `scheduled_for` facultatif, `status`, `dismissed_at` facultatif, `handled_at` facultatif.
+- Statuts initiaux proposés : proposée, reportée, ignorée, traitée.
+- Prévoir une clé de déduplication métier (atelier, client, campagne/règle et période) afin de ne pas afficher indéfiniment la même suggestion.
+- Une suggestion ne prouve ni qu'un client a été contacté ni qu'une vente a été réalisée.
+
+### Tentative de contact
+- `id`, `atelier_id`, `client_id`, `campaign_id` facultatif, `reminder_suggestion_id` facultatif, `channel`, `contacted_at`, `message_snapshot` facultatif, `outcome`, `recorded_by`, `created_at`.
+- La création de cet enregistrement signifie qu'un contact a été déclaré comme réellement effectué ; la simple copie d'un texte ne doit pas le créer automatiquement.
+- Résultats proposés : sans réponse, réponse reçue, devis demandé, commande liée, pas intéressé, refus de contact.
+
+### Attribution commerciale
+- Relation facultative entre une commande et une campagne ou tentative de contact, avec `attribution_rule`, `linked_at` et l'auteur du lien.
+- Les tableaux de bord distinguent suggestions, contacts réels, devis et commandes ; le revenu attribué suit une règle visible et ne constitue pas une preuve de causalité.
+
+
 ## Contraintes et validations
 - `quantity > 0`; prix, paiement et dépense doivent être des entiers valides dans la devise retenue.
 - Une échéance, si fournie, doit être une date valide.
