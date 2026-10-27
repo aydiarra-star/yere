@@ -8,7 +8,7 @@ const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder:
 type View = "overview" | "clients" | "orders" | "cash" | "account" | "marketplace" | "reminders";
 type AtelierProfile = { name: string; phone: string; city: string };
 const emptyAtelier: AtelierProfile = { name: "", phone: "", city: "" };
-type IconName = "home" | "users" | "package" | "shopping-bag" | "wallet" | "user-round";
+type IconName = "home" | "users" | "package" | "shopping-bag" | "wallet" | "user-round" | "refresh-cw";
 
 function AppIcon({ name, size = 22 }: { name: IconName; size?: number }) {
   const common = { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
@@ -19,6 +19,7 @@ function AppIcon({ name, size = 22 }: { name: IconName; size?: number }) {
     {name === "shopping-bag" && <><path d="M5 8h14l1 13H4L5 8Z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></>}
     {name === "wallet" && <><rect x="3" y="5" width="18" height="15" rx="2" /><path d="M3 9h18M16 14h.01M7 5V3h11" /></>}
     {name === "user-round" && <><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a8 8 0 0 1 16 0v1Z" /></>}
+    {name === "refresh-cw" && <><path d="M20 7v5h-5M4 17v-5h5" /><path d="M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3" /></>}
   </svg>;
 }
 
@@ -236,7 +237,7 @@ function App() {
     { id: "marketplace", label: "Marketplace", icon: "shopping-bag" },
     { id: "cash", label: "Caisse", icon: "wallet" },
     { id: "account", label: "Compte", icon: "user-round" },
-    { id: "reminders", label: "Relances clients", icon: "↻" }
+    { id: "reminders", label: "Relances clients", icon: "refresh-cw" }
   ];
   const mobileNavItems = navItems.filter((item) => item.id !== "reminders");
 
