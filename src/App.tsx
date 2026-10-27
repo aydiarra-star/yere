@@ -116,7 +116,7 @@ function App() {
         <div className="atelier-switch"><span className="atelier-avatar">A</span><span><b>Atelier Démo</b><small>Compte de démonstration</small></span><span className="chevron">⌄</span></div>
         <p className="nav-caption">ESPACE ATELIER</p>
         <nav aria-label="Navigation principale">
-          {navItems.map((item) => <button key={item.id} className={view === item.id ? "nav-item active" : "nav-item"} onClick={() => setView(item.id)}><span className="nav-icon">{item.icon}</span>{item.label}{item.id === "clients" && <span className="nav-count">{clients.length}</span>}</button>)}
+          {navItems.map((item) => <button key={item.id} className={view === item.id ? "nav-item active" : "nav-item"} onClick={() => setView(item.id)}><span className="nav-icon">{item.icon}</span>{item.label}{item.id === "clients" && <span className="nav-count">{clients.length}</span>}{item.id === "reminders" && reminderSuggestions.length > 0 && <span className="nav-count">{reminderSuggestions.length}</span>}</button>)}
         </nav>
         <div className="sidebar-bottom"><div className="help-card"><span className="help-icon">✳</span><b>Un atelier mieux organisé.</b><p>Vos clients, leurs mesures et vos commandes au même endroit.</p></div><div className="profile"><span className="profile-avatar">AD</span><span><b>Atelier Démo</b><small>Mode aperçu</small></span><span className="dots">···</span></div></div>
       </aside>
