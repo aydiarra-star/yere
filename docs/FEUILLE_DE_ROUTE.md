@@ -28,6 +28,21 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 
 **Critère de sortie :** projet reproductible, testable, documenté, sans choix techniques inventés. Le lot 0 n'est pas encore terminé.
 
+
+## Lot 0 bis — Onboarding et activation initiale
+
+- [x] Ajouter un parcours de première ouverture en six écrans avec valeur produit, suivi des commandes, aperçu financier et inspirations clairement annoncées comme à venir.
+- [x] Ajouter la création locale du profil atelier et l'accès direct au formulaire du premier client.
+- [x] Distinguer l'entrée vierge de l'exploration de la démonstration avec données fictives.
+- [x] Ajouter une mesure locale du délai jusqu'à la première fiche client, avec le seuil d'analyse de trois minutes.
+- [x] Inscrire le parcours, les critères d'acceptation et la règle de mesure au cahier des charges maître.
+- [ ] Vérifier par CI les tests et la compilation du parcours.
+- [ ] Tester l'onboarding sur téléphone réel, clavier, reprise et rafraîchissement.
+- [ ] Vérifier les transitions client → mensurations → commande ; le parcours de création des mensurations et commandes reste à finaliser dans l'interface.
+- [ ] Faire des tests d'utilisabilité et suivre le taux de première fiche créée en moins de trois minutes.
+
+**Limite actuelle :** le profil d'atelier, l'état de l'onboarding, les clients et les commandes restent dans le stockage local du navigateur. Ce n'est pas une inscription serveur.
+
 ## Lot 1 — Première tranche verticale : atelier, clients, mensurations
 
 - [ ] Authentification.
