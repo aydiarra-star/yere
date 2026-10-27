@@ -161,6 +161,7 @@ Référence : [Banque d'idées stratégiques](./BANQUE_IDEES_STRATEGIQUES.md).
 ## Backend — contrat de sécurité et critères bloquants
 
 - [x] Ajouter `docs/CONTRAT_SECURITE_BACKEND.md` : modèle d'autorisation par atelier, tests d'isolation, validation serveur, secrets, paiements idempotents, sauvegarde/restauration et critères de pilote.
+- [x] Ajouter `docs/CHOIX_FOURNISSEUR_BACKEND.md` : comparer les voies techniques sans créer de service ni réutiliser un projet existant.
 - [ ] Confirmer le fournisseur et créer un environnement dédié à YÉRÉ ; ne pas réutiliser Dekk Food.
 - [ ] Implémenter authentification et isolation multi-atelier, puis faire réussir les tests d'accès inter-ateliers.
 - [ ] Exécuter et documenter un exercice réel de restauration avant toute donnée client réelle.
