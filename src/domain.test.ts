@@ -15,6 +15,15 @@ describe("validation des données restaurées", () => {
     expect(isClientListValid([])).toBe(true);
   });
 
+  it("accepte les anciennes mensurations à six mesures sans invalider les fiches déjà enregistrées", () => {
+    const legacyClient = { ...client, measurement: { bust: "92", waist: "74", hips: "98", shoulder: "40", sleeve: "60", length: "140", note: "" } };
+    expect(isClientListValid([legacyClient])).toBe(true);
+  });
+
+  it("refuse les nouvelles mesures si leur valeur n'est pas une chaîne", () => {
+    expect(isClientListValid([{ ...client, measurement: { ...client.measurement, arm: 42 } }])).toBe(false);
+  });
+
   it("refuse les clients dont les champs indispensables sont absents ou mal typés", () => {
     expect(isClientListValid({})).toBe(false);
     expect(isClientListValid([{ ...client, measurement: null }])).toBe(false);
@@ -168,6 +177,12 @@ describe("historique des mensurations", () => {
 
     expect(updated.measurementHistory).toHaveLength(1);
     expect(updated.measurementHistory?.[0].measurement.waist).toBe("74");
+  });
+
+  it("valide les quatre nouvelles mesures optionnelles", () => {
+    expect(isMeasurementValid({ ...blankMeasurement, arm: "32", neck: "38", thigh: "56", legLength: "102" })).toBe(true);
+    expect(isMeasurementValid({ ...blankMeasurement, arm: "-1" })).toBe(false);
+    expect(isMeasurementValid({ ...blankMeasurement, legLength: "abc" })).toBe(false);
   });
 
   it("refuse les mensurations négatives ou non numériques", () => {
