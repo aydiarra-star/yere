@@ -93,3 +93,41 @@ Si Supabase est retenu, activer RLS sur chaque table exposée. Les politiques UP
 - Politique de remboursement et de paiement excédentaire.
 - Durée de conservation, export et suppression des données.
 - Entités à inclure dans la première migration selon la stack choisie.
+
+
+## Scénarios d'acceptation à rendre automatisables
+
+Ces scénarios sont les critères minimaux pour accepter l'implémentation serveur. Ils ne sont pas encore des tests exécutés contre une base YÉRÉ.
+
+### Isolation des ateliers
+- Un utilisateur authentifié membre de l'atelier A peut lire ses propres clients.
+- Un utilisateur de l'atelier B ne peut pas lire un client A même s'il connaît son UUID.
+- L'utilisateur B ne peut pas modifier un client A ni changer son `atelier_id` pour s'approprier une ligne.
+- Une commande de B ne peut pas référencer un client de A.
+- Les mensurations, paiements, dépenses et mouvements de stock sont également isolés.
+- Les requêtes non authentifiées ne peuvent pas lire ni écrire des données privées.
+
+### Historique des mensurations et commandes
+- Une seconde prise de mensurations crée une nouvelle version et laisse l'ancienne consultable.
+- Les valeurs négatives, non finies et les unités non reconnues sont rejetées.
+- Les quantités nulles, négatives ou non entières sont rejetées.
+- Les transitions de statut invalides sont refusées ; les transitions valides ont un événement historisé.
+- L'archivage d'un client ne détruit pas son historique de commandes et de paiements.
+
+### Intégrité financière
+- Un acompte et un paiement complémentaire donnent un solde exact, calculé à partir des événements valides.
+- Les montants sont des entiers XOF ; aucune arithmétique financière ne dépend de nombres flottants.
+- Un paiement nul ou négatif est rejeté.
+- La politique sur le paiement supérieur au solde est explicite et testée.
+- Une correction financière crée une contrepassation liée à l'opération initiale.
+- Des paiements concurrents ne peuvent pas dépasser le solde autorisé à cause d'une course entre vérification et écriture.
+
+### Exploitation et récupération
+- Les migrations s'appliquent à une base de test vierge de façon reproductible.
+- Un export réalisé par un propriétaire ne contient que les données de son atelier.
+- Une sauvegarde est restaurée dans un environnement de test et le nombre de lignes et les totaux financiers sont rapprochés.
+- Une erreur réseau ne doit jamais afficher « enregistré » si le serveur n'a pas confirmé l'écriture.
+
+## Garde-fou de livraison
+
+La présence de cette spécification n'est pas la preuve d'une base de données, d'une authentification, de politiques RLS ou de tests multi-atelier déjà déployés. Ne pas utiliser de données réelles avant l'intégration du backend choisi et la réussite des scénarios de sécurité.
