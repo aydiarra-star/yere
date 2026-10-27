@@ -167,3 +167,12 @@ Référence : [Banque d'idées stratégiques](./BANQUE_IDEES_STRATEGIQUES.md).
 - [ ] Confirmer le fournisseur et créer un environnement dédié à YÉRÉ ; ne pas réutiliser Dekk Food.
 - [ ] Implémenter authentification et isolation multi-atelier, puis faire réussir les tests d'accès inter-ateliers.
 - [ ] Exécuter et documenter un exercice réel de restauration avant toute donnée client réelle.
+
+## Commandes — validation métier avant persistance locale
+
+- [x] Centraliser la validation de création de commande dans `src/domain.ts`.
+- [x] Refuser un client inconnu, un vêtement vide, une date calendaire invalide, un prix non entier/non sûr/non positif et un acompte supérieur au prix.
+- [x] Ajouter des tests unitaires pour les montants et dates incohérents dans `src/domain.test.ts`.
+- [x] Corriger le motif de date après l'échec du test CI initial.
+- [ ] Confirmer un passage complet de la CI sur la dernière révision de la PR avant de considérer ce changement vérifié.
+- [ ] Ajouter ultérieurement une validation équivalente côté serveur : la validation du navigateur n'est pas une frontière de sécurité.
