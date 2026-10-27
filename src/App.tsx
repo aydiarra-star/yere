@@ -324,7 +324,7 @@ function App() {
           </section>}
 
           {view === "account" && <section className="content-card account-page">
-            <div className="section-heading"><div><h2>Profil de l'atelier</h2><p>Informations enregistrées localement sur cet appareil.</p></div><span className="demo-pill"><i /> Prototype local</span></div>
+            <div className="section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div></div>
             <form className="account-form" onSubmit={(event) => { event.preventDefault(); setNotice("Profil d'atelier mis à jour sur cet appareil uniquement."); }}>
               <label>Nom de l'atelier<input required value={atelier.name} onChange={(event) => setAtelier((current) => ({ ...current, name: event.target.value }))} /></label>
               <label>Téléphone<input value={atelier.phone} onChange={(event) => setAtelier((current) => ({ ...current, phone: event.target.value }))} /></label>
@@ -341,7 +341,7 @@ function App() {
               <p className="privacy-note">Attention : le fichier exporté contient des informations personnelles. Gardez-le hors d’accès public. Avant restauration, exportez les données actuelles si vous souhaitez les conserver.</p>
             </section>
             <div className="account-secondary"><div><b>Relances clients</b><p>Consultez les suggestions de relance manuelle, sans envoi automatique.</p></div><button className="secondary-button" onClick={() => setView("reminders")}>Ouvrir les relances →</button></div>
-            <p className="privacy-note">Aucun compte distant, synchronisation ni sauvegarde serveur n'est actif dans cette version.</p>
+            <p className="privacy-note">Cet espace est enregistré sur cet appareil. La création de comptes avec e-mail et mot de passe, la connexion sécurisée et la synchronisation entre appareils nécessitent encore le branchement du serveur d’authentification.</p>
           </section>}
           {view === "reminders" && <section className="reminders-page">
             <div className="reminders-intro content-card"><div className="reminders-intro-icon">↻</div><div><h2>Votre carnet de relance</h2><p>YÉRÉ repère les clients à recontacter à partir des commandes datées et propose un message que vous pouvez relire et copier. Rien n'est envoyé automatiquement.</p></div></div>
@@ -371,7 +371,7 @@ function Onboarding({ atelier, onAtelierChange, onFinish, onExploreDemo }: {
     { eyebrow: "SUIVI DE PRODUCTION", title: "Gardez chaque commande sous contrôle.", subtitle: "De la coupe à la livraison.", body: "Suivez les étapes de confection : coupe, couture, essayage et livraison.", detail: "Le prototype illustre le suivi. Les alertes automatiques de retard restent à développer." },
     { eyebrow: "GESTION DE L'ARGENT", title: "Comprenez ce que votre atelier gagne réellement.", subtitle: "Des chiffres plus clairs.", body: "Préparez le suivi des acomptes, paiements, dépenses et recettes.", detail: "Dans cette version de démonstration, les indicateurs financiers restent limités aux commandes et soldes simulés." },
     { eyebrow: "INSPIRATIONS COUTURE", title: "Retrouvez les modèles au bon moment.", subtitle: "Un outil de travail, pas un réseau social.", body: "À terme, classez les photos envoyées par les clients, les modèles enregistrés et les créations réalisées.", detail: "Le catalogue d'inspirations est prévu dans la feuille de route ; il n'est pas encore disponible." },
-    { eyebrow: "VOTRE ATELIER", title: "Créons votre premier atelier.", subtitle: "Quelques informations pour commencer.", body: "Renseignez le nom de votre atelier, un téléphone et une ville. Vous pourrez ensuite créer votre premier client.", detail: "Prototype : ces informations restent sur cet appareil. Aucun compte ni sauvegarde serveur n'est créé." }
+    { eyebrow: "VOTRE ATELIER", title: "Créons votre premier atelier.", subtitle: "Quelques informations pour commencer.", body: "Renseignez le nom de votre atelier, un téléphone et une ville. Vous pourrez ensuite créer votre premier client.", detail: "Créez votre espace atelier sur cet appareil. La connexion sécurisée et la synchronisation en ligne seront activées avec le serveur." }
   ];
   const current = steps[step];
   const isSetup = step === steps.length - 1;
