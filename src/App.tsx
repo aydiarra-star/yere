@@ -1,22 +1,8 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
-import { balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
+import { areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
 import { usePersistentState } from "./usePersistentState";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", note: "" };
-
-const initialClients: Client[] = [
-  { id: "c-1", name: "Aïssatou Ndiaye", phone: "+221 77 123 45 67", createdAt: "2026-10-22", measurement: { bust: "92", waist: "74", hips: "100", shoulder: "38", sleeve: "58", length: "145", note: "Préférence : coupe ample" } },
-  { id: "c-2", name: "Mamadou Ba", phone: "+221 76 234 56 78", createdAt: "2026-10-23", measurement: { bust: "98", waist: "86", hips: "102", shoulder: "44", sleeve: "62", length: "150", note: "Boubou traditionnel" } },
-  { id: "c-3", name: "Fatou Sarr", phone: "+221 70 345 67 89", createdAt: "2026-10-25", measurement: { bust: "88", waist: "70", hips: "96", shoulder: "36", sleeve: "56", length: "138", note: "" } },
-  { id: "c-4", name: "Mariama Diallo", phone: "+221 77 456 78 90", createdAt: "2025-10-01", measurement: { bust: "90", waist: "72", hips: "98", shoulder: "37", sleeve: "57", length: "142", note: "Tenue de cérémonie" } }
-];
-
-const initialOrders: Order[] = [
-  { id: "YR-1024", clientId: "c-1", garment: "Ensemble deux pièces", dueDate: "2026-10-29", orderedAt: "2026-10-20", price: 35000, deposit: 20000, status: "En confection" },
-  { id: "YR-1025", clientId: "c-2", garment: "Boubou brodé", dueDate: "2026-10-30", orderedAt: "2026-10-22", price: 45000, deposit: 15000, status: "À préparer" },
-  { id: "YR-1026", clientId: "c-3", garment: "Robe sur mesure", dueDate: "2026-10-27", orderedAt: "2026-10-24", price: 25000, deposit: 25000, status: "Prêt" },
-  { id: "YR-1027", clientId: "c-4", garment: "Tenue de mariage", dueDate: "2025-11-01", orderedAt: "2025-10-01", price: 50000, deposit: 50000, status: "Livré" }
-];
 
 type View = "overview" | "clients" | "orders" | "cash" | "account" | "marketplace" | "reminders";
 type AtelierProfile = { name: string; phone: string; city: string };
@@ -107,10 +93,10 @@ function App() {
     setSelectedClient(client.id);
     const firstClientMessage = clients.length === 0 && onboardingStartedAt !== null
       ? (Date.now() - onboardingStartedAt <= 180000
-          ? " Première action réussie en moins de 3 minutes : objectif d'adoption atteint dans cette démonstration."
-          : " Le premier client a été créé après 3 minutes : ce parcours doit être examiné pour simplifier l'adoption.")
+          ? " Première fiche créée en moins de 3 minutes : parcours de démarrage réussi."
+          : " Le premier client a été créé après 3 minutes : le parcours pourra être simplifié.")
       : "";
-    setNotice(`Fiche de ${name} créée dans la démonstration.${firstClientMessage}`);
+    setNotice(`Fiche de ${name} créée sur cet appareil.${firstClientMessage}`);
   }
 
   function addOrder(event: FormEvent<HTMLFormElement>) {
@@ -136,7 +122,7 @@ function App() {
     setNewOrderPrice("");
     setNewOrderDeposit("0");
     setShowOrderForm(false);
-    setNotice("Première commande créée dans le stockage local de la démonstration. Aucune sauvegarde serveur n'est active.");
+    setNotice("Commande créée sur cet appareil. Aucune sauvegarde serveur n’est active.");
   }
 
   function exportLocalBackup() {
@@ -170,6 +156,7 @@ function App() {
       const data = parsed.data;
       if (!isClientListValid(data.clients)
         || !isOrderListValid(data.orders)
+        || !areClientOrderRelationsValid(data.clients, data.orders)
         || !isAtelierProfileValid(data.atelier)
         || !isBooleanValue(data.onboardingComplete)
         || !isNullableTimestamp(data.onboardingStartedAt)) {
@@ -236,14 +223,7 @@ function App() {
         setOnboardingComplete(true);
         setView("clients");
         setShowForm(true);
-        setNotice("Atelier configuré dans cette démonstration locale. Créez votre premier client pour continuer.");
-      }}
-      onExploreDemo={() => {
-        setClients(initialClients);
-        setOrders(initialOrders);
-        setOnboardingComplete(true);
-        setView("overview");
-        setNotice("Données fictives chargées pour explorer la démonstration. N'utilisez pas de vraies données clients.");
+        setNotice("Espace atelier configuré sur cet appareil. Créez votre premier client pour continuer.");
       }}
     />;
   }
@@ -296,7 +276,7 @@ function App() {
             <div className="client-list">{visibleClients.map((client, index) => <button key={client.id} className={selectedClient === client.id ? "client-row selected" : "client-row"} onClick={() => setSelectedClient(selectedClient === client.id ? null : client.id)}><span className={`client-avatar avatar-${index % 4}`}>{client.name.split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</span><span className="client-main"><b>{client.name}</b><small>{client.phone || "Pas de téléphone renseigné"}</small></span><span className="client-measurements"><b>{Object.values(client.measurement).filter(Boolean).length - (client.measurement.note ? 1 : 0)}/6</b><small>mesures saisies</small></span><span className="row-chevron">›</span></button>)}
               {visibleClients.length === 0 && <div className="empty-state"><span>⌕</span><b>Aucun client trouvé</b><p>Essayez un autre nom ou numéro.</p></div>}
             </div>
-            {selected && <div className="measurement-panel"><div className="section-heading"><div><h2>Mensurations de {selected.name}</h2><p>Dernière fiche de mesures enregistrée en démonstration</p></div><span className="demo-pill">Exemple</span></div><form className="measurement-form" onSubmit={saveMeasurements}><div className="measurement-grid">{[["Tour de poitrine","bust"],["Tour de taille","waist"],["Tour de hanches","hips"],["Épaules","shoulder"],["Longueur de manche","sleeve"],["Longueur du vêtement","length"]].map(([label, key]) => <label className="measure-field" key={key}><span>{label} (cm)</span><input type="number" min="0" step="any" inputMode="decimal" aria-label={label} value={draftMeasurement[key as keyof Measurement] as string} onChange={(event) => updateMeasurement(key as keyof Measurement, event.target.value)} placeholder="—" /></label>)}</div><label className="measure-notes-field">Notes pour la prochaine commande<textarea value={draftMeasurement.note} onChange={(event) => updateMeasurement("note", event.target.value)} placeholder="Préférences, coupe, tissu…" rows={2} /></label><div className="form-actions"><button type="submit" className="primary-button">Enregistrer les mensurations</button></div></form><section className="measurement-history" aria-label="Historique des mensurations"><h3>Historique des prises de mesures</h3>{(selected.measurementHistory ?? []).length === 0 ? <p className="history-empty">Aucune prise de mesures enregistrée. Complétez les champs puis enregistrez une première version.</p> : <ol>{[...(selected.measurementHistory ?? [])].reverse().map((version) => <li key={version.id}><b>{new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(version.measuredAt + "T12:00:00"))}</b><span>{[version.measurement.bust && `Poitrine ${version.measurement.bust}`, version.measurement.waist && `Taille ${version.measurement.waist}`, version.measurement.hips && `Hanches ${version.measurement.hips}`].filter(Boolean).join(" · ") || "Notes uniquement"}</span></li>)}</ol>}</section><p className="privacy-note">Prototype uniquement : l'historique est conservé dans le stockage local de ce navigateur, sans compte ni sauvegarde serveur. N'utilise pas de données clients réelles.</p></div>}
+            {selected && <div className="measurement-panel"><div className="section-heading"><div><h2>Mensurations de {selected.name}</h2><p>Dernière fiche de mesures enregistrée</p></div></div><form className="measurement-form" onSubmit={saveMeasurements}><div className="measurement-grid">{[["Tour de poitrine","bust"],["Tour de taille","waist"],["Tour de hanches","hips"],["Épaules","shoulder"],["Longueur de manche","sleeve"],["Longueur du vêtement","length"]].map(([label, key]) => <label className="measure-field" key={key}><span>{label} (cm)</span><input type="number" min="0" step="any" inputMode="decimal" aria-label={label} value={draftMeasurement[key as keyof Measurement] as string} onChange={(event) => updateMeasurement(key as keyof Measurement, event.target.value)} placeholder="—" /></label>)}</div><label className="measure-notes-field">Notes pour la prochaine commande<textarea value={draftMeasurement.note} onChange={(event) => updateMeasurement("note", event.target.value)} placeholder="Préférences, coupe, tissu…" rows={2} /></label><div className="form-actions"><button type="submit" className="primary-button">Enregistrer les mensurations</button></div></form><section className="measurement-history" aria-label="Historique des mensurations"><h3>Historique des prises de mesures</h3>{(selected.measurementHistory ?? []).length === 0 ? <p className="history-empty">Aucune prise de mesures enregistrée. Complétez les champs puis enregistrez une première version.</p> : <ol>{[...(selected.measurementHistory ?? [])].reverse().map((version) => <li key={version.id}><b>{new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(version.measuredAt + "T12:00:00"))}</b><span>{[version.measurement.bust && `Poitrine ${version.measurement.bust}`, version.measurement.waist && `Taille ${version.measurement.waist}`, version.measurement.hips && `Hanches ${version.measurement.hips}`].filter(Boolean).join(" · ") || "Notes uniquement"}</span></li>)}</ol>}</section><p className="privacy-note">Les mensurations sont conservées uniquement dans ce navigateur, sans compte ni sauvegarde serveur. N’utilisez pas encore de données clients réelles.</p></div>}
           </section>}
 
           {view === "orders" && <section className="content-card"><div className="section-heading"><div><h2>Commandes de l’atelier</h2><p>Modifiez le statut pour tester le suivi de production.</p></div><button className="primary-button" onClick={() => { setShowOrderForm((value) => !value); setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); }}>＋ Nouvelle commande</button></div>
@@ -363,19 +343,18 @@ function App() {
   );
 }
 
-function Onboarding({ atelier, onAtelierChange, onFinish, onExploreDemo }: {
+function Onboarding({ atelier, onAtelierChange, onFinish }: {
   atelier: AtelierProfile;
   onAtelierChange: (value: AtelierProfile) => void;
   onFinish: () => void;
-  onExploreDemo: () => void;
 }) {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<AtelierProfile>(atelier);
   const steps = [
     { eyebrow: "BIENVENUE", title: "YÉRÉ Atelier", subtitle: "La couture, mieux organisée.", body: "Retrouvez vos clients, leurs mensurations, vos commandes et vos paiements en un seul endroit.", detail: "Un outil de travail pensé pour le quotidien de votre atelier." },
     { eyebrow: "GAGNEZ DU TEMPS", title: "Fini les cahiers perdus et les recherches interminables.", subtitle: "Tout retrouver en quelques secondes.", body: "Mensurations, anciennes commandes, acomptes et dates de livraison : les informations utiles sont réunies.", detail: "Moins de recherches, moins d'oublis et moins d'erreurs de saisie." },
-    { eyebrow: "SUIVI DE PRODUCTION", title: "Gardez chaque commande sous contrôle.", subtitle: "De la coupe à la livraison.", body: "Suivez les étapes de confection : coupe, couture, essayage et livraison.", detail: "Le prototype illustre le suivi. Les alertes automatiques de retard restent à développer." },
-    { eyebrow: "GESTION DE L'ARGENT", title: "Comprenez ce que votre atelier gagne réellement.", subtitle: "Des chiffres plus clairs.", body: "Préparez le suivi des acomptes, paiements, dépenses et recettes.", detail: "Dans cette version de démonstration, les indicateurs financiers restent limités aux commandes et soldes simulés." },
+    { eyebrow: "SUIVI DE PRODUCTION", title: "Gardez chaque commande sous contrôle.", subtitle: "De la coupe à la livraison.", body: "Suivez les étapes de confection : coupe, couture, essayage et livraison.", detail: "Le suivi des commandes commence ici ; les alertes automatiques de retard restent à développer." },
+    { eyebrow: "GESTION DE L'ARGENT", title: "Comprenez ce que votre atelier gagne réellement.", subtitle: "Des chiffres plus clairs.", body: "Préparez le suivi des acomptes, paiements, dépenses et recettes.", detail: "Le suivi actuel couvre les prix, acomptes et soldes des commandes ; les dépenses et recettes seront ajoutées ensuite." },
     { eyebrow: "INSPIRATIONS COUTURE", title: "Retrouvez les modèles au bon moment.", subtitle: "Un outil de travail, pas un réseau social.", body: "À terme, classez les photos envoyées par les clients, les modèles enregistrés et les créations réalisées.", detail: "Le catalogue d'inspirations est prévu dans la feuille de route ; il n'est pas encore disponible." },
     { eyebrow: "VOTRE ATELIER", title: "Créons votre premier atelier.", subtitle: "Quelques informations pour commencer.", body: "Renseignez le nom de votre atelier, un téléphone et une ville. Vous pourrez ensuite créer votre premier client.", detail: "Créez votre espace atelier sur cet appareil. La connexion sécurisée et la synchronisation en ligne seront activées avec le serveur." }
   ];
@@ -407,7 +386,6 @@ function Onboarding({ atelier, onAtelierChange, onFinish, onExploreDemo }: {
           {step > 0 && <button className="secondary-button" onClick={() => setStep((value) => value - 1)}>Précédent</button>}
           {!isSetup && <button className="primary-button onboarding-primary" onClick={() => setStep((value) => Math.min(value + 1, steps.length - 1))}>{step === 0 ? "Commencer" : "Continuer"} <span>→</span></button>}
         </div>
-        {step === 0 && <button className="onboarding-demo-link" onClick={onExploreDemo}>Explorer la démonstration avec des exemples</button>}
         <p className="onboarding-disclaimer">Espace local sur cet appareil · la création d’un compte sécurisé en ligne nécessite encore l’activation du serveur.</p>
       </section>
       <aside className="onboarding-visual" aria-label="Illustration conceptuelle d'un atelier de couture organisé">
