@@ -5,6 +5,11 @@ export type Measurement = {
   shoulder: string;
   sleeve: string;
   length: string;
+  /** Optional additions for backward compatibility with older saved profiles. */
+  arm?: string;
+  neck?: string;
+  thigh?: string;
+  legLength?: string;
   note: string;
 };
 
@@ -45,7 +50,7 @@ export function saveMeasurementVersion(
 }
 
 export function isMeasurementValid(measurement: Measurement): boolean {
-  const numericFields = [measurement.bust, measurement.waist, measurement.hips, measurement.shoulder, measurement.sleeve, measurement.length];
+  const numericFields = [measurement.bust, measurement.waist, measurement.hips, measurement.shoulder, measurement.sleeve, measurement.length, measurement.arm ?? "", measurement.neck ?? "", measurement.thigh ?? "", measurement.legLength ?? ""];
   return numericFields.every((value) => {
     if (value.trim() === "") return true;
     const number = Number(value);
@@ -67,7 +72,9 @@ function isCalendarDate(value: unknown): value is string {
 function isMeasurementShape(value: unknown): value is Measurement {
   return isRecord(value)
     && ["bust", "waist", "hips", "shoulder", "sleeve", "length", "note"]
-      .every((key) => typeof value[key] === "string");
+      .every((key) => typeof value[key] === "string")
+    && ["arm", "neck", "thigh", "legLength"]
+      .every((key) => value[key] === undefined || typeof value[key] === "string");
 }
 
 export function isClientListValid(value: unknown): value is Client[] {
