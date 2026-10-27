@@ -53,6 +53,41 @@ export function isMeasurementValid(measurement: Measurement): boolean {
   });
 }
 
+/** Runtime guards for data restored from browser storage (JSON is not type-safe). */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isCalendarDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T12:00:00Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+function isMeasurementShape(value: unknown): value is Measurement {
+  return isRecord(value)
+    && ["bust", "waist", "hips", "shoulder", "sleeve", "length", "note"]
+      .every((key) => typeof value[key] === "string");
+}
+
+export function isClientListValid(value: unknown): value is Client[] {
+  return Array.isArray(value) && value.every((item) => {
+    if (!isRecord(item)
+      || typeof item.id !== "string" || !item.id
+      || typeof item.name !== "string"
+      || typeof item.phone !== "string"
+      || !isCalendarDate(item.createdAt)
+      || !isMeasurementShape(item.measurement)) return false;
+    if (item.measurementHistory === undefined) return true;
+    return Array.isArray(item.measurementHistory) && item.measurementHistory.every((version) =>
+      isRecord(version)
+      && typeof version.id === "string"
+      && isCalendarDate(version.measuredAt)
+      && isMeasurementShape(version.measurement)
+    );
+  });
+}
+
 export type OrderStatus = "À préparer" | "En confection" | "Prêt" | "Livré";
 
 export type Order = {
@@ -66,6 +101,21 @@ export type Order = {
   status: OrderStatus;
 };
 
+export function isOrderListValid(value: unknown): value is Order[] {
+  return Array.isArray(value) && value.every((item) =>
+    isRecord(item)
+    && typeof item.id === "string" && item.id.length > 0
+    && typeof item.clientId === "string" && item.clientId.length > 0
+    && typeof item.garment === "string" && item.garment.trim().length > 0
+    && isCalendarDate(item.dueDate)
+    && (item.orderedAt === undefined || isCalendarDate(item.orderedAt))
+    && typeof item.price === "number" && Number.isSafeInteger(item.price) && item.price > 0
+    && typeof item.deposit === "number" && Number.isSafeInteger(item.deposit)
+    && item.deposit >= 0 && item.deposit <= item.price
+    && typeof item.status === "string" && ["À préparer", "En confection", "Prêt", "Livré"].some((status) => status === item.status)
+  );
+}
+
 export const orderStatuses: OrderStatus[] = [
   "À préparer",
   "En confection",
@@ -75,6 +125,19 @@ export const orderStatuses: OrderStatus[] = [
 
 export function balanceDue(order: Pick<Order, "price" | "deposit">): number {
   return Math.max(0, order.price - order.deposit);
+}
+
+/** Validate a new order before it enters the prototype's local state. */
+export function isOrderInputValid(
+  input: { clientId: string; garment: string; dueDate: string; price: number; deposit: number },
+  clientIds: string[]
+): boolean {
+  if (!input.clientId || !clientIds.includes(input.clientId) || !input.garment.trim()) return false;
+  if (!Number.isSafeInteger(input.price) || input.price <= 0) return false;
+  if (!Number.isSafeInteger(input.deposit) || input.deposit < 0 || input.deposit > input.price) return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dueDate)) return false;
+  const dueDate = new Date(`${input.dueDate}T12:00:00Z`);
+  return Number.isFinite(dueDate.getTime()) && dueDate.toISOString().slice(0, 10) === input.dueDate;
 }
 
 export function formatXof(amount: number): string {
@@ -185,10 +248,7 @@ export type DailyTask = {
   action: "orders" | "cash";
 };
 
-/**
- * Returns explainable dashboard tasks using only saved prototype data.
- * Dates must be ISO calendar dates (YYYY-MM-DD); invalid dates are ignored.
- */
+/** Build explainable dashboard tasks from saved prototype data only. */
 export function getDailyTasks(clients: Client[], orders: Order[], today: string): DailyTask[] {
   const parseDate = (value: string): number | null => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -198,9 +258,9 @@ export function getDailyTasks(clients: Client[], orders: Order[], today: string)
       : null;
   };
   if (parseDate(today) === null) return [];
-
   const clientName = (clientId: string) =>
     clients.find((client) => client.id === clientId)?.name ?? "Client non retrouvé";
+
   const overdue = orders
     .filter((order) => order.status !== "Livré" && parseDate(order.dueDate) !== null && order.dueDate < today)
     .map((order): DailyTask => ({
