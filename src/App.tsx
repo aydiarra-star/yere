@@ -18,7 +18,7 @@ const initialOrders: Order[] = [
   { id: "YR-1027", clientId: "c-4", garment: "Tenue de mariage", dueDate: "2025-11-01", orderedAt: "2025-10-01", price: 50000, deposit: 50000, status: "Livré" }
 ];
 
-type View = "overview" | "clients" | "orders" | "reminders";
+type View = "overview" | "clients" | "orders" | "cash" | "account" | "reminders";
 type AtelierProfile = { name: string; phone: string; city: string };
 const emptyAtelier: AtelierProfile = { name: "", phone: "", city: "" };
 
@@ -150,11 +150,14 @@ function App() {
   }
 
   const navItems: { id: View; label: string; icon: string }[] = [
-    { id: "overview", label: "Vue d'ensemble", icon: "⌂" },
-    { id: "clients", label: "Clients & mesures", icon: "♙" },
+    { id: "overview", label: "Accueil", icon: "⌂" },
+    { id: "clients", label: "Clients", icon: "♙" },
     { id: "orders", label: "Commandes", icon: "▤" },
+    { id: "cash", label: "Caisse", icon: "₣" },
+    { id: "account", label: "Compte", icon: "●" },
     { id: "reminders", label: "Relances clients", icon: "↻" }
   ];
+  const mobileNavItems = navItems.filter((item) => item.id !== "reminders");
 
   if (!onboardingComplete) {
     return <Onboarding
@@ -183,18 +186,18 @@ function App() {
           <span className="brand-mark">Y</span>
           <span><strong>YÉRÉ</strong><small>ATELIER</small></span>
         </a>
-        <div className="atelier-switch"><span className="atelier-avatar">A</span><span><b>Atelier Démo</b><small>Compte de démonstration</small></span><span className="chevron">⌄</span></div>
+        <div className="atelier-switch"><span className="atelier-avatar">A</span><span><b>{atelier.name || "Atelier Démo"}</b><small>{atelier.city || "Compte de démonstration"}</small></span><span className="chevron">⌄</span></div>
         <p className="nav-caption">ESPACE ATELIER</p>
         <nav aria-label="Navigation principale">
           {navItems.map((item) => <button key={item.id} className={view === item.id ? "nav-item active" : "nav-item"} onClick={() => setView(item.id)}><span className="nav-icon">{item.icon}</span>{item.label}{item.id === "clients" && <span className="nav-count">{clients.length}</span>}{item.id === "reminders" && reminderSuggestions.length > 0 && <span className="nav-count">{reminderSuggestions.length}</span>}</button>)}
         </nav>
-        <div className="sidebar-bottom"><div className="help-card"><span className="help-icon">✳</span><b>Un atelier mieux organisé.</b><p>Vos clients, leurs mesures et vos commandes au même endroit.</p></div><div className="profile"><span className="profile-avatar">AD</span><span><b>Atelier Démo</b><small>Mode aperçu</small></span><span className="dots">···</span></div></div>
+        <div className="sidebar-bottom"><div className="help-card"><span className="help-icon">✳</span><b>Un atelier mieux organisé.</b><p>Vos clients, leurs mesures et vos commandes au même endroit.</p></div><div className="profile"><span className="profile-avatar">AD</span><span><b>{atelier.name || "Atelier Démo"}</b><small>Mode aperçu</small></span><span className="dots">···</span></div></div>
       </aside>
 
       <main className="main-content">
         <header className="topbar"><div className="breadcrumb">YÉRÉ <span>/</span> Atelier <span>/</span> <b>{navItems.find((item) => item.id === view)?.label}</b></div><div className="topbar-right"><span className="demo-pill"><i /> Démonstration</span><span className="demo-pill" role="status" aria-live="polite"><i /> {isOnline ? "En ligne" : "Hors ligne"}</span><button className="avatar-button" aria-label="Profil de démonstration">AD</button></div></header>
         <div className="page-wrap">
-          <div className="welcome-row"><div><p className="eyebrow">MARDI 27 OCTOBRE 2026</p><h1>{view === "overview" ? "Votre atelier, en un coup d’œil." : view === "clients" ? "Vos clients & mensurations" : view === "orders" ? "Suivi des commandes" : "Faites revenir vos clients."}</h1><p className="page-subtitle">{view === "overview" ? "Gardez le fil de vos commandes et de votre activité." : view === "clients" ? "Retrouvez les fiches clients et leurs dernières mesures." : view === "orders" ? "Suivez chaque pièce, de la préparation à la livraison." : "Des occasions concrètes de reprendre contact, sans envoyer de message automatiquement."}</p></div><button className="primary-button" onClick={() => { setShowForm(true); setView("clients"); }}><span>＋</span> Nouveau client</button></div>
+          <div className="welcome-row"><div><p className="eyebrow">MARDI 27 OCTOBRE 2026</p><h1>{view === "overview" ? "Votre atelier, en un coup d’œil." : view === "clients" ? "Vos clients & mensurations" : view === "orders" ? "Suivi des commandes" : view === "cash" ? "La caisse de votre atelier" : view === "account" ? (atelier.name || "Votre compte atelier") : "Faites revenir vos clients."}</h1><p className="page-subtitle">{view === "overview" ? "Gardez le fil de vos commandes et de votre activité." : view === "clients" ? "Retrouvez les fiches clients et leurs dernières mesures." : view === "orders" ? "Suivez chaque pièce, de la préparation à la livraison." : view === "cash" ? "Aperçu indicatif des acomptes et soldes, pas encore un journal de caisse complet." : view === "account" ? "Les informations de cet atelier sur cet appareil." : "Des occasions concrètes de reprendre contact, sans envoyer de message automatiquement."}</p></div><button className="primary-button" onClick={() => { setShowForm(true); setView("clients"); }}><span>＋</span> Nouveau client</button></div>
           {notice && <div className="notice"><span>ⓘ</span><p>{notice}</p><button aria-label="Fermer le message" onClick={() => setNotice("")}>×</button></div>}
 
           {view === "overview" && <>
@@ -231,6 +234,29 @@ function App() {
             </form>}
             <OrderTable orders={orders} clients={clients} onStatusChange={updateStatus} /></section>}
 
+
+          {view === "cash" && <section className="cash-page">
+            <div className="cash-summary-grid">
+              <article className="content-card cash-summary"><span>Reste à encaisser</span><strong>{formatXof(outstanding)}</strong><small>Calculé à partir des commandes enregistrées dans ce prototype</small></article>
+              <article className="content-card cash-summary"><span>Acomptes enregistrés</span><strong>{formatXof(orders.reduce((sum, order) => sum + order.deposit, 0))}</strong><small>Somme des acomptes des commandes visibles ici</small></article>
+            </div>
+            <section className="content-card"><div className="section-heading"><div><h2>Situation par commande</h2><p>Montant dû = prix convenu moins acompte enregistré.</p></div></div>
+              {orders.length === 0 ? <div className="empty-state">Aucune commande pour le moment. Créez une commande pour commencer à suivre les montants.</div> : <div className="table-wrap"><table><thead><tr><th>Commande</th><th>Prix</th><th>Acompte</th><th>Reste</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}><td><b>{order.garment}</b><small>{clients.find((client) => client.id === order.clientId)?.name || "Client inconnu"}</small></td><td>{formatXof(order.price)}</td><td>{formatXof(order.deposit)}</td><td><b>{formatXof(balanceDue(order))}</b></td></tr>)}</tbody></table></div>}
+            </section>
+            <p className="privacy-note">Cette vue est un aperçu des montants des commandes. Les encaissements multiples, dépenses, rapprochement de caisse, écritures et rapports financiers restent à développer. Ne l'utilisez pas comme comptabilité officielle.</p>
+          </section>}
+
+          {view === "account" && <section className="content-card account-page">
+            <div className="section-heading"><div><h2>Profil de l'atelier</h2><p>Informations enregistrées localement sur cet appareil.</p></div><span className="demo-pill"><i /> Prototype local</span></div>
+            <form className="account-form" onSubmit={(event) => { event.preventDefault(); setNotice("Profil d'atelier mis à jour sur cet appareil uniquement."); }}>
+              <label>Nom de l'atelier<input required value={atelier.name} onChange={(event) => setAtelier((current) => ({ ...current, name: event.target.value }))} /></label>
+              <label>Téléphone<input value={atelier.phone} onChange={(event) => setAtelier((current) => ({ ...current, phone: event.target.value }))} /></label>
+              <label>Ville<input value={atelier.city} onChange={(event) => setAtelier((current) => ({ ...current, city: event.target.value }))} /></label>
+              <button type="submit" className="primary-button">Enregistrer le profil</button>
+            </form>
+            <div className="account-secondary"><div><b>Relances clients</b><p>Consultez les suggestions de relance manuelle, sans envoi automatique.</p></div><button className="secondary-button" onClick={() => setView("reminders")}>Ouvrir les relances →</button></div>
+            <p className="privacy-note">Aucun compte distant, synchronisation ni sauvegarde serveur n'est actif dans cette version.</p>
+          </section>}
           {view === "reminders" && <section className="reminders-page">
             <div className="reminders-intro content-card"><div className="reminders-intro-icon">↻</div><div><h2>Votre carnet de relance</h2><p>YÉRÉ repère les clients à recontacter à partir des commandes datées et propose un message que vous pouvez relire et copier. Rien n'est envoyé automatiquement.</p></div></div>
             <div className="reminder-summary"><div><strong>{reminderSuggestions.length}</strong><span>suggestions à examiner</span></div><div><strong>{new Set(reminderSuggestions.map((item) => item.clientId)).size}</strong><span>clients concernés</span></div><p>Les dates et règles sont indicatives. Vérifiez le contexte avant chaque prise de contact.</p></div>
@@ -240,6 +266,7 @@ function App() {
           <footer className="footer"><span>YÉRÉ Atelier <span>·</span> La couture, mieux organisée.</span><span>Prototype de démonstration · stockage local uniquement</span></footer>
         </div>
       </main>
+      <nav className="mobile-bottom-nav" aria-label="Navigation mobile">{mobileNavItems.map((item) => <button key={item.id} className={view === item.id ? "mobile-nav-item active" : "mobile-nav-item"} onClick={() => setView(item.id)} aria-current={view === item.id ? "page" : undefined}><span>{item.icon}</span><small>{item.label}</small></button>)}</nav>
     </div>
   );
 }
