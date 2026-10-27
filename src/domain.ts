@@ -53,6 +53,41 @@ export function isMeasurementValid(measurement: Measurement): boolean {
   });
 }
 
+/** Runtime guards for data restored from browser storage (JSON is not type-safe). */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isCalendarDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T12:00:00Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+function isMeasurementShape(value: unknown): value is Measurement {
+  return isRecord(value)
+    && ["bust", "waist", "hips", "shoulder", "sleeve", "length", "note"]
+      .every((key) => typeof value[key] === "string");
+}
+
+export function isClientListValid(value: unknown): value is Client[] {
+  return Array.isArray(value) && value.every((item) => {
+    if (!isRecord(item)
+      || typeof item.id !== "string" || !item.id
+      || typeof item.name !== "string"
+      || typeof item.phone !== "string"
+      || !isCalendarDate(item.createdAt)
+      || !isMeasurementShape(item.measurement)) return false;
+    if (item.measurementHistory === undefined) return true;
+    return Array.isArray(item.measurementHistory) && item.measurementHistory.every((version) =>
+      isRecord(version)
+      && typeof version.id === "string"
+      && isCalendarDate(version.measuredAt)
+      && isMeasurementShape(version.measurement)
+    );
+  });
+}
+
 export type OrderStatus = "À préparer" | "En confection" | "Prêt" | "Livré";
 
 export type Order = {
@@ -65,6 +100,21 @@ export type Order = {
   deposit: number;
   status: OrderStatus;
 };
+
+export function isOrderListValid(value: unknown): value is Order[] {
+  return Array.isArray(value) && value.every((item) =>
+    isRecord(item)
+    && typeof item.id === "string" && item.id.length > 0
+    && typeof item.clientId === "string" && item.clientId.length > 0
+    && typeof item.garment === "string" && item.garment.trim().length > 0
+    && isCalendarDate(item.dueDate)
+    && (item.orderedAt === undefined || isCalendarDate(item.orderedAt))
+    && typeof item.price === "number" && Number.isSafeInteger(item.price) && item.price > 0
+    && typeof item.deposit === "number" && Number.isSafeInteger(item.deposit)
+    && item.deposit >= 0 && item.deposit <= item.price
+    && typeof item.status === "string" && ["À préparer", "En confection", "Prêt", "Livré"].includes(item.status)
+  );
+}
 
 export const orderStatuses: OrderStatus[] = [
   "À préparer",
