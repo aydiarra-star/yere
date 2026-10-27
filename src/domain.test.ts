@@ -131,4 +131,31 @@ describe("suggestions de relance client", () => {
     expect(at180Days.some((item) => item.kind === "inactive")).toBe(true);
     expect(at181Days.some((item) => item.kind === "inactive")).toBe(true);
   });
+
+  it("une commande récente bloque la réactivation mais conserve un rappel d'occasion pertinent", () => {
+    const ordersWithRecentActivity: Order[] = [
+      ...orders,
+      {
+        id: "recent-follow-up",
+        clientId: "c-old",
+        garment: "Boubou",
+        dueDate: "2026-11-15",
+        orderedAt: "2026-08-01",
+        price: 30000,
+        deposit: 10000,
+        status: "En confection"
+      }
+    ];
+    const results = getClientReminderSuggestions(clients, ordersWithRecentActivity, "2026-10-27");
+    expect(results.some((item) => item.clientId === "c-old" && item.kind === "inactive")).toBe(false);
+    expect(results.some((item) => item.clientId === "c-old" && item.kind === "occasion")).toBe(true);
+  });
+
+  it("ignore les dates de commande invalides", () => {
+    const invalidDateOrder: Order[] = [{
+      ...orders[0],
+      orderedAt: "date-invalide"
+    }];
+    expect(getClientReminderSuggestions(clients, invalidDateOrder, "2026-10-27")).toHaveLength(0);
+  });
 });
