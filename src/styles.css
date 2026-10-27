@@ -428,3 +428,107 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .backup-file-input:focus-visible+.backup-import-label{outline:2px solid #A9B8FF;outline-offset:3px}
 .backup-panel .privacy-note{margin:0}
 @media(max-width:560px){.backup-actions{display:grid;grid-template-columns:1fr}.backup-actions .primary-button,.backup-import-label{width:100%;font-size:13px}.backup-panel{gap:12px}}
+
+
+/* Refonte mobile YÉRÉ : accueil métier, hiérarchie lisible et actions directes. */
+.overview-welcome{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:18px;margin-bottom:20px}
+.overview-welcome h1{font-size:34px;line-height:1.12;letter-spacing:-1px;color:var(--yere-navy)}
+.overview-welcome .page-subtitle{font-size:18px;line-height:1.45;max-width:650px}
+.today-snapshot{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:20px;max-width:850px}
+.snapshot-item{display:flex;align-items:center;gap:12px;min-width:0;padding:13px 14px;border:1px solid var(--yere-border);border-radius:13px;background:#fff;box-shadow:0 4px 14px #17255405}
+.snapshot-icon{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border-radius:12px;background:var(--yere-success-soft);color:var(--yere-success);font-size:24px;font-weight:800}
+.snapshot-icon.money{background:var(--yere-gold-soft);color:#8A650B}
+.snapshot-icon.orders{background:var(--yere-sky);color:var(--yere-blue)}
+.snapshot-item>span:last-child{display:grid;gap:4px;min-width:0}
+.snapshot-item b{font-size:18px;line-height:1.3;color:var(--yere-navy);overflow-wrap:anywhere}
+.snapshot-item small{font-size:15px;line-height:1.35;color:var(--yere-muted)}
+.welcome-action{white-space:nowrap;min-height:50px;font-size:16px}
+.daily-assistant{border:1px solid #DDE5FF;box-shadow:0 8px 24px #17255408}
+.daily-assistant .section-heading h2{font-size:24px;line-height:1.25}
+.daily-assistant .section-heading p{font-size:16px;line-height:1.5}
+.daily-count{font-size:14px}
+.daily-task{gap:14px;padding:15px 0}
+.daily-task-marker{width:42px;height:42px;border-radius:12px;font-size:20px}
+.daily-task-copy b{font-size:17px;line-height:1.35}
+.daily-task-copy small{font-size:16px;line-height:1.45}
+.daily-task .text-button{font-size:15px}
+.daily-empty>b{font-size:17px}
+.daily-empty p{font-size:16px;line-height:1.5}
+.stats-grid{gap:12px}
+.stat-card{padding:16px}
+.stat-top{font-size:16px;line-height:1.35}
+.stat-icon{width:38px;height:38px;font-size:21px}
+.stat-card>strong{font-size:30px}
+.stat-card>strong.money-stat{font-size:clamp(19px,2.3vw,27px)}
+.stat-card>small{font-size:15px;line-height:1.45}
+.section-heading h2{font-size:23px;line-height:1.3}
+.section-heading p{font-size:16px;line-height:1.5}
+.order-card{padding:16px}
+.order-card-heading>div>strong{font-size:19px;line-height:1.35}
+.order-card-client{display:grid;gap:4px;margin:14px 0;font-size:16px}
+.order-card-client>span{font-size:15px;color:var(--yere-muted)}
+.order-card-client>b{font-size:17px;color:var(--yere-navy)}
+.order-card-details>div>span{font-size:15px}
+.order-card-details>div>b{font-size:17px}
+.order-status-chip{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:8px 12px;font-size:15px;font-weight:800;white-space:nowrap}
+.order-status-chip.status-ready{background:var(--yere-success-soft);color:var(--yere-success)}
+.order-status-chip.status-progress,.order-status-chip.status-todo{background:var(--yere-warning-soft);color:#99500B}
+.order-status-chip.status-delivered{background:var(--yere-sky);color:var(--yere-blue)}
+.order-view-button{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:48px;margin-top:14px;padding:10px 2px 0;border:0;border-top:1px solid var(--yere-border);background:transparent;color:var(--yere-blue);font-size:16px;font-weight:800;text-align:left}
+.order-view-button span{font-size:22px}
+@media(max-width:760px){
+  .overview-welcome{grid-template-columns:1fr;gap:16px;margin-bottom:17px}
+  .overview-welcome h1{font-size:34px;line-height:1.13;letter-spacing:-.9px}
+  .overview-welcome .page-subtitle{font-size:18px;line-height:1.45;margin-top:8px}
+  .today-snapshot{grid-template-columns:1fr;gap:8px;margin-top:17px}
+  .snapshot-item{padding:12px 13px;border-radius:12px}
+  .snapshot-icon{width:42px;height:42px;flex-basis:42px}
+  .snapshot-item b{font-size:18px}
+  .snapshot-item small{font-size:16px}
+  .welcome-action{width:100%;min-height:54px;justify-content:center;font-size:17px}
+  .daily-assistant{padding:17px 15px 0;margin-bottom:14px}
+  .daily-assistant .section-heading{margin-bottom:12px}
+  .daily-assistant .section-heading h2{font-size:23px;line-height:1.25}
+  .daily-assistant .section-heading p{font-size:16px}
+  .daily-count{font-size:14px;padding:8px 11px}
+  .daily-task{gap:10px;padding:15px 0;flex-wrap:wrap}
+  .daily-task-marker{width:40px;height:40px;flex-basis:40px;font-size:19px}
+  .daily-task-copy{flex:1 1 calc(100% - 58px)}
+  .daily-task-copy b{font-size:17px}
+  .daily-task-copy small{font-size:16px}
+  .daily-task .text-button{margin-left:50px;max-width:none;padding:8px 0;font-size:16px;text-align:left}
+  .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:14px}
+  .stat-card{padding:13px 11px}
+  .stat-top{font-size:15px;gap:7px}
+  .stat-icon{width:34px;height:34px;font-size:20px}
+  .stat-card>strong{font-size:28px}
+  .stat-card>strong.money-stat{font-size:clamp(17px,4.6vw,22px)}
+  .stat-card>small{font-size:15px;line-height:1.4}
+  .section-heading h2{font-size:22px}
+  .section-heading p{font-size:16px}
+  .order-card{padding:16px}
+  .order-card-heading{flex-direction:row;align-items:flex-start}
+  .order-card-heading>div>strong{font-size:19px}
+  .order-card-client{font-size:16px}
+  .order-card-client>b{font-size:17px}
+  .order-card-details>div>span{font-size:15px}
+  .order-card-details>div>b{font-size:17px}
+  .order-status-chip{font-size:14px;padding:7px 10px}
+  .order-view-button{font-size:16px;min-height:48px}
+  .page-subtitle{font-size:16px;line-height:1.5}
+  .eyebrow{font-size:13px;letter-spacing:.8px}
+  .primary-button,.secondary-button{font-size:16px;min-height:48px}
+  .content-card{padding:17px 14px 0}
+}
+@media(max-width:390px){
+  .overview-welcome h1{font-size:32px}
+  .today-snapshot{gap:7px}
+  .snapshot-item{padding:11px}
+  .snapshot-item b{font-size:17px}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .stat-card{padding:12px 9px}
+  .stat-top{font-size:14px}
+  .stat-card>small{font-size:14px}
+  .order-card-heading{flex-direction:column;gap:9px}
+  .order-card-details{grid-template-columns:1fr 1fr}
+}
