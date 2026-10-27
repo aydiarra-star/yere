@@ -44,6 +44,17 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 
 **Limite actuelle :** le profil d'atelier, l'état de l'onboarding, les clients et les commandes restent dans le stockage local du navigateur. Ce n'est pas une inscription serveur.
 
+
+## Lot UI — Charte visuelle et navigation mobile
+
+- [x] Formaliser le bleu YÉRÉ #3B5BDB et l'or textile #D4A017 dans le cahier des charges maître.
+- [x] Définir les couleurs fonctionnelles succès/attention/critique et les règles de contraste et de lisibilité.
+- [x] Ajouter une navigation mobile inférieure avec Accueil, Clients, Commandes, Caisse et Compte.
+- [x] Ajouter les vues Caisse et Compte dans le prototype, avec avertissement explicite sur les limites du suivi financier et du stockage local.
+- [ ] Vérifier la navigation sur appareils iOS/Android, le safe area, le clavier et les petits écrans.
+- [ ] Auditer le contraste, les états fonctionnels et la cohérence visuelle de tous les modules.
+- [ ] Ajouter et tester les fonctions financières complètes après la mise en place du backend sécurisé.
+
 ## Lot 1 — Première tranche verticale : atelier, clients, mensurations
 
 - [ ] Authentification.
