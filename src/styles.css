@@ -210,3 +210,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .onboarding-visual>p{position:absolute;bottom:24px;left:0;right:0;text-align:center;font:700 14px/1.6 Manrope,sans-serif;color:#477053}
 @media(max-width:850px){.onboarding-shell{padding:18px 14px 24px}.onboarding-brand{margin-bottom:17px}.onboarding-layout{grid-template-columns:1fr;min-height:auto}.onboarding-copy{padding:30px 24px 28px}.onboarding-visual{min-height:340px;grid-row:1}.visual-phone{transform:translate(20px,-8px) scale(.78) rotate(3deg)}.visual-notebook{transform:translate(-10px,5px) scale(.75) rotate(-7deg);left:4%;bottom:10%}.visual-fabric{transform:scale(.75) rotate(18deg)}.fabric-two{transform:scale(.75) rotate(-15deg)}.visual-scissors{font-size:35px;right:9%;bottom:12%}.onboarding-visual>p{font-size:11px;bottom:8px}.onboarding-copy h1{font-size:32px}.onboarding-body{font-size:13px}}
 @media(max-width:420px){.onboarding-visual{min-height:280px}.visual-phone{transform:translate(25px,-5px) scale(.65) rotate(3deg)}.visual-notebook{transform:translate(-5px,5px) scale(.62) rotate(-7deg)}.onboarding-benefits{gap:7px}.onboarding-benefits li{font-size:11px;padding:10px 8px 10px 26px}.onboarding-benefits li:before{left:9px}}
+
+.new-order-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:18px;margin:0 0 20px;background:#f8fbf8;border:1px solid #e3ece3;border-radius:12px}
+.new-order-form h3{grid-column:1/-1;margin:0;color:#2c4837;font:700 14px Manrope,sans-serif}
+.new-order-form>label{display:grid;gap:6px;font-size:10px;font-weight:700;color:#53675a}
+.new-order-form input,.new-order-form select{width:100%;min-height:40px;padding:10px;border:1px solid #dfe7df;border-radius:8px;background:#fff;color:#34473b}
+.new-order-form .form-actions{grid-column:1/-1;margin-top:3px}
+.new-order-form .history-empty{grid-column:1/-1}
+.new-order-form button:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:560px){.new-order-form{grid-template-columns:1fr;padding:13px}.new-order-form h3,.new-order-form .form-actions,.new-order-form .history-empty{grid-column:1}}
