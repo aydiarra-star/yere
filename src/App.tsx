@@ -4,23 +4,35 @@ import { usePersistentState } from "./usePersistentState";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", note: "" };
 
-const initialClients: Client[] = [
-  { id: "c-1", name: "Aïssatou Ndiaye", phone: "+221 77 123 45 67", createdAt: "2026-10-22", measurement: { bust: "92", waist: "74", hips: "100", shoulder: "38", sleeve: "58", length: "145", note: "Préférence : coupe ample" } },
-  { id: "c-2", name: "Mamadou Ba", phone: "+221 76 234 56 78", createdAt: "2026-10-23", measurement: { bust: "98", waist: "86", hips: "102", shoulder: "44", sleeve: "62", length: "150", note: "Boubou traditionnel" } },
-  { id: "c-3", name: "Fatou Sarr", phone: "+221 70 345 67 89", createdAt: "2026-10-25", measurement: { bust: "88", waist: "70", hips: "96", shoulder: "36", sleeve: "56", length: "138", note: "" } },
-  { id: "c-4", name: "Mariama Diallo", phone: "+221 77 456 78 90", createdAt: "2025-10-01", measurement: { bust: "90", waist: "72", hips: "98", shoulder: "37", sleeve: "57", length: "142", note: "Tenue de cérémonie" } }
-];
-
-const initialOrders: Order[] = [
-  { id: "YR-1024", clientId: "c-1", garment: "Ensemble deux pièces", dueDate: "2026-10-29", orderedAt: "2026-10-20", price: 35000, deposit: 20000, status: "En confection" },
-  { id: "YR-1025", clientId: "c-2", garment: "Boubou brodé", dueDate: "2026-10-30", orderedAt: "2026-10-22", price: 45000, deposit: 15000, status: "À préparer" },
-  { id: "YR-1026", clientId: "c-3", garment: "Robe sur mesure", dueDate: "2026-10-27", orderedAt: "2026-10-24", price: 25000, deposit: 25000, status: "Prêt" },
-  { id: "YR-1027", clientId: "c-4", garment: "Tenue de mariage", dueDate: "2025-11-01", orderedAt: "2025-10-01", price: 50000, deposit: 50000, status: "Livré" }
-];
 
 type View = "overview" | "clients" | "orders" | "cash" | "account" | "marketplace" | "reminders";
 type AtelierProfile = { name: string; phone: string; city: string };
 const emptyAtelier: AtelierProfile = { name: "", phone: "", city: "" };
+type IconName = "home" | "users" | "package" | "shopping-bag" | "wallet" | "user-round";
+
+function AppIcon({ name, size = 22 }: { name: IconName; size?: number }) {
+  const common = { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" {...common}>
+    {name === "home" && <><path d="m3 10 9-7 9 7" /><path d="M5 9v11h14V9M9 20v-6h6v6" /></>}
+    {name === "users" && <><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" /><circle cx="9.5" cy="7" r="4" /><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>}
+    {name === "package" && <><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="M3 8v9l9 5 9-5V8M12 13v9M7.5 5.5l9 5" /></>}
+    {name === "shopping-bag" && <><path d="M5 8h14l1 13H4L5 8Z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></>}
+    {name === "wallet" && <><rect x="3" y="5" width="18" height="15" rx="2" /><path d="M3 9h18M16 14h.01M7 5V3h11" /></>}
+    {name === "user-round" && <><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a8 8 0 0 1 16 0v1Z" /></>}
+  </svg>;
+}
+
+function TailorLogo() {
+  return <svg className="brand-mark" viewBox="0 0 48 48" role="img" aria-label="Logo YÉRÉ, atelier de couture">
+    <rect x="1" y="1" width="46" height="46" rx="14" fill="currentColor" />
+    <g fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 12h14M19 12v5l-2 3v12a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V20l-2-3v-5" />
+      <path d="M17 20h14M18 25h12M18 30h12" />
+      <path d="M34 10c-3 3-3 6-1 8l-8 10" />
+      <circle cx="33" cy="9" r="1.5" />
+    </g>
+  </svg>;
+}
 
 function isAtelierProfileValid(value: unknown): value is AtelierProfile {
   return typeof value === "object" && value !== null
@@ -42,11 +54,11 @@ function isNullableTimestamp(value: unknown): value is number | null {
 }
 
 function App() {
-  const [clients, setClients] = usePersistentState<Client[]>("yere-demo-clients-v1", [], isClientListValid);
-  const [orders, setOrders] = usePersistentState<Order[]>("yere-demo-orders-v1", [], isOrderListValid);
-  const [atelier, setAtelier] = usePersistentState<AtelierProfile>("yere-demo-atelier-v1", emptyAtelier, isAtelierProfileValid);
-  const [onboardingComplete, setOnboardingComplete] = usePersistentState<boolean>("yere-demo-onboarding-complete-v1", false, isBooleanValue);
-  const [onboardingStartedAt, setOnboardingStartedAt] = usePersistentState<number | null>("yere-demo-onboarding-started-at-v1", null, isNullableTimestamp);
+  const [clients, setClients] = usePersistentState<Client[]>("yere-clients-v1", [], isClientListValid);
+  const [orders, setOrders] = usePersistentState<Order[]>("yere-orders-v1", [], isOrderListValid);
+  const [atelier, setAtelier] = usePersistentState<AtelierProfile>("yere-atelier-v1", emptyAtelier, isAtelierProfileValid);
+  const [onboardingComplete, setOnboardingComplete] = usePersistentState<boolean>("yere-onboarding-complete-v1", false, isBooleanValue);
+  const [onboardingStartedAt, setOnboardingStartedAt] = usePersistentState<number | null>("yere-onboarding-started-at-v1", null, isNullableTimestamp);
   const [view, setView] = useState<View>("overview");
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -110,7 +122,7 @@ function App() {
           ? " Première action réussie en moins de 3 minutes : objectif d'adoption atteint dans cette démonstration."
           : " Le premier client a été créé après 3 minutes : ce parcours doit être examiné pour simplifier l'adoption.")
       : "";
-    setNotice(`Fiche de ${name} créée dans la démonstration.${firstClientMessage}`);
+    setNotice(`Fiche de ${name} créée sur cet appareil.${firstClientMessage}`);
   }
 
   function addOrder(event: FormEvent<HTMLFormElement>) {
@@ -136,7 +148,7 @@ function App() {
     setNewOrderPrice("");
     setNewOrderDeposit("0");
     setShowOrderForm(false);
-    setNotice("Première commande créée dans le stockage local de la démonstration. Aucune sauvegarde serveur n'est active.");
+    setNotice("Première commande enregistrée sur cet appareil. Aucune synchronisation serveur n’est active.");
   }
 
   function exportLocalBackup() {
@@ -218,12 +230,12 @@ function App() {
   }
 
   const navItems: { id: View; label: string; icon: string }[] = [
-    { id: "overview", label: "Accueil", icon: "⌂" },
-    { id: "clients", label: "Clients", icon: "♙" },
-    { id: "orders", label: "Commandes", icon: "▤" },
-    { id: "marketplace", label: "Marketplace", icon: "◇" },
-    { id: "cash", label: "Caisse", icon: "₣" },
-    { id: "account", label: "Compte", icon: "●" },
+    { id: "overview", label: "Accueil", icon: "home" },
+    { id: "clients", label: "Clients", icon: "users" },
+    { id: "orders", label: "Commandes", icon: "package" },
+    { id: "marketplace", label: "Marketplace", icon: "shopping-bag" },
+    { id: "cash", label: "Caisse", icon: "wallet" },
+    { id: "account", label: "Compte", icon: "user-round" },
     { id: "reminders", label: "Relances clients", icon: "↻" }
   ];
   const mobileNavItems = navItems.filter((item) => item.id !== "reminders");
@@ -238,27 +250,20 @@ function App() {
         setShowForm(true);
         setNotice("Atelier configuré dans cette démonstration locale. Créez votre premier client pour continuer.");
       }}
-      onExploreDemo={() => {
-        setClients(initialClients);
-        setOrders(initialOrders);
-        setOnboardingComplete(true);
-        setView("overview");
-        setNotice("Données fictives chargées pour explorer la démonstration. N'utilisez pas de vraies données clients.");
-      }}
-    />;
+     />;
   }
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <a className="brand" href="#" onClick={(event) => { event.preventDefault(); setView("overview"); }}>
-          <span className="brand-mark">Y</span>
+          <TailorLogo />
           <span><strong>YÉRÉ</strong><small>ATELIER</small></span>
         </a>
         <button type="button" className="atelier-switch" onClick={() => setView("account")} aria-label="Ouvrir le profil de l’atelier"><span className="atelier-avatar">A</span><span><b>{atelier.name || "Mon atelier"}</b><small>{atelier.city || "Configurer mon espace"}</small></span><span className="chevron">⌄</span></button>
         <p className="nav-caption">ESPACE ATELIER</p>
         <nav aria-label="Navigation principale">
-          {navItems.map((item) => <button key={item.id} className={view === item.id ? "nav-item active" : "nav-item"} onClick={() => setView(item.id)}><span className="nav-icon">{item.icon}</span>{item.label}{item.id === "clients" && <span className="nav-count">{clients.length}</span>}{item.id === "reminders" && reminderSuggestions.length > 0 && <span className="nav-count">{reminderSuggestions.length}</span>}</button>)}
+          {navItems.map((item) => <button key={item.id} className={view === item.id ? "nav-item active" : "nav-item"} onClick={() => setView(item.id)}><span className="nav-icon"><AppIcon name={item.icon} size={22} /></span>{item.label}{item.id === "clients" && <span className="nav-count">{clients.length}</span>}{item.id === "reminders" && reminderSuggestions.length > 0 && <span className="nav-count">{reminderSuggestions.length}</span>}</button>)}
         </nav>
         <div className="sidebar-bottom"><div className="help-card"><span className="help-icon">✳</span><b>Un atelier mieux organisé.</b><p>Vos clients, leurs mesures et vos commandes au même endroit.</p></div><button type="button" className="profile profile-button" onClick={() => setView("account")} aria-label="Gérer le compte de l’atelier"><span className="profile-avatar">Y</span><span><b>{atelier.name || "Mon atelier"}</b><small>Gérer mon espace</small></span><span className="dots">→</span></button></div>
       </aside>
@@ -296,7 +301,7 @@ function App() {
             <div className="client-list">{visibleClients.map((client, index) => <button key={client.id} className={selectedClient === client.id ? "client-row selected" : "client-row"} onClick={() => setSelectedClient(selectedClient === client.id ? null : client.id)}><span className={`client-avatar avatar-${index % 4}`}>{client.name.split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</span><span className="client-main"><b>{client.name}</b><small>{client.phone || "Pas de téléphone renseigné"}</small></span><span className="client-measurements"><b>{Object.values(client.measurement).filter(Boolean).length - (client.measurement.note ? 1 : 0)}/6</b><small>mesures saisies</small></span><span className="row-chevron">›</span></button>)}
               {visibleClients.length === 0 && <div className="empty-state"><span>⌕</span><b>Aucun client trouvé</b><p>Essayez un autre nom ou numéro.</p></div>}
             </div>
-            {selected && <div className="measurement-panel"><div className="section-heading"><div><h2>Mensurations de {selected.name}</h2><p>Dernière fiche de mesures enregistrée en démonstration</p></div><span className="demo-pill">Exemple</span></div><form className="measurement-form" onSubmit={saveMeasurements}><div className="measurement-grid">{[["Tour de poitrine","bust"],["Tour de taille","waist"],["Tour de hanches","hips"],["Épaules","shoulder"],["Longueur de manche","sleeve"],["Longueur du vêtement","length"]].map(([label, key]) => <label className="measure-field" key={key}><span>{label} (cm)</span><input type="number" min="0" step="any" inputMode="decimal" aria-label={label} value={draftMeasurement[key as keyof Measurement] as string} onChange={(event) => updateMeasurement(key as keyof Measurement, event.target.value)} placeholder="—" /></label>)}</div><label className="measure-notes-field">Notes pour la prochaine commande<textarea value={draftMeasurement.note} onChange={(event) => updateMeasurement("note", event.target.value)} placeholder="Préférences, coupe, tissu…" rows={2} /></label><div className="form-actions"><button type="submit" className="primary-button">Enregistrer les mensurations</button></div></form><section className="measurement-history" aria-label="Historique des mensurations"><h3>Historique des prises de mesures</h3>{(selected.measurementHistory ?? []).length === 0 ? <p className="history-empty">Aucune prise de mesures enregistrée. Complétez les champs puis enregistrez une première version.</p> : <ol>{[...(selected.measurementHistory ?? [])].reverse().map((version) => <li key={version.id}><b>{new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(version.measuredAt + "T12:00:00"))}</b><span>{[version.measurement.bust && `Poitrine ${version.measurement.bust}`, version.measurement.waist && `Taille ${version.measurement.waist}`, version.measurement.hips && `Hanches ${version.measurement.hips}`].filter(Boolean).join(" · ") || "Notes uniquement"}</span></li>)}</ol>}</section><p className="privacy-note">Prototype uniquement : l'historique est conservé dans le stockage local de ce navigateur, sans compte ni sauvegarde serveur. N'utilise pas de données clients réelles.</p></div>}
+            {selected && <div className="measurement-panel"><div className="section-heading"><div><h2>Mensurations de {selected.name}</h2><p>Dernière fiche de mesures enregistrée</p></div> </div><form className="measurement-form" onSubmit={saveMeasurements}><div className="measurement-grid">{[["Tour de poitrine","bust"],["Tour de taille","waist"],["Tour de hanches","hips"],["Épaules","shoulder"],["Longueur de manche","sleeve"],["Longueur du vêtement","length"]].map(([label, key]) => <label className="measure-field" key={key}><span>{label} (cm)</span><input type="number" min="0" step="any" inputMode="decimal" aria-label={label} value={draftMeasurement[key as keyof Measurement] as string} onChange={(event) => updateMeasurement(key as keyof Measurement, event.target.value)} placeholder="—" /></label>)}</div><label className="measure-notes-field">Notes pour la prochaine commande<textarea value={draftMeasurement.note} onChange={(event) => updateMeasurement("note", event.target.value)} placeholder="Préférences, coupe, tissu…" rows={2} /></label><div className="form-actions"><button type="submit" className="primary-button">Enregistrer les mensurations</button></div></form><section className="measurement-history" aria-label="Historique des mensurations"><h3>Historique des prises de mesures</h3>{(selected.measurementHistory ?? []).length === 0 ? <p className="history-empty">Aucune prise de mesures enregistrée. Complétez les champs puis enregistrez une première version.</p> : <ol>{[...(selected.measurementHistory ?? [])].reverse().map((version) => <li key={version.id}><b>{new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(version.measuredAt + "T12:00:00"))}</b><span>{[version.measurement.bust && `Poitrine ${version.measurement.bust}`, version.measurement.waist && `Taille ${version.measurement.waist}`, version.measurement.hips && `Hanches ${version.measurement.hips}`].filter(Boolean).join(" · ") || "Notes uniquement"}</span></li>)}</ol>}</section><p className="privacy-note">Prototype uniquement : l'historique est conservé dans le stockage local de ce navigateur, sans compte ni sauvegarde serveur. N'utilise pas de données clients réelles.</p></div>}
           </section>}
 
           {view === "orders" && <section className="content-card"><div className="section-heading"><div><h2>Commandes de l’atelier</h2><p>Modifiez le statut pour tester le suivi de production.</p></div><button className="primary-button" onClick={() => { setShowOrderForm((value) => !value); setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); }}>＋ Nouvelle commande</button></div>
@@ -315,8 +320,8 @@ function App() {
 
           {view === "cash" && <section className="cash-page">
             <div className="cash-summary-grid">
-              <article className="content-card cash-summary"><span>Reste à encaisser</span><strong>{formatXof(outstanding)}</strong><small>Calculé à partir des commandes enregistrées dans ce prototype</small></article>
-              <article className="content-card cash-summary"><span>Acomptes enregistrés</span><strong>{formatXof(orders.reduce((sum, order) => sum + order.deposit, 0))}</strong><small>Somme des acomptes des commandes visibles ici</small></article>
+              <article className="content-card cash-summary"><span>Reste à encaisser</span><strong>{formatXof(outstanding)}</strong><small>Calculé à partir des commandes enregistrées</small></article>
+              <article className="content-card cash-summary"><span>Acomptes enregistrés</span><strong>{formatXof(orders.reduce((sum, order) => sum + order.deposit, 0))}</strong><small>Somme des acomptes des commandes enregistrées</small></article>
             </div>
             <section className="content-card"><div className="section-heading"><div><h2>Situation par commande</h2><p>Montant dû = prix convenu moins acompte enregistré.</p></div></div>
               {orders.length === 0 ? <div className="empty-state">Aucune commande pour le moment. Créez une commande pour commencer à suivre les montants.</div> : <div className="table-wrap"><table><thead><tr><th>Commande</th><th>Prix</th><th>Acompte</th><th>Reste</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}><td><b>{order.garment}</b><small>{clients.find((client) => client.id === order.clientId)?.name || "Client inconnu"}</small></td><td>{formatXof(order.price)}</td><td>{formatXof(order.deposit)}</td><td><b>{formatXof(balanceDue(order))}</b></td></tr>)}</tbody></table></div>}
@@ -342,7 +347,7 @@ function App() {
               <p className="privacy-note">Attention : le fichier exporté contient des informations personnelles. Gardez-le hors d’accès public. Avant restauration, exportez les données actuelles si vous souhaitez les conserver.</p>
             </section>
             <div className="account-secondary"><div><b>Relances clients</b><p>Consultez les suggestions de relance manuelle, sans envoi automatique.</p></div><button className="secondary-button" onClick={() => setView("reminders")}>Ouvrir les relances →</button></div>
-            <p className="privacy-note">Cet espace est enregistré sur cet appareil. La création de comptes avec e-mail et mot de passe, la connexion sécurisée et la synchronisation entre appareils nécessitent encore le branchement du serveur d’authentification.</p>
+            <p className="privacy-note">Compte en ligne non activé : les données restent sur cet appareil jusqu’à la connexion du service sécurisé YÉRÉ.</p>
           </section>}
           {view === "marketplace" && <section className="marketplace-page">
             <div className="marketplace-hero content-card"><div className="marketplace-mark">◇</div><div><p className="eyebrow">VOTRE VITRINE PROFESSIONNELLE</p><h2>Faites découvrir vos créations.</h2><p>Préparez votre présence sur la marketplace YÉRÉ. Cette première version vous permet d’organiser votre atelier ; la publication publique et les ventes en ligne ne sont pas encore activées.</p><div className="marketplace-actions"><button className="primary-button" onClick={() => setView("account")}>Compléter mon atelier <span>→</span></button><button className="secondary-button" onClick={() => { setShowOrderForm(true); setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); setView("orders"); }}>Créer une commande</button></div></div></div>
@@ -358,26 +363,25 @@ function App() {
           <footer className="footer"><span>YÉRÉ Atelier <span>·</span> La couture, mieux organisée.</span></footer>
         </div>
       </main>
-      <nav className="mobile-bottom-nav" aria-label="Navigation mobile">{mobileNavItems.map((item) => <button key={item.id} className={view === item.id ? "mobile-nav-item active" : "mobile-nav-item"} onClick={() => setView(item.id)} aria-current={view === item.id ? "page" : undefined}><span>{item.icon}</span><small>{item.label}</small></button>)}</nav>
+      <nav className="mobile-bottom-nav" aria-label="Navigation mobile">{mobileNavItems.map((item) => <button key={item.id} className={view === item.id ? "mobile-nav-item active" : "mobile-nav-item"} onClick={() => setView(item.id)} aria-current={view === item.id ? "page" : undefined}><span><AppIcon name={item.icon} size={22} /></span><small>{item.label}</small></button>)}</nav>
     </div>
   );
 }
 
-function Onboarding({ atelier, onAtelierChange, onFinish, onExploreDemo }: {
+function Onboarding({ atelier, onAtelierChange, onFinish }: {
   atelier: AtelierProfile;
   onAtelierChange: (value: AtelierProfile) => void;
   onFinish: () => void;
-  onExploreDemo: () => void;
 }) {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<AtelierProfile>(atelier);
   const steps = [
     { eyebrow: "BIENVENUE", title: "YÉRÉ Atelier", subtitle: "La couture, mieux organisée.", body: "Retrouvez vos clients, leurs mensurations, vos commandes et vos paiements en un seul endroit.", detail: "Un outil de travail pensé pour le quotidien de votre atelier." },
     { eyebrow: "GAGNEZ DU TEMPS", title: "Fini les cahiers perdus et les recherches interminables.", subtitle: "Tout retrouver en quelques secondes.", body: "Mensurations, anciennes commandes, acomptes et dates de livraison : les informations utiles sont réunies.", detail: "Moins de recherches, moins d'oublis et moins d'erreurs de saisie." },
-    { eyebrow: "SUIVI DE PRODUCTION", title: "Gardez chaque commande sous contrôle.", subtitle: "De la coupe à la livraison.", body: "Suivez les étapes de confection : coupe, couture, essayage et livraison.", detail: "Le prototype illustre le suivi. Les alertes automatiques de retard restent à développer." },
-    { eyebrow: "GESTION DE L'ARGENT", title: "Comprenez ce que votre atelier gagne réellement.", subtitle: "Des chiffres plus clairs.", body: "Préparez le suivi des acomptes, paiements, dépenses et recettes.", detail: "Dans cette version de démonstration, les indicateurs financiers restent limités aux commandes et soldes simulés." },
+    { eyebrow: "SUIVI DE PRODUCTION", title: "Gardez chaque commande sous contrôle.", subtitle: "De la coupe à la livraison.", body: "Suivez les étapes de confection : coupe, couture, essayage et livraison.", detail: "Gardez une vue claire sur l’avancement et les dates de livraison." },
+    { eyebrow: "GESTION DE L'ARGENT", title: "Comprenez ce que votre atelier gagne réellement.", subtitle: "Des chiffres plus clairs.", body: "Préparez le suivi des acomptes, paiements, dépenses et recettes.", detail: "Le suivi complet des dépenses et recettes sera disponible après activation des services de gestion financière." },
     { eyebrow: "INSPIRATIONS COUTURE", title: "Retrouvez les modèles au bon moment.", subtitle: "Un outil de travail, pas un réseau social.", body: "À terme, classez les photos envoyées par les clients, les modèles enregistrés et les créations réalisées.", detail: "Le catalogue d'inspirations est prévu dans la feuille de route ; il n'est pas encore disponible." },
-    { eyebrow: "VOTRE ATELIER", title: "Créons votre premier atelier.", subtitle: "Quelques informations pour commencer.", body: "Renseignez le nom de votre atelier, un téléphone et une ville. Vous pourrez ensuite créer votre premier client.", detail: "Créez votre espace atelier sur cet appareil. La connexion sécurisée et la synchronisation en ligne seront activées avec le serveur." }
+    { eyebrow: "VOTRE ATELIER", title: "Créons votre premier atelier.", subtitle: "Quelques informations pour commencer.", body: "Renseignez le nom de votre atelier, un téléphone et une ville. Vous pourrez ensuite créer votre premier client.", detail: "Le compte en ligne et la synchronisation nécessitent l’activation du service sécurisé YÉRÉ." }
   ];
   const current = steps[step];
   const isSetup = step === steps.length - 1;
@@ -407,8 +411,7 @@ function Onboarding({ atelier, onAtelierChange, onFinish, onExploreDemo }: {
           {step > 0 && <button className="secondary-button" onClick={() => setStep((value) => value - 1)}>Précédent</button>}
           {!isSetup && <button className="primary-button onboarding-primary" onClick={() => setStep((value) => Math.min(value + 1, steps.length - 1))}>{step === 0 ? "Commencer" : "Continuer"} <span>→</span></button>}
         </div>
-        {step === 0 && <button className="onboarding-demo-link" onClick={onExploreDemo}>Explorer la démonstration avec des exemples</button>}
-        <p className="onboarding-disclaimer">Espace local sur cet appareil · la création d’un compte sécurisé en ligne nécessite encore l’activation du serveur.</p>
+         <p className="onboarding-disclaimer">Espace local sur cet appareil · la création d’un compte sécurisé en ligne nécessite encore l’activation du serveur.</p>
       </section>
       <aside className="onboarding-visual" aria-label="Illustration conceptuelle d'un atelier de couture organisé">
         <div className="visual-glow"></div><div className="visual-card visual-phone"><span className="visual-phone-top"></span><b>YÉRÉ Atelier</b><small>Vos commandes</small><div className="visual-task"><i></i><span>Tenue de cérémonie<small>En confection</small></span></div><div className="visual-task"><i></i><span>Boubou brodé<small>Essayage</small></span></div><div className="visual-task"><i></i><span>Robe sur mesure<small>À livrer</small></span></div></div>
