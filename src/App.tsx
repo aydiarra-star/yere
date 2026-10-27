@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isMeasurementValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
+import { balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isMeasurementValid, isOrderInputValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
 import { usePersistentState } from "./usePersistentState";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", note: "" };
@@ -108,8 +108,8 @@ function App() {
     event.preventDefault();
     const price = Number(newOrderPrice);
     const deposit = Number(newOrderDeposit);
-    if (!newOrderClientId || !newOrderGarment.trim() || !Number.isFinite(price) || price <= 0 || !Number.isFinite(deposit) || deposit < 0 || deposit > price) {
-      setNotice("Vérifiez le client, le vêtement, le prix et l'acompte. L'acompte ne peut pas dépasser le prix.");
+    if (!isOrderInputValid({ clientId: newOrderClientId, garment: newOrderGarment, dueDate: newOrderDueDate, price, deposit }, clients.map((client) => client.id))) {
+      setNotice("Vérifiez le client, le vêtement, la date de livraison, le prix et l'acompte. Les montants doivent être des nombres entiers positifs, et l'acompte ne peut pas dépasser le prix.");
       return;
     }
     const order: Order = {
