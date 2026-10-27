@@ -162,6 +162,8 @@ Référence : [Banque d'idées stratégiques](./BANQUE_IDEES_STRATEGIQUES.md).
 
 - [x] Ajouter `docs/CONTRAT_SECURITE_BACKEND.md` : modèle d'autorisation par atelier, tests d'isolation, validation serveur, secrets, paiements idempotents, sauvegarde/restauration et critères de pilote.
 - [x] Ajouter `docs/CHOIX_FOURNISSEUR_BACKEND.md` : comparer les voies techniques sans créer de service ni réutiliser un projet existant.
+- [x] Préparer un brouillon de schéma PostgreSQL avec appartenance atelier, mensurations historisées, contraintes de cohérence et journal de paiements idempotent : `docs/sql/0001_initial_schema.sql` (non appliqué, non sécurisé à lui seul).
+- [ ] Après décision du fournisseur, convertir ce brouillon en migration versionnée, ajouter les politiques d'accès et exécuter les tests d'isolation inter-ateliers.
 - [ ] Confirmer le fournisseur et créer un environnement dédié à YÉRÉ ; ne pas réutiliser Dekk Food.
 - [ ] Implémenter authentification et isolation multi-atelier, puis faire réussir les tests d'accès inter-ateliers.
 - [ ] Exécuter et documenter un exercice réel de restauration avant toute donnée client réelle.
