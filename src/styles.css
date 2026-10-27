@@ -891,5 +891,4 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .topbar .breadcrumb > span:nth-child(4) { font-size: 16px; }
   .mobile-nav-item > small { font-size: 7px; }
 }
-.section-heading h2 { font-size: 20px; line-height: 1.35; }
-.account-form ~ .privacy-note { font-size: 13px; line-height: 1.5; }
+.account-section-heading h2 { font-size: 20px; line-height: 1.35; }
