@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { balanceDue, formatXof, getClientReminderSuggestions, isMeasurementValid, isOrderInputValid, matchesClient, saveMeasurementVersion, type Client, type Measurement, type Order } from "./domain";
+import { balanceDue, formatXof, getClientReminderSuggestions, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, saveMeasurementVersion, type Client, type Measurement, type Order } from "./domain";
 
 const client: Client = {
   id: "c-1",
@@ -8,6 +8,43 @@ const client: Client = {
   createdAt: "2026-10-27",
   measurement: { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", note: "" }
 };
+
+describe("validation des données restaurées", () => {
+  it("accepte une liste de clients correctement structurée", () => {
+    expect(isClientListValid([client])).toBe(true);
+    expect(isClientListValid([])).toBe(true);
+  });
+
+  it("refuse les clients dont les champs indispensables sont absents ou mal typés", () => {
+    expect(isClientListValid({})).toBe(false);
+    expect(isClientListValid([{ ...client, measurement: null }])).toBe(false);
+    expect(isClientListValid([{ ...client, createdAt: "2026-02-31" }])).toBe(false);
+    expect(isClientListValid([{ ...client, measurementHistory: [{ id: "v1", measuredAt: "2026-10-27", measurement: {} }] }])).toBe(false);
+  });
+
+  it("accepte une commande persistée cohérente", () => {
+    const order: Order = {
+      id: "order-1", clientId: "c-1", garment: "Boubou",
+      dueDate: "2026-11-01", orderedAt: "2026-10-27",
+      price: 25000, deposit: 10000, status: "En confection"
+    };
+    expect(isOrderListValid([order])).toBe(true);
+    expect(isOrderListValid([])).toBe(true);
+  });
+
+  it("refuse les commandes persistées aux montants, dates ou statuts incohérents", () => {
+    const order: Order = {
+      id: "order-1", clientId: "c-1", garment: "Boubou",
+      dueDate: "2026-11-01", price: 25000, deposit: 10000, status: "En confection"
+    };
+    expect(isOrderListValid({ orders: [order] })).toBe(false);
+    expect(isOrderListValid([{ ...order, deposit: 30000 }])).toBe(false);
+    expect(isOrderListValid([{ ...order, price: Number.POSITIVE_INFINITY }])).toBe(false);
+    expect(isOrderListValid([{ ...order, dueDate: "2026-02-31" }])).toBe(false);
+    expect(isOrderListValid([{ ...order, status: "Inconnu" }])).toBe(false);
+    expect(isOrderListValid([{ ...order, clientId: "" }])).toBe(false);
+  });
+});
 
 describe("balanceDue", () => {
   it("calculates the remaining balance", () => {
