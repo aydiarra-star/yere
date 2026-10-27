@@ -892,33 +892,3 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .mobile-nav-item > small { font-size: 7px; }
 }
 .account-section-heading h2 { font-size: 20px; line-height: 1.35; }
-
-
-/* Identité YÉRÉ : logo vectoriel de couture et icônes SVG cohérentes. */
-.brand-mark {
-  display: block;
-  flex: 0 0 39px;
-  width: 39px;
-  height: 39px;
-  background: transparent;
-  color: #3558E8;
-  overflow: visible;
-}
-.onboarding-brand .brand-mark { flex-basis: 44px; width: 44px; height: 44px; }
-.nav-icon,
-.mobile-nav-item > span {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.nav-icon svg,
-.mobile-nav-item > span svg {
-  display: block;
-  flex: 0 0 auto;
-}
-.mobile-nav-item > span {
-  width: 30px;
-  height: 28px;
-  color: #3558E8;
-}
-.mobile-nav-item.active > span { color: #3558E8; }
