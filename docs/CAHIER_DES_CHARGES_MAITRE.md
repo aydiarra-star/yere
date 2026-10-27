@@ -163,7 +163,7 @@ Chaque entrée doit disposer d'une icône et d'un libellé visible. Prévoir les
 - Politique de confidentialité, conditions d'utilisation et obligations légales à vérifier avant lancement.
 
 ## 7. Fournisseurs
-Le compte fournisseur pourra évoluer vers :
+Le compte fournisseur doit disposer d'un accès dédié depuis la navigation, d'un profil professionnel et d'un parcours de création de boutique. La version actuelle prépare ces informations localement ; elle ne confère pas encore de droits sécurisés côté serveur. Le compte fournisseur pourra évoluer vers :
 - profil et coordonnées;
 - catalogue de tissus, fils, aiguilles, boutons, fermetures, filets, machines et pièces;
 - prix de détail et de gros facultatifs;
