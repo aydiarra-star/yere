@@ -416,3 +416,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .order-card-details{grid-template-columns:1fr 1fr;gap:9px}
   .order-card-heading{flex-direction:column}
 }
+
+/* Sauvegarde locale : actions visibles et utilisables sur mobile. */
+.backup-panel{display:grid;gap:14px;padding:17px 0;border-top:1px solid var(--yere-border)}
+.backup-panel h3{margin:0;color:var(--yere-navy);font:700 14px Manrope,sans-serif}
+.backup-panel p{margin:6px 0 0;color:var(--yere-muted);font-size:12px;line-height:1.6}
+.backup-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.backup-actions .primary-button,.backup-import-label{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:11px 14px;font-size:12px;cursor:pointer;text-align:center}
+.backup-import-label{margin:0}
+.backup-file-input{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.backup-file-input:focus-visible+.backup-import-label{outline:2px solid #A9B8FF;outline-offset:3px}
+.backup-panel .privacy-note{margin:0}
+@media(max-width:560px){.backup-actions{display:grid;grid-template-columns:1fr}.backup-actions .primary-button,.backup-import-label{width:100%;font-size:13px}.backup-panel{gap:12px}}
