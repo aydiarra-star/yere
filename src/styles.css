@@ -121,3 +121,35 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .measurement-history li span{font-size:10px;line-height:1.5;color:#64748b;text-align:right}
 .history-empty{font-size:10px;line-height:1.6;color:#8793a6;margin:0}
 @media(max-width:760px){.measurement-history li{flex-direction:column;gap:5px}.measurement-history li span{text-align:left}}
+
+
+/* Centre de relance client — suggestions explicables et sans envoi automatique */
+.reminders-page{display:grid;gap:16px}
+.reminders-intro{display:flex;align-items:flex-start;gap:14px;padding:20px}
+.reminders-intro-icon{display:grid;place-items:center;flex:0 0 42px;height:42px;border-radius:12px;background:var(--yere-sky);color:var(--yere-blue);font-size:24px}
+.reminders-intro h2,.empty-reminders h2{margin:0 0 7px;color:var(--yere-navy);font-size:15px}
+.reminders-intro p,.empty-reminders p{margin:0;color:var(--yere-text);font-size:12px;line-height:1.7}
+.reminder-summary{display:grid;grid-template-columns:auto auto minmax(150px,1fr);align-items:center;gap:18px;padding:16px 20px;border:1px solid var(--yere-border);border-radius:12px;background:#f8fbff}
+.reminder-summary>div{display:grid;gap:4px}
+.reminder-summary strong{font-size:22px;color:var(--yere-navy)}
+.reminder-summary span{font-size:10px;color:var(--yere-muted)}
+.reminder-summary p{margin:0;color:var(--yere-muted);font-size:10px;line-height:1.6}
+.reminder-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.reminder-card{padding:17px;min-width:0}
+.reminder-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.reminder-kind{padding:5px 8px;border-radius:999px;font-size:9px;font-weight:700}
+.reminder-kind.inactive{background:#fff4df;color:#8a5b09}
+.reminder-kind.occasion{background:#eaf2ff;color:#2456b8}
+.reminder-age{font-size:10px;color:var(--yere-muted)}
+.reminder-card h2{margin:14px 0 5px;font-size:15px;color:var(--yere-navy)}
+.reminder-client-name{margin:0;font-size:12px;font-weight:700;color:#334155}
+.reminder-detail{margin:8px 0 12px;font-size:11px;line-height:1.6;color:var(--yere-text)}
+.reminder-contact{display:grid;gap:5px;padding:10px 0;border-top:1px solid var(--yere-border);font-size:10px;color:var(--yere-muted)}
+.missing-phone{color:#a16207}
+.message-preview{margin-top:8px;padding:12px;border:1px solid #e1eaf9;border-radius:8px;background:#f8fbff}
+.message-preview>span{font-size:9px;font-weight:800;letter-spacing:.06em;color:#6a82aa}
+.message-preview p{margin:7px 0 0;font-size:11px;line-height:1.7;color:#475569;overflow-wrap:anywhere}
+.reminder-copy{margin-top:12px;min-height:38px;font-size:11px}
+.reminder-copy:disabled{opacity:.45;cursor:not-allowed}
+.empty-reminders{padding:22px}
+@media(max-width:760px){.reminder-list{grid-template-columns:1fr}.reminder-summary{grid-template-columns:1fr 1fr;gap:12px}.reminder-summary p{grid-column:1/-1}.reminders-intro{padding:15px}}
