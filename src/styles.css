@@ -325,3 +325,94 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .daily-task-marker{width:29px;height:29px}
   .daily-task .text-button{max-width:92px;font-size:9px}
 }
+
+
+/* Mobile usability pass: readable secondary text, compact metrics and order cards. */
+.order-card-list{display:none}
+.order-card{border:1px solid var(--yere-border,#e5eaf2);border-radius:12px;padding:14px;background:#fff}
+.order-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.order-card-heading>div{min-width:0}
+.order-card-heading>div>strong{display:block;margin-top:5px;color:var(--yere-navy,#10234b);font-size:14px;line-height:1.35}
+.order-card-client{margin:10px 0 13px;color:#334155;font-size:14px;font-weight:700}
+.order-card-details{display:grid;grid-template-columns:1fr 1fr;gap:12px;border-top:1px solid #e9eef7;padding-top:12px}
+.order-card-details>div{display:grid;gap:5px;min-width:0}
+.order-card-details>div>span{font-size:12px;color:#64748b}
+.order-card-details>div>b{font-size:13px;color:#10234b;overflow-wrap:anywhere}
+.order-card-details>div>b.order-balance{color:#1d4ed8}
+.notice p{font-size:12px;line-height:1.45;color:#355b9b}
+.stat-card>small{font-size:12px;line-height:1.4;color:#52627a}
+.stat-top{font-size:12px}
+.section-heading p{font-size:12px;line-height:1.5;color:#52627a}
+.page-subtitle{font-size:13px;line-height:1.5;color:#52627a}
+.table-secondary{font-size:11px}
+.table-wrap td{font-size:12px}
+.client-main small,.client-measurements small{font-size:11px;color:#52627a}
+.quick-actions small,.tip-card>p:last-child{font-size:12px;line-height:1.55;color:#52627a}
+.daily-task-copy small,.daily-disclaimer,.daily-empty p{font-size:12px;line-height:1.5;color:#52627a}
+
+@media(max-width:760px){
+  .page-wrap{padding:18px 12px 24px}
+  .welcome-row{gap:12px;margin-bottom:14px}
+  .welcome-row h1{font-size:24px;line-height:1.25;letter-spacing:-.5px}
+  .page-subtitle{font-size:14px;line-height:1.5}
+  .eyebrow{font-size:11px;letter-spacing:1px;line-height:1.35;margin-bottom:8px;color:#526b95}
+  .primary-button{font-size:14px;min-height:44px;padding:11px 14px}
+  .notice{align-items:flex-start;gap:8px;padding:8px 10px;margin-bottom:14px;border-radius:8px}
+  .notice>span{font-size:16px;line-height:1.35}
+  .notice p{font-size:12px;line-height:1.45}
+  .notice button{font-size:22px;line-height:1;min-width:28px;min-height:28px}
+  .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:14px}
+  .stat-card{padding:13px 12px;border-radius:11px}
+  .stat-top{font-size:12px;line-height:1.35;align-items:flex-start}
+  .stat-icon{width:29px;height:29px;flex-shrink:0}
+  .stat-card>strong{font-size:25px;margin:8px 0 7px;letter-spacing:-.5px}
+  .stat-card>strong.money-stat{font-size:clamp(15px,4.1vw,20px);white-space:normal;overflow-wrap:anywhere;line-height:1.25}
+  .stat-card>small{font-size:12px;line-height:1.4;align-items:flex-start}
+  .content-card{padding:15px 12px 0;margin-bottom:13px;border-radius:11px}
+  .section-heading{gap:9px;margin-bottom:14px}
+  .section-heading h2{font-size:17px;line-height:1.35}
+  .section-heading p{font-size:12px;line-height:1.5;margin-top:5px}
+  .section-heading .text-button{white-space:normal;text-align:left;font-size:13px;padding:4px 0}
+  .orders-desktop{display:none}
+  .order-card-list{display:grid;gap:10px;padding-bottom:14px}
+  .order-card{padding:13px;border-radius:11px}
+  .order-card-heading>div>strong{font-size:14px;line-height:1.4}
+  .order-card-client{font-size:14px;line-height:1.4;margin:10px 0 12px}
+  .order-card-details{gap:11px;padding-top:11px}
+  .order-card-details>div>span{font-size:12px;line-height:1.3}
+  .order-card-details>div>b{font-size:13px;line-height:1.35}
+  .status-select{font-size:12px;max-width:145px;min-height:36px;padding:6px 8px}
+  .daily-assistant{padding-bottom:0}
+  .daily-task-copy b{font-size:13px;line-height:1.4}
+  .daily-task-copy small,.daily-disclaimer,.daily-empty p{font-size:12px;line-height:1.5}
+  .client-row{padding:13px 10px;gap:9px}
+  .client-main b{font-size:13px;line-height:1.4}
+  .client-main small{font-size:12px;line-height:1.4;color:#52627a}
+  .client-measurements{min-width:54px}
+  .client-measurements b{font-size:13px}
+  .client-measurements small{font-size:11px;line-height:1.35;color:#52627a}
+  .search-box{min-height:42px}
+  .search-box input{font-size:14px}
+  .new-client-form label{font-size:13px}
+  .new-client-form input{font-size:16px;min-height:44px}
+  .new-client-form p{font-size:12px;line-height:1.45}
+  .secondary-button{font-size:13px;min-height:42px}
+  .measure-field>span{font-size:12px;line-height:1.4}
+  .measure-field input{font-size:16px;min-height:42px}
+  .measure-notes-field{font-size:12px}
+  .measure-notes-field textarea{font-size:14px}
+  .quick-actions b{font-size:13px;line-height:1.4}
+  .quick-actions small{font-size:12px;line-height:1.45}
+  .tip-card{padding:17px}
+  .tip-card h2{font-size:18px;line-height:1.4}
+  .tip-card>p:last-child{font-size:13px;line-height:1.55}
+}
+@media(max-width:380px){
+  .page-wrap{padding-left:9px;padding-right:9px}
+  .stats-grid{gap:7px}
+  .stat-card{padding:11px 9px}
+  .stat-top{font-size:11px}
+  .stat-card>strong.money-stat{font-size:15px}
+  .order-card-details{grid-template-columns:1fr 1fr;gap:9px}
+  .order-card-heading{flex-direction:column}
+}
