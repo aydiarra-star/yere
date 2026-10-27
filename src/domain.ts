@@ -85,7 +85,7 @@ export function isOrderInputValid(
   if (!input.clientId || !clientIds.includes(input.clientId) || !input.garment.trim()) return false;
   if (!Number.isSafeInteger(input.price) || input.price <= 0) return false;
   if (!Number.isSafeInteger(input.deposit) || input.deposit < 0 || input.deposit > input.price) return false;
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(input.dueDate)) return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dueDate)) return false;
   const dueDate = new Date(`${input.dueDate}T12:00:00Z`);
   return Number.isFinite(dueDate.getTime()) && dueDate.toISOString().slice(0, 10) === input.dueDate;
 }
