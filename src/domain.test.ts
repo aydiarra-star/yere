@@ -124,9 +124,11 @@ describe("suggestions de relance client", () => {
       deposit: 20000,
       status: "Livré"
     }];
-    expect(getClientReminderSuggestions(oneClient, makeOrder("2026-04-30"), "2026-10-27").some((item) => item.kind === "inactive")).toBe(false);
-    expect(getClientReminderSuggestions(oneClient, makeOrder("2026-04-30"), "2026-10-27", 180).some((item) => item.kind === "inactive")).toBe(false);
-    expect(getClientReminderSuggestions(oneClient, makeOrder("2026-04-30"), "2026-10-27").length).toBe(0);
-    expect(getClientReminderSuggestions(oneClient, makeOrder("2026-04-30"), "2026-10-27").some((item) => item.kind === "inactive")).toBe(false);
+    const at179Days = getClientReminderSuggestions(oneClient, makeOrder("2026-05-01"), "2026-10-27");
+    const at180Days = getClientReminderSuggestions(oneClient, makeOrder("2026-04-30"), "2026-10-27");
+    const at181Days = getClientReminderSuggestions(oneClient, makeOrder("2026-04-29"), "2026-10-27");
+    expect(at179Days.some((item) => item.kind === "inactive")).toBe(false);
+    expect(at180Days.some((item) => item.kind === "inactive")).toBe(true);
+    expect(at181Days.some((item) => item.kind === "inactive")).toBe(true);
   });
 });
