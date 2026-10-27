@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { balanceDue, formatXof, getClientReminderSuggestions, isMeasurementValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
+import { balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isMeasurementValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
 import { usePersistentState } from "./usePersistentState";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", note: "" };
@@ -66,21 +66,11 @@ function App() {
     [clients, orders]
   );
 
-  // Assistant quotidien : suggestions explicables, calculées uniquement à partir des commandes locales.
+  // Assistant quotidien : règles métier testées séparément, données locales uniquement.
   const today = new Date();
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const todayLabel = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" }).format(today);
-  const dailyTasks = [
-    ...orders
-      .filter((order) => order.status !== "Livré" && order.dueDate < todayKey)
-      .map((order) => ({ id: `retard-${order.id}`, title: `Commande en retard : ${order.garment}`, detail: `${clients.find((client) => client.id === order.clientId)?.name ?? "Client non retrouvé"} · échéance dépassée`, kind: "critical" as const, action: "orders" as const })),
-    ...orders
-      .filter((order) => order.status !== "Livré" && order.dueDate === todayKey)
-      .map((order) => ({ id: `today-${order.id}`, title: `Livraison prévue aujourd'hui : ${order.garment}`, detail: `${clients.find((client) => client.id === order.clientId)?.name ?? "Client non retrouvé"} · statut : ${order.status}`, kind: "today" as const, action: "orders" as const })),
-    ...orders
-      .filter((order) => order.status === "Prêt" && balanceDue(order) > 0)
-      .map((order) => ({ id: `balance-${order.id}`, title: `Solde à encaisser : ${formatXof(balanceDue(order))}`, detail: `${order.garment} · ${clients.find((client) => client.id === order.clientId)?.name ?? "Client non retrouvé"}`, kind: "money" as const, action: "cash" as const }))
-  ];
+  const dailyTasks = useMemo(() => getDailyTasks(clients, orders, todayKey), [clients, orders, todayKey]);
   const dailyTaskCount = dailyTasks.length;
 
   useEffect(() => {
