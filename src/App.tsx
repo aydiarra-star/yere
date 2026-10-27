@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { balanceDue, formatXof, matchesClient, orderStatuses, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
+import { balanceDue, formatXof, isMeasurementValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
 import { usePersistentState } from "./usePersistentState";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", note: "" };
@@ -38,11 +38,17 @@ function App() {
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
+  const [draftMeasurement, setDraftMeasurement] = useState<Measurement>({ ...emptyMeasurement });
   const [notice, setNotice] = useState("Démonstration : données conservées localement sur cet appareil, sans synchronisation serveur.");
 
   const visibleClients = useMemo(() => clients.filter((client) => matchesClient(client, query)), [clients, query]);
   const outstanding = orders.reduce((sum, order) => sum + balanceDue(order), 0);
   const selected = clients.find((client) => client.id === selectedClient);
+
+  useEffect(() => {
+    const client = clients.find((item) => item.id === selectedClient);
+    setDraftMeasurement(client ? { ...client.measurement } : { ...emptyMeasurement });
+  }, [selectedClient, clients]);
 
   function addClient(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -68,11 +74,23 @@ function App() {
     setOrders((current) => current.map((order) => order.id === orderId ? { ...order, status } : order));
   }
 
-  function updateMeasurement(clientId: string, field: keyof Measurement, value: string) {
-    setClients((current) => current.map((client) => client.id === clientId
-      ? { ...client, measurement: { ...client.measurement, [field]: value } }
+  function updateMeasurement(field: keyof Measurement, value: string) {
+    setDraftMeasurement((current) => ({ ...current, [field]: value }));
+  }
+
+  function saveMeasurements(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selected) return;
+    if (!isMeasurementValid(draftMeasurement)) {
+      setNotice("Chaque mensuration doit être un nombre positif ou nul.");
+      return;
+    }
+    const measuredAt = new Date().toISOString().slice(0, 10);
+    const versionId = `m-${Date.now()}`;
+    setClients((current) => current.map((client) => client.id === selected.id
+      ? saveMeasurementVersion(client, draftMeasurement, measuredAt, versionId)
       : client));
-    setNotice("Mensurations mises à jour sur cet appareil. Aucune synchronisation serveur n'est encore active.");
+    setNotice(`Mensurations de ${selected.name} enregistrées dans l'historique local du prototype. Aucune sauvegarde serveur n'est active.`);
   }
 
   const navItems: { id: View; label: string; icon: string }[] = [
@@ -120,7 +138,7 @@ function App() {
             <div className="client-list">{visibleClients.map((client, index) => <button key={client.id} className={selectedClient === client.id ? "client-row selected" : "client-row"} onClick={() => setSelectedClient(selectedClient === client.id ? null : client.id)}><span className={`client-avatar avatar-${index % 4}`}>{client.name.split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</span><span className="client-main"><b>{client.name}</b><small>{client.phone || "Pas de téléphone renseigné"}</small></span><span className="client-measurements"><b>{Object.values(client.measurement).filter(Boolean).length - (client.measurement.note ? 1 : 0)}/6</b><small>mesures saisies</small></span><span className="row-chevron">›</span></button>)}
               {visibleClients.length === 0 && <div className="empty-state"><span>⌕</span><b>Aucun client trouvé</b><p>Essayez un autre nom ou numéro.</p></div>}
             </div>
-            {selected && <div className="measurement-panel"><div className="section-heading"><div><h2>Mensurations de {selected.name}</h2><p>Dernière fiche de mesures enregistrée en démonstration</p></div><span className="demo-pill">Exemple</span></div><div className="measurement-grid">{[["Tour de poitrine","bust"],["Tour de taille","waist"],["Tour de hanches","hips"],["Épaules","shoulder"],["Longueur de manche","sleeve"],["Longueur du vêtement","length"]].map(([label, key]) => <label className="measure-field" key={key}><span>{label} (cm)</span><input inputMode="decimal" aria-label={label} value={selected.measurement[key as keyof Measurement] as string} onChange={(event) => updateMeasurement(selected.id, key as keyof Measurement, event.target.value)} placeholder="—" /></label>)}</div><label className="measure-notes-field">Notes pour la prochaine commande<textarea value={selected.measurement.note} onChange={(event) => updateMeasurement(selected.id, "note", event.target.value)} placeholder="Préférences, coupe, tissu…" rows={2} /></label><p className="privacy-note">Prototype uniquement : ces informations sont conservées dans le stockage local de ce navigateur, sans compte ni sauvegarde serveur. N'utilise pas de données clients réelles.</p></div>}
+            {selected && <div className="measurement-panel"><div className="section-heading"><div><h2>Mensurations de {selected.name}</h2><p>Dernière fiche de mesures enregistrée en démonstration</p></div><span className="demo-pill">Exemple</span></div><form className="measurement-form" onSubmit={saveMeasurements}><div className="measurement-grid">{[["Tour de poitrine","bust"],["Tour de taille","waist"],["Tour de hanches","hips"],["Épaules","shoulder"],["Longueur de manche","sleeve"],["Longueur du vêtement","length"]].map(([label, key]) => <label className="measure-field" key={key}><span>{label} (cm)</span><input type="number" min="0" step="any" inputMode="decimal" aria-label={label} value={draftMeasurement[key as keyof Measurement] as string} onChange={(event) => updateMeasurement(key as keyof Measurement, event.target.value)} placeholder="—" /></label>)}</div><label className="measure-notes-field">Notes pour la prochaine commande<textarea value={draftMeasurement.note} onChange={(event) => updateMeasurement("note", event.target.value)} placeholder="Préférences, coupe, tissu…" rows={2} /></label><div className="form-actions"><button type="submit" className="primary-button">Enregistrer les mensurations</button></div></form><section className="measurement-history" aria-label="Historique des mensurations"><h3>Historique des prises de mesures</h3>{(selected.measurementHistory ?? []).length === 0 ? <p className="history-empty">Aucune prise de mesures enregistrée. Complétez les champs puis enregistrez une première version.</p> : <ol>{[...(selected.measurementHistory ?? [])].reverse().map((version) => <li key={version.id}><b>{new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(version.measuredAt + "T12:00:00"))}</b><span>{[version.measurement.bust && `Poitrine ${version.measurement.bust}`, version.measurement.waist && `Taille ${version.measurement.waist}`, version.measurement.hips && `Hanches ${version.measurement.hips}`].filter(Boolean).join(" · ") || "Notes uniquement"}</span></li>)}</ol>}</section><p className="privacy-note">Prototype uniquement : l'historique est conservé dans le stockage local de ce navigateur, sans compte ni sauvegarde serveur. N'utilise pas de données clients réelles.</p></div>}
           </section>}
 
           {view === "orders" && <section className="content-card"><div className="section-heading"><div><h2>Commandes de l’atelier</h2><p>Modifiez le statut pour tester le suivi de production.</p></div><span className="demo-pill">Données de démonstration</span></div><OrderTable orders={orders} clients={clients} onStatusChange={updateStatus} /></section>}
