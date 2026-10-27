@@ -71,6 +71,43 @@ L'isolation des données entre ateliers est une exigence bloquante avant le pilo
 - États de chargement, messages d'erreur compréhensibles et confirmations pour actions importantes.
 - Mode hors connexion limité uniquement si les règles de synchronisation et de conflits sont sûres.
 
+
+
+## 5.1 Onboarding — démarrer avec la valeur, pas un module isolé
+
+### Objectif et mesure
+- À la première ouverture, faire comprendre la valeur principale de YÉRÉ en moins de 30 secondes.
+- Guider un nouveau tailleur vers son premier client, puis ses mensurations et sa première commande.
+- Objectif d'adoption : première fiche client créée dans les 3 minutes suivant le début de l'onboarding.
+- Le délai est un indicateur d'amélioration produit, pas une faute de l'utilisateur. Mesurer aussi les abandons, les erreurs de formulaire et le taux de complétion, puis améliorer le parcours si la cible n'est pas atteinte.
+- Ne pas transmettre d'événements d'usage ou de données personnelles sans information, base légale et paramétrage appropriés. Dans le prototype, la mesure est locale uniquement.
+
+### Parcours de première ouverture
+1. **Bienvenue — YÉRÉ Atelier.** Sous-titre « La couture, mieux organisée. » Message : « Retrouvez vos clients, leurs mensurations, vos commandes et vos paiements en un seul endroit. » Action principale : « Commencer ». Présenter une illustration originale d'un atelier réaliste, téléphone, fiches clients et vêtements en cours.
+2. **Le problème résolu.** « Fini les cahiers perdus et les recherches interminables. » Mettre en avant mensurations, anciennes commandes, acomptes et dates de livraison ; bénéfice : gain de temps et réduction des erreurs.
+3. **Suivi des commandes.** « Gardez chaque commande sous contrôle. » Présenter coupe, couture, essayage et livraison. Ne promettre des alertes automatiques de retard que lorsqu'elles sont effectivement implémentées.
+4. **Gestion financière.** « Comprenez ce que votre atelier gagne réellement. » Présenter acomptes, paiements, dépenses et recettes. Distinguer les fonctions disponibles, simulées et à venir ; ne pas laisser croire qu'une comptabilité complète existe avant sa livraison.
+5. **Inspirations couture.** « Conservez les modèles qui inspirent vos créations. » Photos envoyées par les clients, modèles enregistrés et créations réalisées. Positionner ceci comme un outil de travail, jamais comme un réseau social. Signaler explicitement que le catalogue est à venir tant qu'il n'est pas disponible.
+6. **Créer l'atelier.** Champs : nom de l'atelier, téléphone et ville ; action « Commencer à utiliser YÉRÉ ». Ne pas présenter ce profil local comme un compte distant créé.
+7. **Première action guidée.** Ouvrir directement la création d'un client, puis inviter à compléter les mensurations, puis à créer une commande. Afficher une progression simple et une option pour reprendre plus tard.
+
+### États et exigences UX
+- Aucun nouvel utilisateur ne doit atterrir directement dans « Relances clients » ni sur un tableau de bord vide sans explication.
+- Pour un nouvel espace, ne pas injecter silencieusement de faux clients ou commandes. Les données d'exemple doivent être proposées dans un mode démonstration clairement identifié.
+- Autoriser retour, reprise et sortie sans perdre silencieusement les champs ; expliquer les champs facultatifs et éviter de demander plus que nécessaire.
+- Mobile d'abord, accessibilité clavier, libellés explicites, contraste et erreurs de validation lisibles.
+- Montrer un chemin alternatif « Explorer la démonstration » avec des données fictives identifiables.
+
+### Critères d'acceptation
+- Un nouvel espace voit le parcours de bienvenue avant les modules.
+- La valeur centrale est compréhensible en moins de 30 secondes lors des tests d'utilisabilité.
+- Le profil d'atelier est validé et les limites de stockage local sont affichées.
+- Après configuration, l'écran de création du premier client est ouvert automatiquement.
+- Après création du client, l'interface propose la saisie de ses mensurations puis la création d'une commande.
+- Le délai jusqu'au premier client est mesuré sans envoyer de données personnelles depuis le prototype ; le taux de première fiche en moins de 3 minutes est suivi lors des tests terrain.
+- Les données de démonstration sont distinctes des données créées par l'utilisateur et ne sont pas chargées silencieusement.
+- Les fonctionnalités non livrées (alertes, comptabilité complète, inspirations, serveur) sont annoncées comme prévues, jamais comme actives.
+
 ## 6. Sécurité et confiance
 - Authentification sécurisée et gestion des rôles.
 - Contrôles d'accès côté serveur/base de données.
