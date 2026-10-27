@@ -36,9 +36,10 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 - [x] Distinguer l'entrée vierge de l'exploration de la démonstration avec données fictives.
 - [x] Ajouter une mesure locale du délai jusqu'à la première fiche client, avec le seuil d'analyse de trois minutes.
 - [x] Inscrire le parcours, les critères d'acceptation et la règle de mesure au cahier des charges maître.
-- [ ] Vérifier par CI les tests et la compilation du parcours.
+- [x] Vérifier par CI les tests et la compilation du parcours (voir l'exécution liée au commit applicatif ci-dessous).
 - [ ] Tester l'onboarding sur téléphone réel, clavier, reprise et rafraîchissement.
-- [ ] Vérifier les transitions client → mensurations → commande ; le parcours de création des mensurations et commandes reste à finaliser dans l'interface.
+- [ ] Remplacer/compléter l'illustration CSS conceptuelle par une illustration originale plus réaliste d'un atelier de couture, après validation visuelle.
+- [x] Relier le parcours client → formulaire de mensurations → formulaire de première commande dans le prototype.
 - [ ] Faire des tests d'utilisabilité et suivre le taux de première fiche créée en moins de trois minutes.
 
 **Limite actuelle :** le profil d'atelier, l'état de l'onboarding, les clients et les commandes restent dans le stockage local du navigateur. Ce n'est pas une inscription serveur.
