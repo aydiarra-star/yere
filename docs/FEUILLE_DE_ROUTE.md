@@ -133,3 +133,17 @@ Le prototype actuel permet de tester l'interface clients/mesures localement, mai
 ## Règle de priorisation
 
 Toute nouvelle demande est évaluée selon : fréquence du problème, impact sur le temps ou l'argent, nombre d'utilisateurs concernés, risque, coût de développement et dépendances. La sécurité, l'intégrité financière et la protection des données passent avant les fonctions de visibilité.
+
+
+## Banque d'idées stratégiques — intégration à la feuille de route
+
+- [x] Enregistrer la vision « YÉRÉ, système d'exploitation de l'atelier » dans un document séparé, sans élargir automatiquement le MVP.
+- [x] Formaliser le filtre anti-gadget : plus simple, plus rapide et plus utile que le cahier.
+- [x] Classer les idées : assistant quotidien, mémoire client, mensurations, rentabilité, calendrier local, portfolio, santé de l'atelier, tendances anonymisées et diaspora long terme.
+- [x] Ajouter des garde-fous sur les données financières, les anciennes mensurations, les photos/consentements et l'anonymisation.
+- [ ] Priorité produit suivante : définir précisément « Que dois-je faire aujourd'hui ? » à partir des seules données fiables disponibles et après validation terrain.
+- [ ] Avant d'utiliser des données réelles : comptes, isolation des ateliers, sauvegarde/restauration testée, autorisations et protection des données.
+- [ ] Ne pas lancer les tendances agrégées, marketplace étendue ou commande diaspora avant d'avoir validé l'usage du MVP.
+
+Référence : [Banque d'idées stratégiques](./BANQUE_IDEES_STRATEGIQUES.md).
+
