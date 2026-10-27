@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { balanceDue, formatXof, getClientReminderSuggestions, isMeasurementValid, matchesClient, saveMeasurementVersion, type Client, type Measurement, type Order } from "./domain";
+import { balanceDue, formatXof, getClientReminderSuggestions, isMeasurementValid, isOrderInputValid, matchesClient, saveMeasurementVersion, type Client, type Measurement, type Order } from "./domain";
 
 const client: Client = {
   id: "c-1",
@@ -17,6 +17,33 @@ describe("balanceDue", () => {
 
   it("never returns a negative balance", () => {
     expect(balanceDue({ price: 5000, deposit: 7000 })).toBe(0);
+  });
+});
+
+describe("validation d'une nouvelle commande", () => {
+  const validInput = { clientId: "c-1", garment: "Boubou", dueDate: "2026-11-01", price: 25000, deposit: 10000 };
+
+  it("accepte une commande cohérente rattachée à un client existant", () => {
+    expect(isOrderInputValid(validInput, ["c-1", "c-2"])).toBe(true);
+  });
+
+  it("refuse les prix invalides, négatifs, décimaux ou non sûrs", () => {
+    expect(isOrderInputValid({ ...validInput, price: 0 }, ["c-1"])).toBe(false);
+    expect(isOrderInputValid({ ...validInput, price: -1 }, ["c-1"])).toBe(false);
+    expect(isOrderInputValid({ ...validInput, price: 25000.5 }, ["c-1"])).toBe(false);
+    expect(isOrderInputValid({ ...validInput, price: Number.MAX_SAFE_INTEGER + 1 }, ["c-1"])).toBe(false);
+  });
+
+  it("refuse un acompte supérieur au prix ou non entier", () => {
+    expect(isOrderInputValid({ ...validInput, deposit: 26000 }, ["c-1"])).toBe(false);
+    expect(isOrderInputValid({ ...validInput, deposit: 10.5 }, ["c-1"])).toBe(false);
+    expect(isOrderInputValid({ ...validInput, deposit: -1 }, ["c-1"])).toBe(false);
+  });
+
+  it("refuse une date inexistante, un client inconnu ou un vêtement vide", () => {
+    expect(isOrderInputValid({ ...validInput, dueDate: "2026-02-31" }, ["c-1"])).toBe(false);
+    expect(isOrderInputValid({ ...validInput, clientId: "missing" }, ["c-1"])).toBe(false);
+    expect(isOrderInputValid({ ...validInput, garment: "   " }, ["c-1"])).toBe(false);
   });
 });
 
