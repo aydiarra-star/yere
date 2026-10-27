@@ -219,3 +219,80 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .new-order-form .history-empty{grid-column:1/-1}
 .new-order-form button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:560px){.new-order-form{grid-template-columns:1fr;padding:13px}.new-order-form h3,.new-order-form .form-actions,.new-order-form .history-empty{grid-column:1}}
+
+
+/* Charte officielle YÉRÉ — confiance bleue, accent or textile */
+:root{
+  --yere-blue:#3B5BDB;
+  --yere-blue-hover:#2F4BC0;
+  --yere-navy:#172554;
+  --yere-sky:#EEF2FF;
+  --yere-sky-strong:#DDE5FF;
+  --yere-gold:#D4A017;
+  --yere-gold-soft:#FBF4D8;
+  --yere-success:#16804A;
+  --yere-success-soft:#E8F6ED;
+  --yere-warning:#C66A13;
+  --yere-warning-soft:#FFF3E3;
+  --yere-danger:#B42318;
+  --yere-danger-soft:#FEECEB;
+  --yere-text:#334155;
+  --yere-muted:#64748B;
+  --yere-border:#E3E8F2;
+  --yere-canvas:#F8FAFF;
+}
+body{background:var(--yere-canvas);color:var(--yere-text)}
+.brand-mark{background:var(--yere-blue);box-shadow:0 5px 14px #3b5bdb26}
+.primary-button{background:var(--yere-blue);border-color:var(--yere-blue)}
+.primary-button:hover{background:var(--yere-blue-hover)}
+.nav-item.active{background:var(--yere-sky);color:var(--yere-blue)}
+.nav-count{background:var(--yere-sky-strong);color:var(--yere-blue)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline-color:#A9B8FF}
+.demo-pill i{background:var(--yere-gold)}
+.stat-icon.amber,.reminder-kind.occasion{background:var(--yere-gold-soft);color:#8A650B}
+.stat-card .green,.quick-icon.green{background:var(--yere-success-soft);color:var(--yere-success)}
+.notice{background:#F0F4FF;border-color:#DEE6FF;color:#344A9B}
+.tip-card{border-color:#F0E4B8}
+.tip-spark{background:var(--yere-gold-soft);color:#9B7411}
+.onboarding-copy .eyebrow{color:var(--yere-blue)}
+.onboarding-primary{background:var(--yere-blue);border-color:var(--yere-blue)}
+.onboarding-primary:hover{background:var(--yere-blue-hover)}
+.onboarding-benefits li:before{color:var(--yere-success)}
+.onboarding-inspiration>span{background:var(--yere-gold-soft);color:#8A650B}
+.reminder-kind.occasion{background:var(--yere-gold-soft);color:#8A650B}
+.cash-page,.account-page{display:grid;gap:15px}
+.cash-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.cash-summary{padding:21px;display:flex;flex-direction:column;gap:10px}
+.cash-summary>span{font-size:11px;color:var(--yere-muted)}
+.cash-summary>strong{font:800 clamp(22px,3vw,30px)/1.2 Manrope,sans-serif;color:var(--yere-navy)}
+.cash-summary>small{font-size:10px;line-height:1.5;color:var(--yere-muted)}
+.account-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;padding:4px 0 20px}
+.account-form label{display:grid;gap:6px;font-size:11px;font-weight:700;color:#475569}
+.account-form label:first-child{grid-column:1/-1}
+.account-form input{width:100%;min-height:43px;border:1px solid var(--yere-border);border-radius:8px;padding:11px 12px;background:#fff;color:var(--yere-navy)}
+.account-form button{justify-self:start;grid-column:1/-1}
+.account-secondary{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:17px 0;border-top:1px solid var(--yere-border)}
+.account-secondary b{font-size:12px}.account-secondary p{font-size:11px;line-height:1.6;color:var(--yere-muted);margin:6px 0 0}
+.secondary-button{border:1px solid var(--yere-border);border-radius:8px;background:#fff;color:var(--yere-navy);font-size:11px;font-weight:700;padding:11px 14px;min-height:40px}
+.mobile-bottom-nav{display:none}
+@media(max-width:760px){
+  .sidebar{display:none}
+  .main-content{margin-left:0;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+  .topbar{padding:0 16px;height:57px}
+  .page-wrap{padding-bottom:20px}
+  .mobile-bottom-nav{position:fixed;z-index:20;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:7px 5px calc(7px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--yere-border);box-shadow:0 -5px 24px #1725540a}
+  .mobile-nav-item{min-width:0;min-height:52px;border:0;background:transparent;color:#64748b;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:4px 1px;border-radius:9px}
+  .mobile-nav-item>span{font-size:20px;line-height:1}
+  .mobile-nav-item>small{font-size:9px;font-weight:600;white-space:nowrap}
+  .mobile-nav-item.active{background:var(--yere-sky);color:var(--yere-blue)}
+  .mobile-nav-item.active>small{font-weight:800}
+  .cash-summary-grid{grid-template-columns:1fr;gap:9px}
+  .cash-summary{padding:16px}
+  .account-form{grid-template-columns:1fr}
+  .account-form label:first-child,.account-form button{grid-column:1}
+  .account-secondary{align-items:flex-start;flex-direction:column}
+}
+@media(max-width:360px){
+  .mobile-nav-item>small{font-size:8px}
+  .mobile-nav-item>span{font-size:18px}
+}
