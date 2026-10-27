@@ -111,4 +111,22 @@ describe("suggestions de relance client", () => {
     ], "2026-10-27");
     expect(results).toHaveLength(0);
   });
+
+  it("respecte exactement le seuil de 180 jours", () => {
+    const oneClient = [clients[0]];
+    const makeOrder = (orderedAt: string): Order[] => [{
+      id: "threshold",
+      clientId: "c-old",
+      garment: "Boubou",
+      dueDate: orderedAt,
+      orderedAt,
+      price: 20000,
+      deposit: 20000,
+      status: "Livré"
+    }];
+    expect(getClientReminderSuggestions(oneClient, makeOrder("2026-04-30"), "2026-10-27").some((item) => item.kind === "inactive")).toBe(false);
+    expect(getClientReminderSuggestions(oneClient, makeOrder("2026-04-30"), "2026-10-27", 180).some((item) => item.kind === "inactive")).toBe(false);
+    expect(getClientReminderSuggestions(oneClient, makeOrder("2026-04-30"), "2026-10-27").length).toBe(0);
+    expect(getClientReminderSuggestions(oneClient, makeOrder("2026-04-30"), "2026-10-27").some((item) => item.kind === "inactive")).toBe(false);
+  });
 });
