@@ -42,17 +42,6 @@ function isNullableTimestamp(value: unknown): value is number | null {
 }
 
 function App() {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  useEffect(() => {
-    const updateConnection = () => setIsOnline(navigator.onLine);
-    window.addEventListener("online", updateConnection);
-    window.addEventListener("offline", updateConnection);
-    return () => {
-      window.removeEventListener("online", updateConnection);
-      window.removeEventListener("offline", updateConnection);
-    };
-  }, []);
-
   const [clients, setClients] = usePersistentState<Client[]>("yere-demo-clients-v1", [], isClientListValid);
   const [orders, setOrders] = usePersistentState<Order[]>("yere-demo-orders-v1", [], isOrderListValid);
   const [atelier, setAtelier] = usePersistentState<AtelierProfile>("yere-demo-atelier-v1", emptyAtelier, isAtelierProfileValid);
@@ -71,7 +60,7 @@ function App() {
   const [clientPhone, setClientPhone] = useState("");
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [draftMeasurement, setDraftMeasurement] = useState<Measurement>({ ...emptyMeasurement });
-  const [notice, setNotice] = useState("Démonstration : données conservées localement sur cet appareil, sans synchronisation serveur.");
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     if (onboardingStartedAt === null) setOnboardingStartedAt(Date.now());
@@ -274,20 +263,20 @@ function App() {
       </aside>
 
       <main className="main-content">
-        <header className="topbar"><div className="breadcrumb">YÉRÉ <span>/</span> Atelier <span>/</span> <b>{navItems.find((item) => item.id === view)?.label}</b></div><div className="topbar-right"><span className="demo-pill"><i /> Démonstration</span><span className="demo-pill" role="status" aria-live="polite"><i /> {isOnline ? "En ligne" : "Hors ligne"}</span><button className="avatar-button" aria-label="Profil de démonstration">AD</button></div></header>
+        <header className="topbar"><div className="breadcrumb">YÉRÉ <span>/</span> Atelier <span>/</span> <b>{navItems.find((item) => item.id === view)?.label}</b></div><div className="topbar-right"><button className="avatar-button" aria-label="Profil de l’atelier">AD</button></div></header>
         <div className="page-wrap">
-          <div className="welcome-row"><div><p className="eyebrow">{todayLabel.charAt(0).toUpperCase() + todayLabel.slice(1)}</p><h1>{view === "overview" ? "Votre atelier, en un coup d’œil." : view === "clients" ? "Vos clients & mensurations" : view === "orders" ? "Suivi des commandes" : view === "cash" ? "La caisse de votre atelier" : view === "account" ? (atelier.name || "Votre compte atelier") : "Faites revenir vos clients."}</h1><p className="page-subtitle">{view === "overview" ? "Gardez le fil de vos commandes et de votre activité." : view === "clients" ? "Retrouvez les fiches clients et leurs dernières mesures." : view === "orders" ? "Suivez chaque pièce, de la préparation à la livraison." : view === "cash" ? "Aperçu indicatif des acomptes et soldes, pas encore un journal de caisse complet." : view === "account" ? "Les informations de cet atelier sur cet appareil." : "Des occasions concrètes de reprendre contact, sans envoyer de message automatiquement."}</p></div><button className="primary-button" onClick={() => { setShowForm(true); setView("clients"); }}><span>＋</span> Nouveau client</button></div>
-          {notice && <div className="notice" role="status"><span aria-hidden="true">ⓘ</span><p>{notice}</p><button aria-label="Fermer le message" onClick={() => setNotice("")}>×</button></div>}
+          <div className={view === "overview" ? "welcome-row overview-welcome" : "welcome-row"}><div><p className="eyebrow">{view === "overview" ? "VOTRE ATELIER AUJOURD’HUI" : todayLabel.charAt(0).toUpperCase() + todayLabel.slice(1)}</p><h1>{view === "overview" ? "Bonjour Abdoulaye 👋" : view === "clients" ? "Vos clients & mensurations" : view === "orders" ? "Suivi des commandes" : view === "cash" ? "La caisse de votre atelier" : view === "account" ? (atelier.name || "Votre compte atelier") : "Faites revenir vos clients."}</h1><p className="page-subtitle">{view === "overview" ? "Voici les priorités de votre atelier pour aujourd’hui." : view === "clients" ? "Retrouvez les fiches clients et leurs dernières mesures." : view === "orders" ? "Suivez chaque pièce, de la préparation à la livraison." : view === "cash" ? "Suivez les acomptes et les montants à récupérer." : view === "account" ? "Votre profil d’atelier." : "Des occasions concrètes de reprendre contact avec vos clients."}</p>{view === "overview" && <div className="today-snapshot" aria-label="Résumé de la journée"><div className="snapshot-item"><span className="snapshot-icon">✓</span><span><b>{orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length} livraison{orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length === 1 ? "" : "s"}</b><small>prévue aujourd’hui</small></span></div><div className="snapshot-item"><span className="snapshot-icon money">₣</span><span><b>{formatXof(outstanding)}</b><small>à encaisser</small></span></div><div className="snapshot-item"><span className="snapshot-icon orders">▣</span><span><b>{orders.filter((order) => order.status !== "Livré").length} commande{orders.filter((order) => order.status !== "Livré").length === 1 ? "" : "s"}</b><small>en cours</small></span></div></div>}</div><button className="primary-button welcome-action" onClick={() => { if (view === "overview") { setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); setShowOrderForm(true); setView("orders"); } else { setShowForm(true); setView("clients"); } }}><span>＋</span> {view === "overview" ? "Nouvelle commande" : "Nouveau client"}</button></div>
+          {notice && view !== "overview" && <div className="notice" role="status"><span aria-hidden="true">ⓘ</span><p>{notice}</p><button aria-label="Fermer le message" onClick={() => setNotice("")}>×</button></div>}
 
           {view === "overview" && <>
             <section className="daily-assistant content-card" aria-labelledby="daily-assistant-title">
               <div className="section-heading">
-                <div><p className="eyebrow">VOTRE PRIORITÉ DU JOUR</p><h2 id="daily-assistant-title">Que dois-je faire aujourd'hui ?</h2><p>{todayLabel.charAt(0).toUpperCase() + todayLabel.slice(1)} · suggestions calculées depuis les commandes enregistrées sur cet appareil.</p></div>
+                <div><p className="eyebrow">LES PRIORITÉS</p><h2 id="daily-assistant-title">Que dois-je faire aujourd’hui ?</h2><p>Les prochaines actions pour garder le rythme de l’atelier.</p></div>
                 <span className="daily-count">{dailyTaskCount} action{dailyTaskCount > 1 ? "s" : ""}</span>
               </div>
-              {dailyTasks.length > 0 ? <ul className="daily-task-list">{dailyTasks.slice(0, 6).map((task) => <li key={task.id} className={`daily-task ${task.kind}`}><span className="daily-task-marker" aria-hidden="true">{task.kind === "critical" ? "!" : task.kind === "money" ? "₣" : "→"}</span><span className="daily-task-copy"><b>{task.title}</b><small>{task.detail}</small></span><button className="text-button" onClick={() => setView(task.action)}>{task.action === "cash" ? "Voir la caisse" : "Voir la commande"} <span>→</span></button></li>)}</ul> : <div className="daily-empty"><b>Aucune urgence détectée dans les données disponibles.</b><p>Les commandes, paiements et stocks non enregistrés ici ne sont pas pris en compte.</p><button className="secondary-button" onClick={() => setView("orders")}>Vérifier les commandes</button></div>}
+              {dailyTasks.length > 0 ? <ul className="daily-task-list">{dailyTasks.slice(0, 6).map((task) => <li key={task.id} className={`daily-task ${task.kind}`}><span className="daily-task-marker" aria-hidden="true">{task.kind === "critical" ? "!" : task.kind === "money" ? "₣" : "→"}</span><span className="daily-task-copy"><b>{task.title}</b><small>{task.detail}</small></span><button className="text-button" onClick={() => setView(task.action)}>{task.action === "cash" ? "Voir la caisse" : "Voir la commande"} <span>→</span></button></li>)}</ul> : <div className="daily-empty"><b>Tout est à jour pour le moment.</b><p>Vous pouvez vérifier vos prochaines livraisons ou créer une nouvelle commande.</p><button className="secondary-button" onClick={() => setView("orders")}>Vérifier les commandes</button></div>}
               {dailyTaskCount > 6 && <p className="daily-overflow">Et {dailyTaskCount - 6} autre{dailyTaskCount - 6 > 1 ? "s" : ""} action{dailyTaskCount - 6 > 1 ? "s" : ""} à consulter dans les commandes et la caisse.</p>}
-              <p className="daily-disclaimer">Aide indicative du prototype : les données restent locales, ne sont pas synchronisées et peuvent être incomplètes. Vérifiez les échéances avec votre cahier.</p>
+              
             </section>
             <section className="stats-grid" aria-label="Indicateurs de l'atelier">
               <article className="stat-card"><div className="stat-top"><span>Commandes en cours</span><span className="stat-icon green">▤</span></div><strong>{orders.filter((order) => order.status !== "Livré").length.toString().padStart(2, "0")}</strong><small><span className="stat-dot green-dot" /> À suivre cette semaine</small></article>
@@ -296,7 +285,7 @@ function App() {
             </section>
             <section className="content-card">
               <div className="section-heading"><div><h2>Commandes à suivre</h2><p>Les dernières pièces de votre atelier</p></div><button className="text-button" onClick={() => setView("orders")}>Toutes les commandes <span>→</span></button></div>
-              <OrderTable orders={orders.slice(0, 3)} clients={clients} onStatusChange={updateStatus} />
+              <OrderTable orders={orders.slice(0, 3)} clients={clients} onStatusChange={updateStatus} onView={() => setView("orders")} />
             </section>
             <section className="bottom-grid"><div className="content-card quick-card"><div className="section-heading"><div><h2>Accès rapide</h2><p>Les actions du quotidien</p></div></div><div className="quick-actions"><button onClick={() => { setShowForm(true); setView("clients"); }}><span className="quick-icon green">＋</span><span><b>Ajouter un client</b><small>Créer une fiche client</small></span><span className="quick-arrow">→</span></button><button onClick={() => setView("clients")}><span className="quick-icon purple">↗</span><span><b>Retrouver des mesures</b><small>Consulter les fiches existantes</small></span><span className="quick-arrow">→</span></button></div></div><div className="tip-card"><span className="tip-spark">✳</span><p className="eyebrow">LE CONSEIL YÉRÉ</p><h2>Une bonne couture commence par une bonne mesure.</h2><p>Conservez les mensurations de chaque client pour gagner du temps lors de sa prochaine commande.</p></div></section>
           </>}
@@ -424,15 +413,15 @@ function Onboarding({ atelier, onAtelierChange, onFinish, onExploreDemo }: {
   </main>;
 }
 
-function OrderTable({ orders, clients, onStatusChange }: { orders: Order[]; clients: Client[]; onStatusChange: (id: string, status: OrderStatus) => void }) {
+function OrderTable({ orders, clients, onStatusChange, onView }: { orders: Order[]; clients: Client[]; onStatusChange: (id: string, status: OrderStatus) => void; onView?: (order: Order) => void }) {
   const getStatusClass = (status: OrderStatus) => status === "Prêt" ? "ready" : status === "En confection" ? "progress" : status === "Livré" ? "delivered" : "todo";
-  const formatDueDate = (date: string) => new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" }).format(new Date(date + "T12:00:00"));
-  const statusControl = (order: Order) => <select className={`status-select status-${getStatusClass(order.status)}`} value={order.status} aria-label={`Statut de ${order.id}`} onChange={(event) => onStatusChange(order.id, event.target.value as OrderStatus)}>{orderStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select>;
+  const formatDueDate = (date: string) => new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long" }).format(new Date(date + "T12:00:00"));
+  const statusControl = (order: Order) => <select className={"status-select status-" + getStatusClass(order.status)} value={order.status} aria-label={"Statut de " + order.id} onChange={(event) => onStatusChange(order.id, event.target.value as OrderStatus)}>{orderStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select>;
 
   return <div className="orders-display">
     <div className="table-wrap orders-desktop"><table><thead><tr><th>COMMANDE</th><th>CLIENT</th><th>DATE DE LIVRAISON</th><th>PRIX</th><th>RESTE DÛ</th><th>STATUT</th></tr></thead><tbody>{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <tr key={order.id}><td><b className="order-id">{order.id}</b><small className="table-secondary">{order.garment}</small></td><td><span className="table-client">{client?.name ?? "Client supprimé"}</span></td><td>{formatDueDate(order.dueDate)}</td><td>{formatXof(order.price)}</td><td><b className={balanceDue(order) === 0 ? "paid" : ""}>{formatXof(balanceDue(order))}</b></td><td>{statusControl(order)}</td></tr>; })}</tbody></table></div>
-    <div className="order-card-list" aria-label="Commandes sous forme de cartes">{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <article className="order-card" key={order.id}><div className="order-card-heading"><div><b className="order-id">{order.id}</b><strong>{order.garment}</strong></div>{statusControl(order)}</div><p className="order-card-client">{client?.name ?? "Client supprimé"}</p><div className="order-card-details"><div><span>Livraison</span><b>{formatDueDate(order.dueDate)}</b></div><div><span>Prix</span><b>{formatXof(order.price)}</b></div><div><span>À encaisser</span><b className={balanceDue(order) === 0 ? "paid" : "order-balance"}>{formatXof(balanceDue(order))}</b></div></div></article>; })}</div>
-    {orders.length === 0 && <div className="empty-state">Aucune commande pour le moment.</div>}
+    <div className="order-card-list" aria-label="Commandes sous forme de cartes">{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <article className="order-card" key={order.id}><div className="order-card-heading"><div><b className="order-id">{order.id}</b><strong>{order.garment}</strong></div><span className={"order-status-chip status-" + getStatusClass(order.status)}>{order.status}</span></div><p className="order-card-client"><span>Client</span><b>{client?.name ?? "Client supprimé"}</b></p><div className="order-card-details"><div><span>Livraison</span><b>{formatDueDate(order.dueDate)}</b></div><div><span>À encaisser</span><b className={balanceDue(order) === 0 ? "paid" : "order-balance"}>{formatXof(balanceDue(order))}</b></div></div>{onView && <button type="button" className="order-view-button" onClick={() => onView(order)}>Voir la commande <span aria-hidden="true">→</span></button>}</article>; })}</div>
+    {orders.length === 0 && <div className="empty-state">Aucune commande pour le moment. Créez votre première commande pour commencer.</div>}
   </div>;
 }
 
