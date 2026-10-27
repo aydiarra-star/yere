@@ -123,7 +123,7 @@ export function getClientReminderSuggestions(
   const suggestions: ClientReminderSuggestion[] = [];
   for (const client of clients) {
     const datedOrders = orders
-      .filter((order) => order.clientId === client.id && order.orderedAt && order.status !== "À préparer")
+      .filter((order) => order.clientId === client.id && order.orderedAt)
       .filter((order) => Number.isFinite(new Date(`${order.orderedAt}T12:00:00Z`).getTime()))
       .sort((a, b) => (b.orderedAt ?? "").localeCompare(a.orderedAt ?? ""));
     const latestOrder = datedOrders[0];
