@@ -148,3 +148,41 @@ Ne pas imposer des coûts qui empêchent les petits ateliers d'essayer le produi
 - Politique de conservation, export et suppression des données.
 
 Ces décisions doivent être prises à partir du dépôt, des contraintes techniques et des retours terrain, pas par supposition.
+
+
+## 4.6 Fidélisation et relances clients — YÉRÉ Relances
+
+**Objectif métier :** aider l'atelier à retrouver ses anciens clients et à anticiper les commandes saisonnières, sans transformer YÉRÉ en outil de démarchage intrusif.
+
+### Parcours et fonctions attendus
+- Afficher un carnet de relance à partir de l'historique fiable des commandes datées.
+- Proposer une réactivation après un seuil initial de 180 jours sans commande ; rendre le seuil configurable ultérieurement.
+- Repérer les anciennes commandes de cérémonie (mariage, baptême, Tabaski, Korité, rentrée scolaire) et suggérer une prise de contact assez tôt pour le délai de confection.
+- Permettre à l'atelier de définir ses propres événements, dates, période de préparation et délai de confection.
+- Pour les fêtes à date variable, utiliser une date vérifiée et modifiable ; ne jamais figer une date annuelle supposée.
+- Générer un message court, poli et personnalisable, avec aperçu et copie manuelle dans le premier lot.
+- Distinguer les rappels commerciaux des alertes opérationnelles (essayage, commande prête, échéance ou solde).
+- Permettre d'ignorer, de reporter ou de marquer une suggestion comme traitée ; conserver l'historique nécessaire pour éviter les doublons.
+- Enregistrer les tentatives de contact, le canal, la date et le résultat lorsqu'un contact a réellement eu lieu.
+- Relier facultativement une campagne à une demande de devis ou à une commande ultérieure pour mesurer les résultats sans attribuer automatiquement tout revenu à une suggestion.
+
+### Protection des clients et limites d'envoi
+- Prévoir une préférence de contact, un indicateur « ne pas contacter » et la traçabilité de leur mise à jour avant toute fonction d'envoi.
+- Respecter les coordonnées manquantes ou invalides, les refus de contact et une période de calme configurable.
+- Dédupliquer les suggestions par client, règle et campagne.
+- Le MVP ne doit envoyer aucun SMS, message WhatsApp ou campagne automatiquement. Copier un texte ne signifie pas qu'il a été envoyé.
+- Toute intégration de messagerie ultérieure nécessite une validation explicite du canal, des coûts, du consentement, des obligations légales et du mécanisme d'arrêt.
+- Les données et campagnes sont strictement isolées par atelier ; les mensurations ne sont jamais incluses dans les messages marketing.
+
+### Indicateurs
+- Suggestions affichées, ignorées, reportées et traitées.
+- Tentatives de contact effectivement consignées, réponses, demandes de devis et commandes liées.
+- Chiffre d'affaires associé uniquement selon une règle d'attribution documentée ; ne pas présenter une suggestion comme une vente générée.
+
+### Livraison par étapes
+1. Prototype local : suggestions explicables et copie manuelle, avec données fictives.
+2. Backend sécurisé : préférences de contact, refus, statut des suggestions et historique de contact isolés par atelier.
+3. Calendrier configurable : événements, périodes de préparation, ciblage et déduplication.
+4. Mesure commerciale puis, éventuellement, intégrations de messagerie après validation dédiée.
+
+**Critère bloquant avant usage réel :** authentification, isolation serveur par atelier, préférences de contact, journal de contact, sauvegarde et tests d'accès croisé validés.
