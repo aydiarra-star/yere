@@ -4,16 +4,16 @@
 
 YÉRÉ commence par aider les tailleurs et ateliers de couture au Sénégal à gérer leurs clients, mensurations, commandes, étapes de confection, paiements, caisse, dépenses et stocks. L'intégration des fournisseurs viendra ensuite, puis une marketplace facultative dans une phase ultérieure.
 
-## Prototype applicatif — YÉRÉ Atelier
+## Version applicative en chantier — YÉRÉ Atelier
 
-Le premier socle est une application web React + TypeScript + Vite, conçue mobile-first. Cette branche contient un prototype interactif pour explorer le parcours atelier :
-- tableau de bord et indicateurs de démonstration ;
+Le premier socle est une application web React + TypeScript + Vite, conçue mobile-first. Cette version démarre sans données fictives préchargées. Elle permet de parcourir les fonctions disponibles pour l'atelier :
+- tableau de bord alimenté par les données saisies dans l'application ;
 - recherche de clients par nom ou téléphone ;
 - création de fiches client conservées dans le stockage local du navigateur ;
 - édition des mensurations et notes client, conservées localement ;
 - commandes, statut de confection et calcul du reste dû en FCFA.
 
-**Limites importantes :** les données de démonstration et les modifications sont conservées uniquement dans le stockage local de ce navigateur ; aucune authentification, base de données, sauvegarde serveur ou isolation multi-atelier n'est encore intégrée. Ne saisissez aucune donnée réelle de client. Ce prototype n'est pas prêt pour la production.
+**Limites importantes :** les données saisies sont conservées uniquement dans le stockage local de ce navigateur ; aucune authentification réelle, base de données serveur, sauvegarde distante ou isolation multi-atelier n'est encore intégrée. L'export JSON et la restauration locale sont disponibles, mais ne remplacent pas une sauvegarde serveur. N'utilisez pas encore de données réelles de clients. Cette version n'est pas prête pour la production.
 
 ### Démarrer en local
 
