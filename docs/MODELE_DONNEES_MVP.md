@@ -37,7 +37,8 @@
 - `id`, `atelier_id`, `client_id`, `type_vetement`, `label` facultatif, `taken_at`, `notes` facultatives, `created_by`, `created_at`.
 - Les versions anciennes sont conservées. Une correction doit être visible et traçable.
 - Les valeurs peuvent être normalisées dans une table enfant `measurement_values` : `measurement_profile_id`, `measurement_key`, `value`, `unit`.
-- Définir les clés de mesures et unités autorisées après observation des pratiques des tailleurs. Ne pas mélanger cm et pouces sans indication explicite.
+- Clés de mesures initiales (unité `cm`) : `bust` (tour de poitrine), `waist` (tour de taille), `hips` (tour de hanches), `shoulder` (épaules), `sleeve` (longueur de manche), `length` (longueur du vêtement), `arm` (tour de bras/biceps), `neck` (tour de cou), `thigh` (tour de cuisse) et `legLength` (longueur de jambe/pantalon).
+- Les quatre nouvelles clés `arm`, `neck`, `thigh` et `legLength` sont optionnelles pour les profils existants et les vêtements où elles ne sont pas nécessaires. L'interface les présente comme champs numériques en centimètres. Ne pas mélanger cm et pouces sans indication explicite.
 
 ### Commande
 - `id`, `atelier_id`, `client_id`, `reference` lisible par atelier, `garment_type`, `quantity`, `agreed_amount`, `currency`, `ordered_at`, `due_at` facultatif, `status`, `notes` facultatives, `created_by`, `created_at`, `updated_at`, `delivered_at` facultatif, `cancelled_at` facultatif.
