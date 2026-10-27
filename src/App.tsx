@@ -254,16 +254,16 @@ function App() {
           <span className="brand-mark">Y</span>
           <span><strong>YÉRÉ</strong><small>ATELIER</small></span>
         </a>
-        <div className="atelier-switch"><span className="atelier-avatar">A</span><span><b>{atelier.name || "Atelier Démo"}</b><small>{atelier.city || "Compte de démonstration"}</small></span><span className="chevron">⌄</span></div>
+        <button type="button" className="atelier-switch" onClick={() => setView("account")} aria-label="Ouvrir le profil de l’atelier"><span className="atelier-avatar">A</span><span><b>{atelier.name || "Mon atelier"}</b><small>{atelier.city || "Configurer mon espace"}</small></span><span className="chevron">⌄</span></button>
         <p className="nav-caption">ESPACE ATELIER</p>
         <nav aria-label="Navigation principale">
           {navItems.map((item) => <button key={item.id} className={view === item.id ? "nav-item active" : "nav-item"} onClick={() => setView(item.id)}><span className="nav-icon">{item.icon}</span>{item.label}{item.id === "clients" && <span className="nav-count">{clients.length}</span>}{item.id === "reminders" && reminderSuggestions.length > 0 && <span className="nav-count">{reminderSuggestions.length}</span>}</button>)}
         </nav>
-        <div className="sidebar-bottom"><div className="help-card"><span className="help-icon">✳</span><b>Un atelier mieux organisé.</b><p>Vos clients, leurs mesures et vos commandes au même endroit.</p></div><div className="profile"><span className="profile-avatar">AD</span><span><b>{atelier.name || "Atelier Démo"}</b><small>Mode aperçu</small></span><span className="dots">···</span></div></div>
+        <div className="sidebar-bottom"><div className="help-card"><span className="help-icon">✳</span><b>Un atelier mieux organisé.</b><p>Vos clients, leurs mesures et vos commandes au même endroit.</p></div><button type="button" className="profile profile-button" onClick={() => setView("account")} aria-label="Gérer le compte de l’atelier"><span className="profile-avatar">Y</span><span><b>{atelier.name || "Mon atelier"}</b><small>Gérer mon espace</small></span><span className="dots">→</span></button></div>
       </aside>
 
       <main className="main-content">
-        <header className="topbar"><div className="breadcrumb">YÉRÉ <span>/</span> Atelier <span>/</span> <b>{navItems.find((item) => item.id === view)?.label}</b></div><div className="topbar-right"><button className="avatar-button" aria-label="Profil de l’atelier">AD</button></div></header>
+        <header className="topbar"><div className="breadcrumb" aria-label="Fil d’Ariane"><span className="breadcrumb-brand">YÉRÉ</span><span>/</span><span>Atelier</span><span>/</span><b>{navItems.find((item) => item.id === view)?.label}</b></div><div className="topbar-right"><button className="avatar-button" aria-label="Ouvrir le compte de l’atelier" onClick={() => setView("account")}>Y</button></div></header>
         <div className="page-wrap">
           <div className={view === "overview" ? "welcome-row overview-welcome" : "welcome-row"}><div><p className="eyebrow">{view === "overview" ? "VOTRE ATELIER AUJOURD’HUI" : todayLabel.charAt(0).toUpperCase() + todayLabel.slice(1)}</p><h1>{view === "overview" ? "Bonjour Abdoulaye 👋" : view === "clients" ? "Vos clients & mensurations" : view === "orders" ? "Suivi des commandes" : view === "cash" ? "La caisse de votre atelier" : view === "account" ? (atelier.name || "Votre compte atelier") : "Faites revenir vos clients."}</h1><p className="page-subtitle">{view === "overview" ? "Voici les priorités de votre atelier pour aujourd’hui." : view === "clients" ? "Retrouvez les fiches clients et leurs dernières mesures." : view === "orders" ? "Suivez chaque pièce, de la préparation à la livraison." : view === "cash" ? "Suivez les acomptes et les montants à récupérer." : view === "account" ? "Votre profil d’atelier." : "Des occasions concrètes de reprendre contact avec vos clients."}</p>{view === "overview" && <div className="today-snapshot" aria-label="Résumé de la journée"><div className="snapshot-item"><span className="snapshot-icon">✓</span><span><b>{orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length} livraison{orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length === 1 ? "" : "s"}</b><small>prévue aujourd’hui</small></span></div><div className="snapshot-item"><span className="snapshot-icon money">₣</span><span><b>{formatXof(outstanding)}</b><small>à encaisser</small></span></div><div className="snapshot-item"><span className="snapshot-icon orders">▣</span><span><b>{orders.filter((order) => order.status !== "Livré").length} commande{orders.filter((order) => order.status !== "Livré").length === 1 ? "" : "s"}</b><small>en cours</small></span></div></div>}</div><button className="primary-button welcome-action" onClick={() => { if (view === "overview") { setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); setShowOrderForm(true); setView("orders"); } else { setShowForm(true); setView("clients"); } }}><span>＋</span> {view === "overview" ? "Nouvelle commande" : "Nouveau client"}</button></div>
           {notice && view !== "overview" && <div className="notice" role="status"><span aria-hidden="true">ⓘ</span><p>{notice}</p><button aria-label="Fermer le message" onClick={() => setNotice("")}>×</button></div>}
@@ -324,7 +324,7 @@ function App() {
           </section>}
 
           {view === "account" && <section className="content-card account-page">
-            <div className="section-heading"><div><h2>Profil de l'atelier</h2><p>Informations enregistrées localement sur cet appareil.</p></div><span className="demo-pill"><i /> Prototype local</span></div>
+            <div className="section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div></div>
             <form className="account-form" onSubmit={(event) => { event.preventDefault(); setNotice("Profil d'atelier mis à jour sur cet appareil uniquement."); }}>
               <label>Nom de l'atelier<input required value={atelier.name} onChange={(event) => setAtelier((current) => ({ ...current, name: event.target.value }))} /></label>
               <label>Téléphone<input value={atelier.phone} onChange={(event) => setAtelier((current) => ({ ...current, phone: event.target.value }))} /></label>
@@ -341,7 +341,7 @@ function App() {
               <p className="privacy-note">Attention : le fichier exporté contient des informations personnelles. Gardez-le hors d’accès public. Avant restauration, exportez les données actuelles si vous souhaitez les conserver.</p>
             </section>
             <div className="account-secondary"><div><b>Relances clients</b><p>Consultez les suggestions de relance manuelle, sans envoi automatique.</p></div><button className="secondary-button" onClick={() => setView("reminders")}>Ouvrir les relances →</button></div>
-            <p className="privacy-note">Aucun compte distant, synchronisation ni sauvegarde serveur n'est actif dans cette version.</p>
+            <p className="privacy-note">Cet espace est enregistré sur cet appareil. La création de comptes avec e-mail et mot de passe, la connexion sécurisée et la synchronisation entre appareils nécessitent encore le branchement du serveur d’authentification.</p>
           </section>}
           {view === "reminders" && <section className="reminders-page">
             <div className="reminders-intro content-card"><div className="reminders-intro-icon">↻</div><div><h2>Votre carnet de relance</h2><p>YÉRÉ repère les clients à recontacter à partir des commandes datées et propose un message que vous pouvez relire et copier. Rien n'est envoyé automatiquement.</p></div></div>
@@ -371,7 +371,7 @@ function Onboarding({ atelier, onAtelierChange, onFinish, onExploreDemo }: {
     { eyebrow: "SUIVI DE PRODUCTION", title: "Gardez chaque commande sous contrôle.", subtitle: "De la coupe à la livraison.", body: "Suivez les étapes de confection : coupe, couture, essayage et livraison.", detail: "Le prototype illustre le suivi. Les alertes automatiques de retard restent à développer." },
     { eyebrow: "GESTION DE L'ARGENT", title: "Comprenez ce que votre atelier gagne réellement.", subtitle: "Des chiffres plus clairs.", body: "Préparez le suivi des acomptes, paiements, dépenses et recettes.", detail: "Dans cette version de démonstration, les indicateurs financiers restent limités aux commandes et soldes simulés." },
     { eyebrow: "INSPIRATIONS COUTURE", title: "Retrouvez les modèles au bon moment.", subtitle: "Un outil de travail, pas un réseau social.", body: "À terme, classez les photos envoyées par les clients, les modèles enregistrés et les créations réalisées.", detail: "Le catalogue d'inspirations est prévu dans la feuille de route ; il n'est pas encore disponible." },
-    { eyebrow: "VOTRE ATELIER", title: "Créons votre premier atelier.", subtitle: "Quelques informations pour commencer.", body: "Renseignez le nom de votre atelier, un téléphone et une ville. Vous pourrez ensuite créer votre premier client.", detail: "Prototype : ces informations restent sur cet appareil. Aucun compte ni sauvegarde serveur n'est créé." }
+    { eyebrow: "VOTRE ATELIER", title: "Créons votre premier atelier.", subtitle: "Quelques informations pour commencer.", body: "Renseignez le nom de votre atelier, un téléphone et une ville. Vous pourrez ensuite créer votre premier client.", detail: "Créez votre espace atelier sur cet appareil. La connexion sécurisée et la synchronisation en ligne seront activées avec le serveur." }
   ];
   const current = steps[step];
   const isSetup = step === steps.length - 1;
@@ -394,7 +394,7 @@ function Onboarding({ atelier, onAtelierChange, onFinish, onExploreDemo }: {
           <label>Nom de l'atelier<input required autoFocus value={draft.name} onChange={(event) => update("name", event.target.value)} placeholder="Ex. Atelier Aminata" /></label>
           <label>Téléphone<input value={draft.phone} onChange={(event) => update("phone", event.target.value)} placeholder="+221 77 000 00 00" /></label>
           <label>Ville<input value={draft.city} onChange={(event) => update("city", event.target.value)} placeholder="Ex. Dakar" /></label>
-          <button className="primary-button onboarding-primary" type="submit">Commencer à utiliser YÉRÉ <span>→</span></button>
+          <button className="primary-button onboarding-primary" type="submit">Créer mon espace atelier <span>→</span></button>
         </form>}
         {!isSetup && <p className="onboarding-detail">{current.detail}</p>}
         <div className="onboarding-actions">
@@ -402,7 +402,7 @@ function Onboarding({ atelier, onAtelierChange, onFinish, onExploreDemo }: {
           {!isSetup && <button className="primary-button onboarding-primary" onClick={() => setStep((value) => Math.min(value + 1, steps.length - 1))}>{step === 0 ? "Commencer" : "Continuer"} <span>→</span></button>}
         </div>
         {step === 0 && <button className="onboarding-demo-link" onClick={onExploreDemo}>Explorer la démonstration avec des exemples</button>}
-        <p className="onboarding-disclaimer">Démonstration uniquement · stockage local · ne pas saisir de vraies données clients</p>
+        <p className="onboarding-disclaimer">Espace local sur cet appareil · la création d’un compte sécurisé en ligne nécessite encore l’activation du serveur.</p>
       </section>
       <aside className="onboarding-visual" aria-label="Illustration conceptuelle d'un atelier de couture organisé">
         <div className="visual-glow"></div><div className="visual-card visual-phone"><span className="visual-phone-top"></span><b>YÉRÉ Atelier</b><small>Vos commandes</small><div className="visual-task"><i></i><span>Tenue de cérémonie<small>En confection</small></span></div><div className="visual-task"><i></i><span>Boubou brodé<small>Essayage</small></span></div><div className="visual-task"><i></i><span>Robe sur mesure<small>À livrer</small></span></div></div>
