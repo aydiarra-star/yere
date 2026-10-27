@@ -10,7 +10,7 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 - Mode hors ligne : code ajouté et déploiement du prototype confirmé ; test réel en mode avion toujours à effectuer.
 - Backend : aucun backend, compte atelier, base YÉRÉ ou isolation multi-atelier intégrés.
 - Environnement : le projet Supabase connecté est « Dekk Food » (inactif), pas un projet YÉRÉ ; ne pas le réutiliser.
-- PR #5 : ouverte en brouillon, non fusionnée.
+- PR #2, #4, #5 et #6 : fusionnées ; le prototype et ses fondations sont maintenant intégrés à `main`.
 - Prochaine dépendance : choisir/provisionner un environnement de développement dédié à YÉRÉ avant d'intégrer l'authentification et la persistance distante.
 
 ## Lot 0 — Établir les fondations
@@ -175,7 +175,9 @@ Référence : [Banque d'idées stratégiques](./BANQUE_IDEES_STRATEGIQUES.md).
 - [x] Appliquer une validation aux états locaux du profil d'atelier et de l'onboarding.
 - [x] Ajouter des tests unitaires sur les données persistées mal formées et les montants incohérents.
 - [ ] Confirmer la CI complète sur le dernier commit ; l'absence de résultat retourné par la vérification actuelle ne vaut pas succès.
-- [ ] Prévoir une stratégie explicite de récupération/export avant toute migration de données réelles : ce garde-fou protège le prototype mais ne remplace pas une sauvegarde.
+- [x] Préserver une copie brute des données rejetées sous une clé locale `.recovery` (puis `.recovery-2`, etc.) avant le remplacement ; si la copie échoue, ne pas écraser la valeur lors du premier rendu.
+- [x] Ajouter des tests unitaires pour la copie de récupération, l'absence d'écrasement d'une copie existante et l'échec d'écriture.
+- [ ] Ajouter une interface d'export/restauration vérifiable : la copie cachée de récupération n'est pas une sauvegarde distante et n'est pas encore accessible depuis l'interface.
 - [ ] Ajouter les validations côté serveur lors de l'intégration du backend.
 
 ## Commandes — validation métier avant persistance locale
