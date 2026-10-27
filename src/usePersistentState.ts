@@ -6,13 +6,17 @@ import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
  */
 export function usePersistentState<T>(
   key: string,
-  initialValue: T
+  initialValue: T,
+  isValid?: (value: unknown) => value is T
 ): [T, Dispatch<SetStateAction<T>>] {
   const [value, setValue] = useState<T>(() => {
     if (typeof window === "undefined") return initialValue;
     try {
       const saved = window.localStorage.getItem(key);
-      return saved === null ? initialValue : (JSON.parse(saved) as T);
+      if (saved === null) return initialValue;
+      const parsed: unknown = JSON.parse(saved);
+      if (isValid && !isValid(parsed)) return initialValue;
+      return parsed as T;
     } catch {
       return initialValue;
     }
