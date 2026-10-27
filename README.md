@@ -49,6 +49,7 @@ Ces commandes doivent être exécutées dans un environnement Node avant de cons
 - [Plan pilote terrain](docs/PLAN_PILOTE_TERRAIN.md)
 - [Modèle de données MVP](docs/MODELE_DONNEES_MVP.md)
 - [Plan de persistance serveur et sécurité](docs/PLAN_PERSISTENCE_ET_SECURITE.md)
+- [Charte graphique bleu et blanc](docs/CHARTE_GRAPHIQUE.md)
 
 ## Principes
 - Produit mobile d'abord, simple à apprendre et utile dès la première utilisation.
