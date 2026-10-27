@@ -141,7 +141,9 @@ Toute nouvelle demande est évaluée selon : fréquence du problème, impact sur
 - [x] Formaliser le filtre anti-gadget : plus simple, plus rapide et plus utile que le cahier.
 - [x] Classer les idées : assistant quotidien, mémoire client, mensurations, rentabilité, calendrier local, portfolio, santé de l'atelier, tendances anonymisées et diaspora long terme.
 - [x] Ajouter des garde-fous sur les données financières, les anciennes mensurations, les photos/consentements et l'anonymisation.
-- [ ] Priorité produit suivante : définir précisément « Que dois-je faire aujourd'hui ? » à partir des seules données fiables disponibles et après validation terrain.
+- [x] Première version prototype de « Que dois-je faire aujourd'hui ? » : affiche les commandes en retard, les livraisons du jour et les soldes des commandes prêtes à livrer, avec explication des données utilisées.
+- [ ] Valider les règles de priorité avec des ateliers pilotes et ajouter des sources fiables pour les paiements, stocks et contacts avant d'élargir l'assistant.
+- [ ] Ne pas présenter cette version locale comme une alerte complète : les données peuvent être incomplètes et ne sont ni synchronisées ni sauvegardées sur serveur.
 - [ ] Avant d'utiliser des données réelles : comptes, isolation des ateliers, sauvegarde/restauration testée, autorisations et protection des données.
 - [ ] Ne pas lancer les tendances agrégées, marketplace étendue ou commande diaspora avant d'avoir validé l'usage du MVP.
 
