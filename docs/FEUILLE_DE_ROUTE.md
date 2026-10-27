@@ -5,9 +5,9 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 ## État du chantier au 27 octobre 2026
 
 - Dépôt audité : frontend React + TypeScript + Vite présent ; site statique Render configuré sur `feat/atelier-first-slice`.
-- Prototype : clients, mensurations, commandes et solde de démonstration dans le navigateur ; aucune donnée réelle ne doit être saisie.
+- Prototype : clients, mensurations historisées, commandes, solde de démonstration et centre « Relances clients » dans le navigateur ; aucune donnée réelle ne doit être saisie.
 - CI : GitHub Actions #37 réussie sur le dernier commit consulté (tests unitaires et compilation).
-- Mode hors ligne : code ajouté, mais déploiement du commit courant et test réel en mode avion non confirmés.
+- Mode hors ligne : code ajouté et déploiement du prototype confirmé ; test réel en mode avion toujours à effectuer.
 - Backend : aucun backend, compte atelier, base YÉRÉ ou isolation multi-atelier intégrés.
 - Environnement : le projet Supabase connecté est « Dekk Food » (inactif), pas un projet YÉRÉ ; ne pas le réutiliser.
 - PR #5 : ouverte en brouillon, non fusionnée.
@@ -21,7 +21,7 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 - [ ] Ajouter la configuration sûre et la gestion des secrets côté backend.
 - [x] Définir les premiers modèles de données et la stratégie de migrations dans la documentation.
 - [x] Mettre en place les tests unitaires et la CI ; dernier run consulté réussi.
-- [ ] Vérifier que le déploiement Render sert le dernier commit et tester la PWA hors connexion sur mobile et ordinateur.
+- [x] Déployer le commit du prototype avec l'historique des mensurations et le centre de relance (déploiement Render réussi au moment de cette mise à jour).\n- [ ] Tester la PWA en mode avion sur mobile et ordinateur.\n- [x] Définir les règles MVP du module Relances clients, ses limites anti-spam et ses critères d'acceptation dans `docs/RELANCES_CLIENTS.md`.\n- [ ] Tester les parcours du centre de relance sur la prévisualisation et corriger les anomalies éventuelles.
 
 **Critère de sortie :** projet reproductible, testable, documenté, sans choix techniques inventés. Le lot 0 n'est pas encore terminé.
 
@@ -31,7 +31,7 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 - [ ] Création et configuration d'un atelier.
 - [ ] Isolation des données par atelier.
 - [ ] CRUD client et recherche avec persistance serveur.
-- [ ] Mensurations datées, types de vêtement et historique côté serveur.
+- [ ] Mensurations datées, types de vêtement et historique côté serveur.\n- [ ] Ajouter les dates de commande fiables et l'historique serveur nécessaires aux suggestions de relance.
 - [ ] Tests d'accès et validation des données.
 
 Le prototype actuel permet de tester l'interface clients/mesures localement, mais ne valide aucun de ces critères serveur.
@@ -87,6 +87,6 @@ Le prototype actuel permet de tester l'interface clients/mesures localement, mai
 - [ ] Demandes de confection.
 - [ ] Étude puis développement des paiements et livraisons, y compris diaspora.
 
-## Règle de priorisation
+## Lot 4 bis — Relances clients et campagnes saisonnières\n\n- [x] Documenter le concept, les règles MVP, les garde-fous et les critères d'acceptation.\n- [x] Ajouter au prototype des suggestions d'inactivité (seuil initial de 180 jours) et de souvenir d'occasion à partir des commandes datées.\n- [x] Prévisualiser un message et permettre sa copie manuelle ; aucun envoi automatique.\n- [ ] Ajouter préférences de contact, option « ne pas contacter », suggestions traitées/ignorées et historique de contact côté serveur.\n- [ ] Ajouter un calendrier d'événements configurable par atelier ; confirmer les dates des fêtes à calendrier variable.\n- [ ] Mesurer les contacts réellement effectués, réponses, devis et commandes attribuées, sans assimiler une suggestion à un revenu.\n\n**Critère de sortie :** les relances sont explicables, non intrusives, isolées par atelier et mesurables sur des résultats réels.\n\n## Règle de priorisation
 
 Toute nouvelle demande est évaluée selon : fréquence du problème, impact sur le temps ou l'argent, nombre d'utilisateurs concernés, risque, coût de développement et dépendances. La sécurité, l'intégrité financière et la protection des données passent avant les fonctions de visibilité.
