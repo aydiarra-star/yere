@@ -6,7 +6,7 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 
 - Dépôt audité : frontend React + TypeScript + Vite présent ; site statique Render configuré sur `feat/atelier-first-slice`.
 - Prototype : clients, mensurations historisées, commandes, solde de démonstration et centre « Relances clients » dans le navigateur ; aucune donnée réelle ne doit être saisie.
-- CI : GitHub Actions #37 réussie sur le dernier commit consulté (tests unitaires et compilation).
+- CI : GitHub Actions #71 réussie sur le commit `bd3165af85a6b9594c0560b075d9056292a89035` (tests unitaires et compilation).
 - Mode hors ligne : code ajouté et déploiement du prototype confirmé ; test réel en mode avion toujours à effectuer.
 - Backend : aucun backend, compte atelier, base YÉRÉ ou isolation multi-atelier intégrés.
 - Environnement : le projet Supabase connecté est « Dekk Food » (inactif), pas un projet YÉRÉ ; ne pas le réutiliser.
@@ -21,7 +21,7 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 - [ ] Ajouter la configuration sûre et la gestion des secrets côté backend.
 - [x] Définir les premiers modèles de données et la stratégie de migrations dans la documentation.
 - [x] Mettre en place les tests unitaires et la CI ; dernier run consulté réussi.
-- [x] Déployer le commit du prototype avec l'historique des mensurations et le centre de relance (déploiement Render réussi au moment de cette mise à jour).\n- [ ] Tester la PWA en mode avion sur mobile et ordinateur.\n- [x] Définir les règles MVP du module Relances clients, ses limites anti-spam et ses critères d'acceptation dans `docs/RELANCES_CLIENTS.md`.\n- [ ] Tester les parcours du centre de relance sur la prévisualisation et corriger les anomalies éventuelles.
+- [x] Déployer le commit `bd3165af85a6b9594c0560b075d9056292a89035` avec l'historique des mensurations et le centre de relance (déploiement Render réussi).\n- [ ] Tester la PWA en mode avion sur mobile et ordinateur.\n- [x] Définir les règles MVP du module Relances clients, ses limites anti-spam et ses critères d'acceptation dans `docs/RELANCES_CLIENTS.md`.\n- [ ] Tester les parcours du centre de relance sur la prévisualisation et corriger les anomalies éventuelles.
 
 **Critère de sortie :** projet reproductible, testable, documenté, sans choix techniques inventés. Le lot 0 n'est pas encore terminé.
 
