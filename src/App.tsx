@@ -1,18 +1,26 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
 import { usePersistentState } from "./usePersistentState";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", arm: "", neck: "", thigh: "", legLength: "", note: "" };
 
-type View = "overview" | "clients" | "orders" | "cash" | "account" | "marketplace" | "reminders";
+type View = "overview" | "clients" | "orders" | "cash" | "account" | "marketplace" | "reminders" | "suppliers";
 type AtelierProfile = { name: string; phone: string; city: string };
 const emptyAtelier: AtelierProfile = { name: "", phone: "", city: "" };
+type SupplierProfile = { businessName: string; contactName: string; phone: string; city: string; category: string; shopName: string; description: string };
+const emptySupplier: SupplierProfile = { businessName: "", contactName: "", phone: "", city: "", category: "", shopName: "", description: "" };
 
 function isAtelierProfileValid(value: unknown): value is AtelierProfile {
   return typeof value === "object" && value !== null
     && "name" in value && typeof value.name === "string"
     && "phone" in value && typeof value.phone === "string"
     && "city" in value && typeof value.city === "string";
+}
+
+function isSupplierProfileValid(value: unknown): value is SupplierProfile {
+  return typeof value === "object" && value !== null
+    && ["businessName", "contactName", "phone", "city", "category", "shopName", "description"]
+      .every((key) => key in value && typeof (value as Record<string, unknown>)[key] === "string");
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
@@ -31,6 +39,7 @@ function App() {
   const [clients, setClients] = usePersistentState<Client[]>("yere-demo-clients-v1", [], isClientListValid);
   const [orders, setOrders] = usePersistentState<Order[]>("yere-demo-orders-v1", [], isOrderListValid);
   const [atelier, setAtelier] = usePersistentState<AtelierProfile>("yere-demo-atelier-v1", emptyAtelier, isAtelierProfileValid);
+  const [supplier, setSupplier] = usePersistentState<SupplierProfile>("yere-supplier-profile-v1", emptySupplier, isSupplierProfileValid);
   const [onboardingComplete, setOnboardingComplete] = usePersistentState<boolean>("yere-demo-onboarding-complete-v1", false, isBooleanValue);
   const [onboardingStartedAt, setOnboardingStartedAt] = usePersistentState<number | null>("yere-demo-onboarding-started-at-v1", null, isNullableTimestamp);
   const [view, setView] = useState<View>("overview");
@@ -130,7 +139,7 @@ function App() {
       format: "yere-local-backup",
       schemaVersion: 1,
       exportedAt: new Date().toISOString(),
-      data: { clients, orders, atelier, onboardingComplete, onboardingStartedAt }
+      data: { clients, orders, atelier, supplier, onboardingComplete, onboardingStartedAt }
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -158,6 +167,7 @@ function App() {
         || !isOrderListValid(data.orders)
         || !areClientOrderRelationsValid(data.clients, data.orders)
         || !isAtelierProfileValid(data.atelier)
+        || (data.supplier !== undefined && !isSupplierProfileValid(data.supplier))
         || !isBooleanValue(data.onboardingComplete)
         || !isNullableTimestamp(data.onboardingStartedAt)) {
         throw new Error("La sauvegarde est incomplète ou contient des données invalides. Aucune donnée n'a été modifiée.");
@@ -165,6 +175,7 @@ function App() {
       setClients(data.clients);
       setOrders(data.orders);
       setAtelier(data.atelier);
+      setSupplier(data.supplier !== undefined && isSupplierProfileValid(data.supplier) ? data.supplier : emptySupplier);
       setOnboardingComplete(data.onboardingComplete);
       setOnboardingStartedAt(data.onboardingStartedAt);
       setSelectedClient(null);
@@ -205,15 +216,16 @@ function App() {
   }
 
   const navItems: { id: View; label: string; icon: string }[] = [
-    { id: "overview", label: "Accueil", icon: "⌂" },
-    { id: "clients", label: "Clients", icon: "♙" },
-    { id: "orders", label: "Commandes", icon: "▤" },
-    { id: "marketplace", label: "Marketplace", icon: "◇" },
-    { id: "cash", label: "Caisse", icon: "₣" },
-    { id: "account", label: "Compte", icon: "●" },
-    { id: "reminders", label: "Relances clients", icon: "↻" }
+    { id: "overview", label: "Accueil", icon: "house" },
+    { id: "clients", label: "Clients", icon: "users" },
+    { id: "orders", label: "Commandes", icon: "clipboard-list" },
+    { id: "suppliers", label: "Fournisseurs", icon: "truck" },
+    { id: "marketplace", label: "Marketplace", icon: "store" },
+    { id: "cash", label: "Caisse", icon: "wallet" },
+    { id: "account", label: "Compte", icon: "user-round" },
+    { id: "reminders", label: "Relances clients", icon: "bell-ring" }
   ];
-  const mobileNavItems = navItems.filter((item) => item.id !== "reminders");
+  const mobileNavItems = navItems.filter((item) => ["overview", "clients", "orders", "suppliers", "marketplace", "cash"].includes(item.id));
 
   if (!onboardingComplete) {
     return <Onboarding
@@ -238,15 +250,15 @@ function App() {
         <button type="button" className="atelier-switch" onClick={() => setView("account")} aria-label="Ouvrir le profil de l’atelier"><span className="atelier-avatar">A</span><span><b>{atelier.name || "Mon atelier"}</b><small>{atelier.city || "Configurer mon espace"}</small></span><span className="chevron">⌄</span></button>
         <p className="nav-caption">ESPACE ATELIER</p>
         <nav aria-label="Navigation principale">
-          {navItems.map((item) => <button key={item.id} className={view === item.id ? "nav-item active" : "nav-item"} onClick={() => setView(item.id)}><span className="nav-icon">{item.icon}</span>{item.label}{item.id === "clients" && <span className="nav-count">{clients.length}</span>}{item.id === "reminders" && reminderSuggestions.length > 0 && <span className="nav-count">{reminderSuggestions.length}</span>}</button>)}
+          {navItems.map((item) => <button key={item.id} className={view === item.id ? "nav-item active" : "nav-item"} onClick={() => setView(item.id)}><span className="nav-icon"><NavIcon name={item.icon} /></span>{item.label}{item.id === "clients" && <span className="nav-count">{clients.length}</span>}{item.id === "reminders" && reminderSuggestions.length > 0 && <span className="nav-count">{reminderSuggestions.length}</span>}</button>)}
         </nav>
         <div className="sidebar-bottom"><div className="help-card"><span className="help-icon">✳</span><b>Un atelier mieux organisé.</b><p>Vos clients, leurs mesures et vos commandes au même endroit.</p></div><button type="button" className="profile profile-button" onClick={() => setView("account")} aria-label="Gérer le compte de l’atelier"><span className="profile-avatar">Y</span><span><b>{atelier.name || "Mon atelier"}</b><small>Gérer mon espace</small></span><span className="dots">→</span></button></div>
       </aside>
 
       <main className="main-content">
-        <header className="topbar"><div className="breadcrumb" aria-label="Fil d’Ariane"><span className="breadcrumb-brand">YÉRÉ</span><span>/</span><span>Atelier</span><span>/</span><b>{navItems.find((item) => item.id === view)?.label}</b></div><div className="topbar-right"><button className="avatar-button" aria-label="Ouvrir le compte de l’atelier" onClick={() => setView("account")}>Y</button></div></header>
+        <header className="topbar"><div className="breadcrumb" aria-label="Fil d’Ariane"><span className="breadcrumb-brand">YÉRÉ</span><span>Atelier</span><b>{navItems.find((item) => item.id === view)?.label}</b></div><div className="topbar-right"><button className="avatar-button" aria-label="Ouvrir le compte de l’atelier" onClick={() => setView("account")}><NavIcon name="user-round" /></button></div></header>
         <div className="page-wrap">
-          <div className={view === "overview" ? "welcome-row overview-welcome" : "welcome-row"}><div><p className="eyebrow">{view === "overview" ? "VOTRE ATELIER AUJOURD’HUI" : todayLabel.charAt(0).toUpperCase() + todayLabel.slice(1)}</p><h1>{view === "overview" ? "Bonjour Abdoulaye 👋" : view === "clients" ? "Vos clients & mensurations" : view === "orders" ? "Suivi des commandes" : view === "cash" ? "La caisse de votre atelier" : view === "account" ? (atelier.name || "Votre compte atelier") : view === "marketplace" ? "La marketplace YÉRÉ" : "Faites revenir vos clients."}</h1><p className="page-subtitle">{view === "overview" ? "Voici les priorités de votre atelier pour aujourd’hui." : view === "clients" ? "Retrouvez les fiches clients et leurs dernières mesures." : view === "orders" ? "Suivez chaque pièce, de la préparation à la livraison." : view === "cash" ? "Suivez les acomptes et les montants à récupérer." : view === "account" ? "Votre profil d’atelier." : view === "marketplace" ? "Préparez votre vitrine et développez votre activité." : "Des occasions concrètes de reprendre contact avec vos clients."}</p>{view === "overview" && <div className="today-snapshot" aria-label="Résumé de la journée"><div className="snapshot-item"><span className="snapshot-icon">✓</span><span><b>{orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length} livraison{orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length === 1 ? "" : "s"}</b><small>prévue aujourd’hui</small></span></div><div className="snapshot-item"><span className="snapshot-icon money">₣</span><span><b>{formatXof(outstanding)}</b><small>à encaisser</small></span></div><div className="snapshot-item"><span className="snapshot-icon orders">▣</span><span><b>{orders.filter((order) => order.status !== "Livré").length} commande{orders.filter((order) => order.status !== "Livré").length === 1 ? "" : "s"}</b><small>en cours</small></span></div></div>}</div><button className="primary-button welcome-action" onClick={() => { if (view === "overview") { setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); setShowOrderForm(true); setView("orders"); } else { setShowForm(true); setView("clients"); } }}><span>＋</span> {view === "overview" ? "Nouvelle commande" : "Nouveau client"}</button></div>
+          <div className={view === "overview" ? "welcome-row overview-welcome" : "welcome-row"}><div><p className="eyebrow">{view === "overview" ? "VOTRE ATELIER AUJOURD’HUI" : todayLabel.charAt(0).toUpperCase() + todayLabel.slice(1)}</p><h1>{view === "overview" ? (atelier.name ? "Bienvenue chez " + atelier.name : "Bienvenue dans votre atelier") : view === "clients" ? "Vos clients & mensurations" : view === "orders" ? "Suivi des commandes" : view === "cash" ? "La caisse de votre atelier" : view === "account" ? (atelier.name || "Votre compte atelier") : view === "marketplace" ? "La marketplace YÉRÉ" : view === "suppliers" ? "Espace fournisseurs" : "Faites revenir vos clients."}</h1><p className="page-subtitle">{view === "overview" ? "Voici les priorités de votre atelier pour aujourd’hui." : view === "clients" ? "Retrouvez les fiches clients et leurs dernières mesures." : view === "orders" ? "Suivez chaque pièce, de la préparation à la livraison." : view === "cash" ? "Suivez les acomptes et les montants à récupérer." : view === "account" ? "Votre profil d’atelier." : view === "marketplace" ? "Accédez aux boutiques et préparez votre vitrine professionnelle." : view === "suppliers" ? "Gérez votre profil fournisseur et préparez votre boutique YÉRÉ." : "Des occasions concrètes de reprendre contact avec vos clients."}</p>{view === "overview" && <div className="today-snapshot" aria-label="Résumé de la journée"><div className="snapshot-item"><span className="snapshot-icon">✓</span><span><b>{orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length} livraison{orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length === 1 ? "" : "s"}</b><small>prévue aujourd’hui</small></span></div><div className="snapshot-item"><span className="snapshot-icon money">₣</span><span><b>{formatXof(outstanding)}</b><small>à encaisser</small></span></div><div className="snapshot-item"><span className="snapshot-icon orders">▣</span><span><b>{orders.filter((order) => order.status !== "Livré").length} commande{orders.filter((order) => order.status !== "Livré").length === 1 ? "" : "s"}</b><small>en cours</small></span></div></div>}</div>{["overview", "clients", "orders", "suppliers", "marketplace"].includes(view) && <button className="primary-button welcome-action" onClick={() => { if (view === "overview" || view === "orders") { setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); setShowOrderForm(true); setView("orders"); } else if (view === "suppliers" || view === "marketplace") { setView(view === "suppliers" ? "marketplace" : "suppliers"); } else { setShowForm(true); setView("clients"); } }}><span>＋</span> {view === "overview" || view === "orders" ? "Nouvelle commande" : view === "suppliers" ? "Créer ma boutique" : view === "marketplace" ? "Gérer ma boutique" : "Nouveau client"}</button>}</div>
           {notice && view !== "overview" && <div className="notice" role="status"><span aria-hidden="true">ⓘ</span><p>{notice}</p><button aria-label="Fermer le message" onClick={() => setNotice("")}>×</button></div>}
 
           {view === "overview" && <>
@@ -324,9 +336,24 @@ function App() {
             <div className="account-secondary"><div><b>Relances clients</b><p>Consultez les suggestions de relance manuelle, sans envoi automatique.</p></div><button className="secondary-button" onClick={() => setView("reminders")}>Ouvrir les relances →</button></div>
             <p className="privacy-note">Cet espace est enregistré sur cet appareil. La création de comptes avec e-mail et mot de passe, la connexion sécurisée et la synchronisation entre appareils nécessitent encore le branchement du serveur d’authentification.</p>
           </section>}
+          {view === "suppliers" && <section className="content-card supplier-page">
+            <div className="section-heading"><div><h2>Profil fournisseur</h2><p>Renseignez les informations professionnelles de votre espace fournisseur.</p></div><span className="supplier-symbol"><NavIcon name="truck" /></span></div>
+            <form className="supplier-form" onSubmit={(event) => { event.preventDefault(); setNotice("Profil fournisseur enregistré sur cet appareil. La publication publique nécessite encore l’activation du serveur."); }}>
+              <label>Nom de l’entreprise<input required value={supplier.businessName} onChange={(event) => setSupplier((current) => ({ ...current, businessName: event.target.value }))} placeholder="Nom de votre entreprise" /></label>
+              <label>Nom du contact<input value={supplier.contactName} onChange={(event) => setSupplier((current) => ({ ...current, contactName: event.target.value }))} placeholder="Nom du responsable" /></label>
+              <label>Téléphone professionnel<input type="tel" value={supplier.phone} onChange={(event) => setSupplier((current) => ({ ...current, phone: event.target.value }))} placeholder="Téléphone de contact" /></label>
+              <label>Ville ou zone de livraison<input value={supplier.city} onChange={(event) => setSupplier((current) => ({ ...current, city: event.target.value }))} placeholder="Ville ou zone desservie" /></label>
+              <label>Catégorie de produits<select value={supplier.category} onChange={(event) => setSupplier((current) => ({ ...current, category: event.target.value }))}><option value="">Choisir une catégorie</option><option value="Tissus">Tissus</option><option value="Mercerie">Mercerie et accessoires</option><option value="Machines">Machines et équipements</option><option value="Autres">Autres fournitures</option></select></label>
+              <label>Nom de la boutique<input value={supplier.shopName} onChange={(event) => setSupplier((current) => ({ ...current, shopName: event.target.value }))} placeholder="Nom public de la boutique" /></label>
+              <label className="supplier-description">Description de l’offre<textarea value={supplier.description} onChange={(event) => setSupplier((current) => ({ ...current, description: event.target.value }))} rows={3} placeholder="Décrivez vos produits et services" /></label>
+              <button type="submit" className="primary-button">Enregistrer le profil fournisseur</button>
+            </form>
+            <div className="supplier-shop-access"><div><span className="supplier-symbol"><NavIcon name="store" /></span><div><h3>Création de boutique</h3><p>Préparez votre boutique avec un nom public, une catégorie et une zone de livraison.</p></div></div><button className="secondary-button" onClick={() => { setSupplier((current) => ({ ...current, shopName: current.shopName || current.businessName })); setView("marketplace"); }}>Créer / gérer ma boutique <span>→</span></button></div>
+            <p className="privacy-note">Les informations sont conservées localement sur cet appareil. Les comptes fournisseurs, les permissions réelles, le catalogue public et les commandes marketplace ne sont pas encore activés côté serveur.</p>
+          </section>}
           {view === "marketplace" && <section className="marketplace-page">
-            <div className="marketplace-hero content-card"><div className="marketplace-mark">◇</div><div><p className="eyebrow">VOTRE VITRINE PROFESSIONNELLE</p><h2>Faites découvrir vos créations.</h2><p>Préparez votre présence sur la marketplace YÉRÉ. Cette première version vous permet d’organiser votre atelier ; la publication publique et les ventes en ligne ne sont pas encore activées.</p><div className="marketplace-actions"><button className="primary-button" onClick={() => setView("account")}>Compléter mon atelier <span>→</span></button><button className="secondary-button" onClick={() => { setShowOrderForm(true); setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); setView("orders"); }}>Créer une commande</button></div></div></div>
-            <div className="marketplace-grid"><article className="content-card marketplace-tile"><span className="marketplace-tile-icon">✂</span><h3>Vos créations</h3><p>Préparez les pièces que vous souhaitez présenter à vos futurs clients.</p><button className="text-button" onClick={() => setView("orders")}>Voir mes commandes <span>→</span></button></article><article className="content-card marketplace-tile"><span className="marketplace-tile-icon">♙</span><h3>Votre clientèle</h3><p>Retrouvez vos clients et entretenez la relation avant d’ouvrir les ventes publiques.</p><button className="text-button" onClick={() => setView("clients")}>Ouvrir les clients <span>→</span></button></article><article className="content-card marketplace-tile"><span className="marketplace-tile-icon">⌂</span><h3>Profil de boutique</h3><p>Renseignez le nom et la ville de l’atelier pour préparer votre vitrine.</p><button className="text-button" onClick={() => setView("account")}>Gérer le profil <span>→</span></button></article></div>
+            <div className="marketplace-hero content-card"><div className="marketplace-mark"><NavIcon name="store" /></div><div><p className="eyebrow">ESPACE MARKETPLACE</p><h2>{supplier.shopName || "Préparez votre boutique"}</h2><p>Les fournisseurs peuvent préparer leur profil et le nom de leur boutique. L’annuaire public, la publication des produits et les commandes en ligne seront activés avec le backend marketplace.</p><div className="marketplace-actions"><button className="primary-button" onClick={() => setView("suppliers")}>Créer / compléter ma boutique <span>→</span></button><button className="secondary-button" onClick={() => setView("clients")}>Espace clients</button></div></div></div>
+            <div className="marketplace-grid"><article className="content-card marketplace-tile"><span className="marketplace-tile-icon"><NavIcon name="package" /></span><h3>Catalogue fournisseur</h3><p>Préparez la description de votre offre et votre catégorie de produits.</p><button className="text-button" onClick={() => setView("suppliers")}>Gérer mon offre <span>→</span></button></article><article className="content-card marketplace-tile"><span className="marketplace-tile-icon"><NavIcon name="map-pin" /></span><h3>Zone de livraison</h3><p>Indiquez votre ville et les zones que vous desservez dans votre profil fournisseur.</p><button className="text-button" onClick={() => setView("suppliers")}>Renseigner ma zone <span>→</span></button></article><article className="content-card marketplace-tile"><span className="marketplace-tile-icon"><NavIcon name="store" /></span><h3>Boutique fournisseur</h3><p>{supplier.shopName ? "Boutique préparée : " + supplier.shopName : "Aucune boutique renseignée pour le moment."}</p><button className="text-button" onClick={() => setView("suppliers")}>Créer ma boutique <span>→</span></button></article></div>
           </section>}
 
           {view === "reminders" && <section className="reminders-page">
@@ -338,9 +365,26 @@ function App() {
           <footer className="footer"><span>YÉRÉ Atelier <span>·</span> La couture, mieux organisée.</span></footer>
         </div>
       </main>
-      <nav className="mobile-bottom-nav" aria-label="Navigation mobile">{mobileNavItems.map((item) => <button key={item.id} className={view === item.id ? "mobile-nav-item active" : "mobile-nav-item"} onClick={() => setView(item.id)} aria-current={view === item.id ? "page" : undefined}><span>{item.icon}</span><small>{item.label}</small></button>)}</nav>
+      <nav className="mobile-bottom-nav" aria-label="Navigation mobile">{mobileNavItems.map((item) => <button key={item.id} className={view === item.id ? "mobile-nav-item active" : "mobile-nav-item"} onClick={() => setView(item.id)} aria-current={view === item.id ? "page" : undefined}><span><NavIcon name={item.icon} /></span><small>{item.label}</small></button>)}</nav>
     </div>
   );
+}
+
+function NavIcon({ name }: { name: string }) {
+  const common = { width: 21, height: 21, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true as const };
+  const paths: Record<string, ReactNode> = {
+    house: <><path d="m3 10 9-7 9 7" /><path d="M5 9v11h14V9" /><path d="M9 20v-6h6v6" /></>,
+    users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>,
+    "clipboard-list": <><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4.5h6a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1Z" /><path d="M9 10h6M9 14h6M9 18h3" /></>,
+    truck: <><path d="M3 6h11v12H3z" /><path d="M14 10h4l3 3v5h-7z" /><circle cx="7.5" cy="19" r="1.5" /><circle cx="17.5" cy="19" r="1.5" /></>,
+    store: <><path d="M3 10v10h18V10" /><path d="m2 10 2-7h16l2 7" /><path d="M2 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0 2 2 0 0 0 2 0" /><path d="M9 20v-6h6v6" /></>,
+    wallet: <><rect x="3" y="5" width="18" height="15" rx="2" /><path d="M3 8h18" /><path d="M16 14h2" /></>,
+    "user-round": <><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></>,
+    "bell-ring": <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /><path d="M19 3l2 2M5 3 3 5" /></>,
+    package: <><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="M3 8v9l9 5 9-5V8" /><path d="M12 13v9" /></>,
+    "map-pin": <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></>
+  };
+  return <svg {...common}>{paths[name] ?? paths.store}</svg>;
 }
 
 function Onboarding({ atelier, onAtelierChange, onFinish }: {
@@ -348,51 +392,26 @@ function Onboarding({ atelier, onAtelierChange, onFinish }: {
   onAtelierChange: (value: AtelierProfile) => void;
   onFinish: () => void;
 }) {
-  const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<AtelierProfile>(atelier);
-  const steps = [
-    { eyebrow: "BIENVENUE", title: "YÉRÉ Atelier", subtitle: "La couture, mieux organisée.", body: "Retrouvez vos clients, leurs mensurations, vos commandes et vos paiements en un seul endroit.", detail: "Un outil de travail pensé pour le quotidien de votre atelier." },
-    { eyebrow: "GAGNEZ DU TEMPS", title: "Fini les cahiers perdus et les recherches interminables.", subtitle: "Tout retrouver en quelques secondes.", body: "Mensurations, anciennes commandes, acomptes et dates de livraison : les informations utiles sont réunies.", detail: "Moins de recherches, moins d'oublis et moins d'erreurs de saisie." },
-    { eyebrow: "SUIVI DE PRODUCTION", title: "Gardez chaque commande sous contrôle.", subtitle: "De la coupe à la livraison.", body: "Suivez les étapes de confection : coupe, couture, essayage et livraison.", detail: "Le suivi des commandes commence ici ; les alertes automatiques de retard restent à développer." },
-    { eyebrow: "GESTION DE L'ARGENT", title: "Comprenez ce que votre atelier gagne réellement.", subtitle: "Des chiffres plus clairs.", body: "Préparez le suivi des acomptes, paiements, dépenses et recettes.", detail: "Le suivi actuel couvre les prix, acomptes et soldes des commandes ; les dépenses et recettes seront ajoutées ensuite." },
-    { eyebrow: "INSPIRATIONS COUTURE", title: "Retrouvez les modèles au bon moment.", subtitle: "Un outil de travail, pas un réseau social.", body: "À terme, classez les photos envoyées par les clients, les modèles enregistrés et les créations réalisées.", detail: "Le catalogue d'inspirations est prévu dans la feuille de route ; il n'est pas encore disponible." },
-    { eyebrow: "VOTRE ATELIER", title: "Créons votre premier atelier.", subtitle: "Quelques informations pour commencer.", body: "Renseignez le nom de votre atelier, un téléphone et une ville. Vous pourrez ensuite créer votre premier client.", detail: "Créez votre espace atelier sur cet appareil. La connexion sécurisée et la synchronisation en ligne seront activées avec le serveur." }
-  ];
-  const current = steps[step];
-  const isSetup = step === steps.length - 1;
   function update(field: keyof AtelierProfile, value: string) {
     setDraft((previous) => ({ ...previous, [field]: value }));
   }
   return <main className="onboarding-shell">
-    <header className="onboarding-brand"><span className="brand-mark">Y</span><span><strong>YÉRÉ</strong><small>ATELIER</small></span><span className="onboarding-step">Étape {step + 1} sur {steps.length}</span></header>
-    <div className="onboarding-layout">
+    <header className="onboarding-brand"><span className="brand-mark">Y</span><span><strong>YÉRÉ</strong><small>ATELIER</small></span></header>
+    <div className="onboarding-layout onboarding-layout-simple">
       <section className="onboarding-copy">
-        <p className="eyebrow">{current.eyebrow}</p>
-        <h1>{current.title}</h1>
-        <h2>{current.subtitle}</h2>
-        <p className="onboarding-body">{current.body}</p>
-        {step === 1 && <ul className="onboarding-benefits"><li>Mensurations</li><li>Anciennes commandes</li><li>Acomptes</li><li>Dates de livraison</li></ul>}
-        {step === 2 && <div className="onboarding-flow"><span>Coupe</span><b>→</b><span>Couture</span><b>→</b><span>Essayage</span><b>→</b><span>Livraison</span></div>}
-        {step === 3 && <ul className="onboarding-benefits"><li>Acomptes</li><li>Paiements</li><li>Dépenses</li><li>Recettes</li></ul>}
-        {step === 4 && <div className="onboarding-inspiration"><span>✦</span><div><b>Vos références couture</b><small>Photos, modèles et créations — fonctionnalité prévue, pas encore active.</small></div></div>}
-        {isSetup && <form className="onboarding-form" onSubmit={(event) => { event.preventDefault(); onAtelierChange(draft); onFinish(); }}>
-          <label>Nom de l'atelier<input required autoFocus value={draft.name} onChange={(event) => update("name", event.target.value)} placeholder="Ex. Atelier Aminata" /></label>
-          <label>Téléphone<input value={draft.phone} onChange={(event) => update("phone", event.target.value)} placeholder="+221 77 000 00 00" /></label>
-          <label>Ville<input value={draft.city} onChange={(event) => update("city", event.target.value)} placeholder="Ex. Dakar" /></label>
+        <p className="eyebrow">CONFIGURATION</p>
+        <h1>Configurez votre atelier</h1>
+        <h2>Un espace de travail à votre nom.</h2>
+        <p className="onboarding-body">Renseignez les informations de votre atelier pour commencer à saisir vos propres données.</p>
+        <form className="onboarding-form" onSubmit={(event) => { event.preventDefault(); onAtelierChange(draft); onFinish(); }}>
+          <label>Nom de l'atelier<input required autoFocus value={draft.name} onChange={(event) => update("name", event.target.value)} placeholder="Nom de l'atelier" /></label>
+          <label>Téléphone<input type="tel" value={draft.phone} onChange={(event) => update("phone", event.target.value)} placeholder="Téléphone" /></label>
+          <label>Ville<input value={draft.city} onChange={(event) => update("city", event.target.value)} placeholder="Ville" /></label>
           <button className="primary-button onboarding-primary" type="submit">Créer mon espace atelier <span>→</span></button>
-        </form>}
-        {!isSetup && <p className="onboarding-detail">{current.detail}</p>}
-        <div className="onboarding-actions">
-          {step > 0 && <button className="secondary-button" onClick={() => setStep((value) => value - 1)}>Précédent</button>}
-          {!isSetup && <button className="primary-button onboarding-primary" onClick={() => setStep((value) => Math.min(value + 1, steps.length - 1))}>{step === 0 ? "Commencer" : "Continuer"} <span>→</span></button>}
-        </div>
-        <p className="onboarding-disclaimer">Espace local sur cet appareil · la création d’un compte sécurisé en ligne nécessite encore l’activation du serveur.</p>
+        </form>
+        <p className="onboarding-privacy">Les données de cette version sont conservées dans ce navigateur.</p>
       </section>
-      <aside className="onboarding-visual" aria-label="Illustration conceptuelle d'un atelier de couture organisé">
-        <div className="visual-glow"></div><div className="visual-card visual-phone"><span className="visual-phone-top"></span><b>YÉRÉ Atelier</b><small>Vos commandes</small><div className="visual-task"><i></i><span>Tenue de cérémonie<small>En confection</small></span></div><div className="visual-task"><i></i><span>Boubou brodé<small>Essayage</small></span></div><div className="visual-task"><i></i><span>Robe sur mesure<small>À livrer</small></span></div></div>
-        <div className="visual-card visual-notebook"><span>FICHE CLIENT</span><b>Mensurations</b><div className="visual-lines"></div><div className="visual-lines short"></div><div className="visual-lines"></div><small>Retrouvées en quelques secondes</small></div>
-        <div className="visual-fabric fabric-one"></div><div className="visual-fabric fabric-two"></div><div className="visual-scissors">✂</div><p>Un atelier mieux organisé,<br/>sans perdre le fil.</p>
-      </aside>
     </div>
   </main>;
 }
