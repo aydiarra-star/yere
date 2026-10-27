@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
 import { usePersistentState } from "./usePersistentState";
 
@@ -27,6 +27,10 @@ function isAtelierProfileValid(value: unknown): value is AtelierProfile {
     && "name" in value && typeof value.name === "string"
     && "phone" in value && typeof value.phone === "string"
     && "city" in value && typeof value.city === "string";
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isBooleanValue(value: unknown): value is boolean {
@@ -144,6 +148,58 @@ function App() {
     setNewOrderDeposit("0");
     setShowOrderForm(false);
     setNotice("Première commande créée dans le stockage local de la démonstration. Aucune sauvegarde serveur n'est active.");
+  }
+
+  function exportLocalBackup() {
+    const backup = {
+      format: "yere-local-backup",
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      data: { clients, orders, atelier, onboardingComplete, onboardingStartedAt }
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `yere-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setNotice("Export préparé. Conservez ce fichier dans un endroit sûr : il contient des données clients et mensurations.");
+  }
+
+  function importLocalBackup(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    void file.text().then((raw) => {
+      const parsed: unknown = JSON.parse(raw);
+      if (!isObjectRecord(parsed) || parsed.format !== "yere-local-backup" || parsed.schemaVersion !== 1 || !isObjectRecord(parsed.data)) {
+        throw new Error("Format de sauvegarde YÉRÉ non reconnu.");
+      }
+      const data = parsed.data;
+      if (!isClientListValid(data.clients)
+        || !isOrderListValid(data.orders)
+        || !isAtelierProfileValid(data.atelier)
+        || !isBooleanValue(data.onboardingComplete)
+        || !isNullableTimestamp(data.onboardingStartedAt)) {
+        throw new Error("La sauvegarde est incomplète ou contient des données invalides. Aucune donnée n'a été modifiée.");
+      }
+      setClients(data.clients);
+      setOrders(data.orders);
+      setAtelier(data.atelier);
+      setOnboardingComplete(data.onboardingComplete);
+      setOnboardingStartedAt(data.onboardingStartedAt);
+      setSelectedClient(null);
+      setShowForm(false);
+      setShowOrderForm(false);
+      setView("overview");
+      setNotice("Sauvegarde restaurée dans ce navigateur. Vérifiez les clients, les mensurations et les commandes. Cette restauration ne crée pas de copie serveur.");
+    }).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : "Fichier impossible à lire.";
+      setNotice(`Restauration refusée : ${message}`);
+    });
   }
 
   function updateStatus(orderId: string, status: OrderStatus) {
@@ -286,6 +342,15 @@ function App() {
               <label>Ville<input value={atelier.city} onChange={(event) => setAtelier((current) => ({ ...current, city: event.target.value }))} /></label>
               <button type="submit" className="primary-button">Enregistrer le profil</button>
             </form>
+            <section className="backup-panel" aria-labelledby="backup-title">
+              <div><h3 id="backup-title">Sauvegarde locale</h3><p>Exportez vos fiches, mensurations, commandes et profil. La restauration remplace les données actuellement enregistrées sur cet appareil.</p></div>
+              <div className="backup-actions">
+                <button type="button" className="primary-button" onClick={exportLocalBackup}>Exporter une sauvegarde (.json)</button>
+                <label className="secondary-button backup-import-label" htmlFor="yere-backup-file">Restaurer une sauvegarde</label>
+                <input id="yere-backup-file" className="backup-file-input" type="file" accept=".json,application/json" onChange={importLocalBackup} />
+              </div>
+              <p className="privacy-note">Attention : le fichier exporté contient des informations personnelles. Gardez-le hors d’accès public. Avant restauration, exportez les données actuelles si vous souhaitez les conserver.</p>
+            </section>
             <div className="account-secondary"><div><b>Relances clients</b><p>Consultez les suggestions de relance manuelle, sans envoi automatique.</p></div><button className="secondary-button" onClick={() => setView("reminders")}>Ouvrir les relances →</button></div>
             <p className="privacy-note">Aucun compte distant, synchronisation ni sauvegarde serveur n'est actif dans cette version.</p>
           </section>}
