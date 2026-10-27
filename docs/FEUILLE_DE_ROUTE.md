@@ -149,3 +149,10 @@ Toute nouvelle demande est évaluée selon : fréquence du problème, impact sur
 
 Référence : [Banque d'idées stratégiques](./BANQUE_IDEES_STRATEGIQUES.md).
 
+
+
+## Assistant quotidien — durcissement de la logique métier
+
+- [x] Extraire les règles de l'assistant quotidien dans une fonction métier testable : retards, échéances du jour, soldes des commandes prêtes et dates invalides.
+- [x] Ajouter des tests unitaires ciblés sur les priorités et les dates incohérentes ; résultat CI de cette dernière tranche à confirmer.
+- [ ] Valider les règles de priorité avec des ateliers pilotes et relier l'assistant à des paiements/stocks fiables après le backend.
