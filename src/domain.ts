@@ -8,13 +8,50 @@ export type Measurement = {
   note: string;
 };
 
+export type MeasurementVersion = {
+  id: string;
+  measuredAt: string;
+  measurement: Measurement;
+};
+
 export type Client = {
   id: string;
   name: string;
   phone: string;
   createdAt: string;
   measurement: Measurement;
+  measurementHistory?: MeasurementVersion[];
 };
+
+export function saveMeasurementVersion(
+  client: Client,
+  measurement: Measurement,
+  measuredAt: string,
+  versionId: string
+): Client {
+  const hasCurrentValues = Object.values(client.measurement).some((value) => value.trim() !== "");
+  const history = client.measurementHistory ?? (hasCurrentValues
+    ? [{ id: `legacy-${client.id}`, measuredAt: client.createdAt, measurement: client.measurement }]
+    : []);
+  return {
+    ...client,
+    measurement: { ...measurement },
+    measurementHistory: [...history, {
+      id: versionId,
+      measuredAt,
+      measurement: { ...measurement }
+    }]
+  };
+}
+
+export function isMeasurementValid(measurement: Measurement): boolean {
+  const numericFields = [measurement.bust, measurement.waist, measurement.hips, measurement.shoulder, measurement.sleeve, measurement.length];
+  return numericFields.every((value) => {
+    if (value.trim() === "") return true;
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 0;
+  });
+}
 
 export type OrderStatus = "À préparer" | "En confection" | "Prêt" | "Livré";
 
