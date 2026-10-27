@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { balanceDue, formatXof, getClientReminderSuggestions, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, saveMeasurementVersion, type Client, type Measurement, type Order } from "./domain";
+import { areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, saveMeasurementVersion, type Client, type Measurement, type Order } from "./domain";
 
 const client: Client = {
   id: "c-1",
@@ -43,6 +43,30 @@ describe("validation des données restaurées", () => {
     expect(isOrderListValid([{ ...order, dueDate: "2026-02-31" }])).toBe(false);
     expect(isOrderListValid([{ ...order, status: "Inconnu" }])).toBe(false);
     expect(isOrderListValid([{ ...order, clientId: "" }])).toBe(false);
+  });
+});
+
+
+describe("cohérence des données restaurées", () => {
+  const clients: Client[] = [
+    { ...client, id: "c-1" },
+    { ...client, id: "c-2", name: "Moussa Diallo" }
+  ];
+  const orders: Order[] = [
+    { id: "o-1", clientId: "c-1", garment: "Boubou", dueDate: "2026-11-01", price: 25000, deposit: 5000, status: "À préparer" }
+  ];
+
+  it("accepte les commandes rattachées à des clients existants", () => {
+    expect(areClientOrderRelationsValid(clients, orders)).toBe(true);
+  });
+
+  it("refuse une commande dont le client est absent", () => {
+    expect(areClientOrderRelationsValid(clients, [{ ...orders[0], clientId: "missing" }])).toBe(false);
+  });
+
+  it("refuse les identifiants dupliqués", () => {
+    expect(areClientOrderRelationsValid([...clients, clients[0]], orders)).toBe(false);
+    expect(areClientOrderRelationsValid(clients, [...orders, orders[0]])).toBe(false);
   });
 });
 
