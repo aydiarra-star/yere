@@ -38,6 +38,7 @@ function App() {
   const [orders, setOrders] = usePersistentState<Order[]>("yere-demo-orders-v1", []);
   const [atelier, setAtelier] = usePersistentState<AtelierProfile>("yere-demo-atelier-v1", emptyAtelier);
   const [onboardingComplete, setOnboardingComplete] = usePersistentState<boolean>("yere-demo-onboarding-complete-v1", false);
+  const [onboardingStartedAt, setOnboardingStartedAt] = usePersistentState<number | null>("yere-demo-onboarding-started-at-v1", null);
   const [view, setView] = useState<View>("overview");
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -46,6 +47,10 @@ function App() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [draftMeasurement, setDraftMeasurement] = useState<Measurement>({ ...emptyMeasurement });
   const [notice, setNotice] = useState("Démonstration : données conservées localement sur cet appareil, sans synchronisation serveur.");
+
+  useEffect(() => {
+    if (onboardingStartedAt === null) setOnboardingStartedAt(Date.now());
+  }, [onboardingStartedAt, setOnboardingStartedAt]);
 
   const visibleClients = useMemo(() => clients.filter((client) => matchesClient(client, query)), [clients, query]);
   const outstanding = orders.reduce((sum, order) => sum + balanceDue(order), 0);
@@ -77,7 +82,12 @@ function App() {
     setShowForm(false);
     setView("clients");
     setSelectedClient(client.id);
-    setNotice(`Fiche de ${name} créée dans la démonstration.`);
+    const firstClientMessage = clients.length === 0 && onboardingStartedAt !== null
+      ? (Date.now() - onboardingStartedAt <= 180000
+          ? " Première action réussie en moins de 3 minutes : objectif d'adoption atteint dans cette démonstration."
+          : " Le premier client a été créé après 3 minutes : ce parcours doit être examiné pour simplifier l'adoption.")
+      : "";
+    setNotice(`Fiche de ${name} créée dans la démonstration.${firstClientMessage}`);
   }
 
   function updateStatus(orderId: string, status: OrderStatus) {
