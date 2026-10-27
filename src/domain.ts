@@ -175,3 +175,55 @@ export function getClientReminderSuggestions(
 
   return suggestions.sort((a, b) => b.daysSinceOrder - a.daysSinceOrder);
 }
+
+
+export type DailyTask = {
+  id: string;
+  title: string;
+  detail: string;
+  kind: "critical" | "today" | "money";
+  action: "orders" | "cash";
+};
+
+/** Build explainable dashboard tasks from saved prototype data only. */
+export function getDailyTasks(clients: Client[], orders: Order[], today: string): DailyTask[] {
+  const parseDate = (value: string): number | null => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    const date = new Date(`${value}T12:00:00Z`);
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
+      ? date.getTime()
+      : null;
+  };
+  if (parseDate(today) === null) return [];
+  const clientName = (clientId: string) =>
+    clients.find((client) => client.id === clientId)?.name ?? "Client non retrouvé";
+
+  const overdue = orders
+    .filter((order) => order.status !== "Livré" && parseDate(order.dueDate) !== null && order.dueDate < today)
+    .map((order): DailyTask => ({
+      id: `retard-${order.id}`,
+      title: `Commande en retard : ${order.garment}`,
+      detail: `${clientName(order.clientId)} · échéance dépassée`,
+      kind: "critical",
+      action: "orders"
+    }));
+  const dueToday = orders
+    .filter((order) => order.status !== "Livré" && parseDate(order.dueDate) !== null && order.dueDate === today)
+    .map((order): DailyTask => ({
+      id: `today-${order.id}`,
+      title: `Livraison prévue aujourd'hui : ${order.garment}`,
+      detail: `${clientName(order.clientId)} · statut : ${order.status}`,
+      kind: "today",
+      action: "orders"
+    }));
+  const readyBalances = orders
+    .filter((order) => order.status === "Prêt" && balanceDue(order) > 0)
+    .map((order): DailyTask => ({
+      id: `balance-${order.id}`,
+      title: `Solde à encaisser : ${formatXof(balanceDue(order))}`,
+      detail: `${order.garment} · ${clientName(order.clientId)}`,
+      kind: "money",
+      action: "cash"
+    }));
+  return [...overdue, ...dueToday, ...readyBalances];
+}
