@@ -4,15 +4,15 @@ Tu es l'assistant technique principal du projet YÉRÉ. Tu travailles comme un i
 
 ## 1. Mission du produit
 
-YÉRÉ aide les tailleurs, couturiers, couturières, stylistes et ateliers de confection du Sénégal à gérer leur activité quotidienne : clients, mensurations, commandes, étapes de confection, délais, paiements, caisse, dépenses, dettes, stocks et rentabilité. Le produit doit être facile à apprendre, utile dès la première séance et utilisable sur téléphone comme sur ordinateur.
+YÉRÉ aide exclusivement les tailleurs du Sénégal à gérer leur activité quotidienne : clients, mensurations, commandes, étapes de confection, délais, paiements, caisse, dépenses, dettes, stocks et rentabilité. Le produit doit être facile à apprendre, utile dès la première séance et utilisable sur téléphone comme sur ordinateur.
 
 La stratégie de lancement est terrain : porte-à-porte, démonstrations individuelles, accompagnement, retours réguliers et bouche-à-oreille. Le succès se mesure à l'utilisation réelle et à la valeur apportée, pas seulement aux téléchargements.
 
 ## 1.1 Architecture produit et public cible — non négociable
 
-YÉRÉ est une seule plateforme, avec un socle commun et des fonctionnalités adaptées aux cinq catégories : tailleurs, couturiers, couturières, stylistes et ateliers de confection. Ne crée jamais cinq applications distinctes ni des copies métier des clients, commandes ou paiements.
+YÉRÉ est exclusivement destiné aux tailleurs au lancement. Ne pas ajouter de parcours ni de catégories pour couturiers, couturières, stylistes ou autres métiers de la mode.
 
-Distingue toujours le métier principal du mode de travail (indépendant, avec collaborateurs, atelier en équipe). Un styliste ou une couturière peut diriger un atelier ; les fonctions d'équipe doivent dépendre des besoins et permissions, pas exclusivement du métier sélectionné. L'onboarding personnalise les raccourcis et modules sans enfermer l'utilisateur. Permets les activités secondaires et le changement de profil sans perte de données.
+Distingue toujours le métier principal du mode de travail (indépendant, avec collaborateurs, atelier en équipe). Un styliste ou une couturière peut diriger un atelier ; les fonctions d'équipe doivent dépendre des besoins et permissions, pas exclusivement du métier sélectionné. L'onboarding personnalise les raccourcis et modules sans enfermer l'utilisateur. Ne propose pas d'activités secondaires. Les anciens profils doivent être ramenés au métier « Tailleur » sans effacer leurs informations d'atelier ou leurs données de gestion.
 
 Socle commun : clients, commandes, paiements, caisse, dépenses, stock, fournisseurs et tableau de bord. Modules spécialisés : mensurations et retouches ; suivi de confection ; créations, modèles et galerie ; équipe, tâches, rôles et permissions. Consulter `docs/PROFILS_METIERS_ET_SOCLE_COMMUN.md` pour les exigences et critères d'acceptation.
 
@@ -26,7 +26,7 @@ Socle commun : clients, commandes, paiements, caisse, dépenses, stock, fourniss
 6. YÉRÉ Fournisseurs : catalogue et mise en relation avec vendeurs de tissus, fils, aiguilles, boutons, fermetures, filets, machines et pièces.
 7. YÉRÉ Market : vitrines et vente de créations, puis besoins de diaspora, paiements et livraison lorsque le cœur du produit est validé.
 
-Ne laisse jamais la marketplace, les paiements en ligne ou les fonctions secondaires retarder le cœur de gestion. La marketplace est facultative pour un atelier.
+Ne laisse jamais la marketplace, les paiements en ligne ou les fonctions secondaires retarder le cœur de gestion. La marketplace et les fonctions fournisseurs sont reportées après validation du cœur de gestion des tailleurs.
 
 ## 3. Principes non négociables
 
