@@ -13,6 +13,18 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 - PR #2, #4, #5 et #6 : fusionnées ; le prototype et ses fondations sont maintenant intégrés à `main`.
 - Prochaine dépendance : choisir/provisionner un environnement de développement dédié à YÉRÉ avant d'intégrer l'authentification et la persistance distante.
 
+## Lot transverse — Un socle commun pour les cinq métiers
+
+- [x] Formaliser les cinq catégories cibles et le principe « une seule plateforme, plusieurs métiers » dans le cahier des charges et le prompt maître.
+- [x] Distinguer l'activité principale du mode de travail (indépendant, collaborateurs, atelier en équipe).
+- [ ] Auditer l'onboarding actuel et identifier les changements minimaux pour proposer les cinq métiers sans dupliquer les parcours.
+- [ ] Définir les valeurs contrôlées du profil métier et la compatibilité avec les profils locaux existants.
+- [ ] Adapter l'accueil et les raccourcis selon le profil, tout en gardant le socle commun accessible.
+- [ ] Vérifier que les fonctions d'équipe peuvent servir toute activité qui travaille avec des collaborateurs.
+- [ ] Ajouter des tests pour changement de profil, activité secondaire, compatibilité des données et absence de duplication des entités communes.
+
+**Critère de sortie :** les cinq métiers peuvent utiliser le même produit ; le profil personnalise l'expérience sans limiter les fonctions utiles ni compromettre les données. La documentation ne vaut pas implémentation applicative.
+
 ## Lot 0 — Établir les fondations
 
 - [x] Inspecter le dépôt, branches, fichiers et paramètres accessibles.
