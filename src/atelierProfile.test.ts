@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   atelierActivities,
   emptyAtelier,
+  type AtelierProfile,
   isAtelierProfileValid,
   normalizeAtelierProfile,
   toggleSecondaryActivity,
@@ -85,7 +86,7 @@ describe("secondary professional activities", () => {
   });
 
   it("does not add the primary activity to the secondary list or duplicate selections", () => {
-    let profile = { ...emptyAtelier, activity: "tailleur" as const, secondaryActivities: [] as ("couturier" | "couturiere" | "styliste" | "atelier_confection")[] };
+    let profile: AtelierProfile = { ...emptyAtelier, activity: "tailleur", secondaryActivities: [] };
     profile = toggleSecondaryActivity(profile, "styliste", true);
     profile = toggleSecondaryActivity(profile, "styliste", true);
     expect(profile.secondaryActivities).toEqual(["styliste"]);
