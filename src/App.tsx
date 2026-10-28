@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
-import { addOrderPayment, areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, orderStatuses, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderStatus } from "./domain";
+import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderStatus, type StockItem, type StockMovement } from "./domain";
 import { usePersistentState } from "./usePersistentState";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", arm: "", neck: "", thigh: "", legLength: "", garmentType: "Tenue complète", note: "" };
@@ -13,7 +13,7 @@ const measurementFieldsByGarment: Record<string, Array<[string, keyof Measuremen
   "Autre": [["Tour de poitrine", "bust"], ["Tour de taille", "waist"], ["Tour de hanches", "hips"], ["Épaules", "shoulder"], ["Longueur de manche", "sleeve"], ["Longueur du vêtement", "length"], ["Tour de bras (biceps)", "arm"], ["Tour de cou", "neck"], ["Tour de cuisse", "thigh"], ["Longueur de jambe / pantalon", "legLength"]]
 };
 
-type View = "overview" | "clients" | "orders" | "cash" | "account" | "marketplace" | "reminders" | "suppliers";
+type View = "overview" | "clients" | "orders" | "cash" | "stock" | "account" | "marketplace" | "reminders" | "suppliers";
 type AtelierProfile = { name: string; phone: string; city: string };
 const emptyAtelier: AtelierProfile = { name: "", phone: "", city: "" };
 type SupplierProfile = { businessName: string; contactName: string; phone: string; city: string; category: string; shopName: string; description: string };
@@ -55,6 +55,8 @@ function App() {
   const [clients, setClients] = usePersistentState<Client[]>("yere-demo-clients-v1", [], isClientListValid);
   const [orders, setOrders] = usePersistentState<Order[]>("yere-demo-orders-v1", [], isOrderListValid);
   const [expenses, setExpenses] = usePersistentState<Expense[]>("yere-demo-expenses-v1", [], isExpenseListValid);
+  const [stockItems, setStockItems] = usePersistentState<StockItem[]>("yere-demo-stock-items-v1", [], isStockItemListValid);
+  const [stockMovements, setStockMovements] = usePersistentState<StockMovement[]>("yere-demo-stock-movements-v1", [], isStockMovementListValid);
   const [atelier, setAtelier] = usePersistentState<AtelierProfile>("yere-demo-atelier-v1", emptyAtelier, isAtelierProfileValid);
   const [supplier, setSupplier] = usePersistentState<SupplierProfile>("yere-supplier-profile-v1", emptySupplier, isSupplierProfileValid);
   const [marketplaceListings, setMarketplaceListings] = usePersistentState<MarketplaceListing[]>("yere-marketplace-listings-v1", [], isMarketplaceListingListValid);
@@ -80,6 +82,15 @@ function App() {
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseToVoidId, setExpenseToVoidId] = useState<string | null>(null);
   const [expenseVoidReason, setExpenseVoidReason] = useState("");
+  const [stockFormOpen, setStockFormOpen] = useState(false);
+  const [stockName, setStockName] = useState("");
+  const [stockUnit, setStockUnit] = useState("mètre");
+  const [stockInitialQuantity, setStockInitialQuantity] = useState("0");
+  const [stockMinimumQuantity, setStockMinimumQuantity] = useState("0");
+  const [stockMovementItemId, setStockMovementItemId] = useState<string | null>(null);
+  const [stockMovementType, setStockMovementType] = useState<"Entrée" | "Sortie">("Entrée");
+  const [stockMovementQuantity, setStockMovementQuantity] = useState("");
+  const [stockMovementNote, setStockMovementNote] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -169,9 +180,9 @@ function App() {
   function exportLocalBackup() {
     const backup = {
       format: "yere-local-backup",
-      schemaVersion: 2,
+      schemaVersion: 3,
       exportedAt: new Date().toISOString(),
-      data: { clients, orders, expenses, atelier, supplier, onboardingComplete, onboardingStartedAt }
+      data: { clients, orders, expenses, stockItems, stockMovements, atelier, supplier, onboardingComplete, onboardingStartedAt }
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -191,14 +202,17 @@ function App() {
     if (!file) return;
     void file.text().then((raw) => {
       const parsed: unknown = JSON.parse(raw);
-      if (!isObjectRecord(parsed) || parsed.format !== "yere-local-backup" || ![1, 2].includes(parsed.schemaVersion as number) || !isObjectRecord(parsed.data)) {
+      if (!isObjectRecord(parsed) || parsed.format !== "yere-local-backup" || ![1, 2, 3].includes(parsed.schemaVersion as number) || !isObjectRecord(parsed.data)) {
         throw new Error("Format de sauvegarde YÉRÉ non reconnu.");
       }
       const data = parsed.data;
       if (!isClientListValid(data.clients)
         || !isOrderListValid(data.orders)
         || !areClientOrderRelationsValid(data.clients, data.orders)
-        || (parsed.schemaVersion === 2 && !isExpenseListValid(data.expenses))
+        || ((parsed.schemaVersion === 2 || parsed.schemaVersion === 3) && !isExpenseListValid(data.expenses))
+        || (parsed.schemaVersion === 3 && (!isStockItemListValid(data.stockItems)
+          || !isStockMovementListValid(data.stockMovements)
+          || !areStockRelationsValid(data.stockItems, data.stockMovements)))
         || !isAtelierProfileValid(data.atelier)
         || (data.supplier !== undefined && !isSupplierProfileValid(data.supplier))
         || !isBooleanValue(data.onboardingComplete)
@@ -208,6 +222,8 @@ function App() {
       setClients(data.clients);
       setOrders(data.orders);
       setExpenses(isExpenseListValid(data.expenses) ? data.expenses : []);
+      setStockItems(isStockItemListValid(data.stockItems) ? data.stockItems : []);
+      setStockMovements(isStockMovementListValid(data.stockMovements) ? data.stockMovements : []);
       setAtelier(data.atelier);
       setSupplier(data.supplier !== undefined && isSupplierProfileValid(data.supplier) ? data.supplier : emptySupplier);
       setOnboardingComplete(data.onboardingComplete);
@@ -238,6 +254,64 @@ function App() {
     setExpenseToVoidId(null);
     setExpenseVoidReason("");
     setNotice("Dépense annulée et conservée dans l’historique. Le total des dépenses actives a été recalculé.");
+  }
+
+  function addStockItem(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = stockName.trim();
+    const initialQuantity = Number(stockInitialQuantity);
+    const minimumQuantity = Number(stockMinimumQuantity);
+    if (!name || !stockUnit.trim() || !Number.isFinite(initialQuantity) || initialQuantity < 0
+      || !Number.isFinite(minimumQuantity) || minimumQuantity < 0) {
+      setNotice("Vérifiez le nom, l’unité et les quantités du produit.");
+      return;
+    }
+    const item: StockItem = {
+      id: "STK-" + Date.now(), name, unit: stockUnit,
+      quantity: 0, minimumQuantity,
+      createdAt: new Date().toISOString().slice(0, 10)
+    };
+    if (initialQuantity > 0) {
+      const opening: StockMovement = {
+        id: "MOV-" + Date.now() + "-opening", itemId: item.id, type: "Entrée",
+        quantity: initialQuantity, movedAt: item.createdAt, note: "Stock initial"
+      };
+      const result = recordStockMovement([item], [], opening);
+      if (!result) { setNotice("Impossible d’initialiser le stock. Vérifiez la quantité."); return; }
+      setStockItems(result.items);
+      setStockMovements((current) => [...result.movements, ...current]);
+    } else {
+      setStockItems((current) => [item, ...current]);
+    }
+    setStockName("");
+    setStockInitialQuantity("0");
+    setStockMinimumQuantity("0");
+    setStockFormOpen(false);
+    setNotice("Article ajouté au stock sur cet appareil.");
+  }
+
+  function saveStockMovement(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const quantity = Number(stockMovementQuantity);
+    const movement: StockMovement = {
+      id: "MOV-" + Date.now(),
+      itemId: stockMovementItemId ?? "",
+      type: stockMovementType,
+      quantity,
+      movedAt: new Date().toISOString().slice(0, 10),
+      note: stockMovementNote.trim() || undefined
+    };
+    const result = recordStockMovement(stockItems, stockMovements, movement);
+    if (!result) {
+      setNotice("Mouvement refusé : vérifiez l’article, la quantité et le stock disponible. Une sortie ne peut pas créer un stock négatif.");
+      return;
+    }
+    setStockItems(result.items);
+    setStockMovements(result.movements);
+    setStockMovementItemId(null);
+    setStockMovementQuantity("");
+    setStockMovementNote("");
+    setNotice("Mouvement de stock enregistré sur cet appareil.");
   }
 
   function addExpense(event: FormEvent<HTMLFormElement>) {
@@ -317,13 +391,14 @@ function App() {
     { id: "overview", label: "Accueil", icon: "house" },
     { id: "clients", label: "Clients", icon: "users" },
     { id: "orders", label: "Commandes", icon: "clipboard-list" },
+    { id: "stock", label: "Stock", icon: "package" },
     { id: "suppliers", label: "Fournisseurs", icon: "truck" },
     { id: "marketplace", label: "Marketplace", icon: "store" },
     { id: "cash", label: "Caisse", icon: "wallet" },
     { id: "account", label: "Compte", icon: "user-round" },
     { id: "reminders", label: "Relances clients", icon: "bell-ring" }
   ];
-  const mobileNavItems = navItems.filter((item) => ["overview", "clients", "orders", "suppliers", "marketplace", "cash"].includes(item.id));
+  const mobileNavItems = navItems.filter((item) => ["overview", "clients", "orders", "stock", "suppliers", "marketplace", "cash"].includes(item.id));
 
   if (!onboardingComplete) {
     return <Onboarding
@@ -439,6 +514,20 @@ function App() {
             </section>
             <div className="account-secondary"><div><b>Relances clients</b><p>Consultez les suggestions de relance manuelle, sans envoi automatique.</p></div><button className="secondary-button" onClick={() => setView("reminders")}>Ouvrir les relances →</button></div>
             <p className="privacy-note">Cet espace est enregistré sur cet appareil. La création de comptes avec e-mail et mot de passe, la connexion sécurisée et la synchronisation entre appareils nécessitent encore le branchement du serveur d’authentification.</p>
+          </section>}
+          {view === "stock" && <section className="stock-page">
+            <div className="cash-summary-grid">
+              <article className="content-card cash-summary"><span>Articles suivis</span><strong>{stockItems.length}</strong><small>Articles enregistrés sur cet appareil</small></article>
+              <article className="content-card cash-summary"><span>Alertes de stock</span><strong>{stockItems.filter((item) => item.quantity <= item.minimumQuantity).length}</strong><small>Stock au seuil minimum ou en dessous</small></article>
+              <article className="content-card cash-summary"><span>Mouvements récents</span><strong>{stockMovements.length}</strong><small>Historique local des entrées et sorties</small></article>
+            </div>
+            <section className="content-card"><div className="section-heading"><div><h2>Inventaire de l’atelier</h2><p>Suivez les tissus et fournitures avec des unités adaptées.</p></div><button type="button" className="primary-button" onClick={() => setStockFormOpen((open) => !open)}>{stockFormOpen ? "Annuler" : "＋ Ajouter un article"}</button></div>
+              {stockFormOpen && <form className="new-order-form" onSubmit={addStockItem}><label>Nom de l’article<input required maxLength={100} value={stockName} onChange={(event) => setStockName(event.target.value)} placeholder="Ex. tissu bazin" /></label><label>Unité<select value={stockUnit} onChange={(event) => setStockUnit(event.target.value)}><option>mètre</option><option>pièce</option><option>bobine</option><option>rouleau</option><option>paquet</option><option>kilogramme</option><option>litre</option><option>autre</option></select></label><label>Stock initial<input required type="number" min="0" step="any" inputMode="decimal" value={stockInitialQuantity} onChange={(event) => setStockInitialQuantity(event.target.value)} /></label><label>Seuil d’alerte<input required type="number" min="0" step="any" inputMode="decimal" value={stockMinimumQuantity} onChange={(event) => setStockMinimumQuantity(event.target.value)} /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setStockFormOpen(false)}>Annuler</button><button type="submit" className="primary-button">Créer l’article</button></div></form>}
+              {stockItems.length === 0 ? <div className="empty-state">Aucun article suivi. Ajoutez un tissu ou une fourniture pour commencer.</div> : <div className="table-wrap"><table><thead><tr><th>Article</th><th>Stock</th><th>Seuil</th><th>État</th><th>Action</th></tr></thead><tbody>{stockItems.map((item) => <tr key={item.id}><td><b>{item.name}</b><small>{item.unit}</small></td><td>{item.quantity} {item.unit}</td><td>{item.minimumQuantity} {item.unit}</td><td>{item.quantity <= item.minimumQuantity ? "À réapprovisionner" : "Disponible"}</td><td><div className="form-actions"><button type="button" className="secondary-button" onClick={() => { setStockMovementItemId(item.id); setStockMovementType("Entrée"); setStockMovementQuantity(""); setStockMovementNote(""); }}>Entrée</button><button type="button" className="secondary-button" disabled={item.quantity <= 0} onClick={() => { setStockMovementItemId(item.id); setStockMovementType("Sortie"); setStockMovementQuantity(""); setStockMovementNote(""); }}>Sortie</button></div></td></tr>)}</tbody></table></div>}
+              {stockMovementItemId && stockItems.some((item) => item.id === stockMovementItemId) && <form className="new-order-form" onSubmit={saveStockMovement}><h3>{stockMovementType} de stock — {stockItems.find((item) => item.id === stockMovementItemId)?.name}</h3><label>Type de mouvement<select value={stockMovementType} onChange={(event) => setStockMovementType(event.target.value as "Entrée" | "Sortie")}><option>Entrée</option><option>Sortie</option></select></label><label>Quantité ({stockItems.find((item) => item.id === stockMovementItemId)?.unit})<input required type="number" min="0.01" step="any" inputMode="decimal" value={stockMovementQuantity} onChange={(event) => setStockMovementQuantity(event.target.value)} /></label><label>Note (facultative)<input maxLength={120} value={stockMovementNote} onChange={(event) => setStockMovementNote(event.target.value)} placeholder="Ex. achat fournisseur ou commande client" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setStockMovementItemId(null)}>Annuler</button><button type="submit" className="primary-button">Enregistrer le mouvement</button></div></form>}
+            </section>
+            <section className="content-card"><div className="section-heading"><div><h2>Historique des mouvements</h2><p>Les mouvements restent visibles pour comprendre les variations de stock.</p></div></div>{stockMovements.length === 0 ? <div className="empty-state">Aucun mouvement enregistré.</div> : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Article</th><th>Type</th><th>Quantité</th><th>Note</th></tr></thead><tbody>{stockMovements.slice(0, 100).map((movement) => <tr key={movement.id}><td>{movement.movedAt}</td><td>{stockItems.find((item) => item.id === movement.itemId)?.name ?? "Article inconnu"}</td><td>{movement.type}</td><td>{movement.quantity} {stockItems.find((item) => item.id === movement.itemId)?.unit ?? ""}</td><td>{movement.note || "—"}</td></tr>)}</tbody></table></div>}</section>
+            <p className="privacy-note">Stock local uniquement : aucun achat fournisseur, coût moyen, inventaire comptable ou synchronisation serveur n’est encore géré.</p>
           </section>}
           {view === "suppliers" && <section className="content-card supplier-page">
             <div className="section-heading"><div><h2>Profil fournisseur</h2><p>Renseignez les informations professionnelles de votre espace fournisseur.</p></div><span className="supplier-symbol"><NavIcon name="truck" /></span></div>

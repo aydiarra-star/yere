@@ -179,6 +179,79 @@ export function isExpenseListValid(value: unknown): value is Expense[] {
   ) && new Set(value.map((item) => (item as Record<string, unknown>).id)).size === value.length;
 }
 
+
+export type StockItem = {
+  id: string;
+  name: string;
+  unit: string;
+  quantity: number;
+  minimumQuantity: number;
+  createdAt: string;
+};
+
+export type StockMovement = {
+  id: string;
+  itemId: string;
+  type: "Entrée" | "Sortie";
+  quantity: number;
+  movedAt: string;
+  note?: string;
+};
+
+export function isStockItemListValid(value: unknown): value is StockItem[] {
+  return Array.isArray(value) && value.every((item) =>
+    isRecord(item)
+    && typeof item.id === "string" && item.id.trim().length > 0
+    && typeof item.name === "string" && item.name.trim().length > 0
+    && typeof item.unit === "string" && item.unit.trim().length > 0
+    && typeof item.quantity === "number" && Number.isFinite(item.quantity) && item.quantity >= 0
+    && typeof item.minimumQuantity === "number" && Number.isFinite(item.minimumQuantity) && item.minimumQuantity >= 0
+    && isCalendarDate(item.createdAt)
+  ) && new Set(value.map((item) => (item as Record<string, unknown>).id)).size === value.length;
+}
+
+export function isStockMovementListValid(value: unknown): value is StockMovement[] {
+  return Array.isArray(value) && value.every((item) =>
+    isRecord(item)
+    && typeof item.id === "string" && item.id.trim().length > 0
+    && typeof item.itemId === "string" && item.itemId.trim().length > 0
+    && (item.type === "Entrée" || item.type === "Sortie")
+    && typeof item.quantity === "number" && Number.isFinite(item.quantity) && item.quantity > 0
+    && isCalendarDate(item.movedAt)
+    && (item.note === undefined || typeof item.note === "string")
+  ) && new Set(value.map((item) => (item as Record<string, unknown>).id)).size === value.length;
+}
+
+export function areStockRelationsValid(items: StockItem[], movements: StockMovement[]): boolean {
+  const itemIds = new Set(items.map((item) => item.id));
+  if (itemIds.size !== items.length
+    || new Set(movements.map((movement) => movement.id)).size !== movements.length
+    || !movements.every((movement) => itemIds.has(movement.itemId))) return false;
+  return items.every((item) => {
+    const calculated = movements
+      .filter((movement) => movement.itemId === item.id)
+      .reduce((quantity, movement) => quantity + (movement.type === "Entrée" ? movement.quantity : -movement.quantity), 0);
+    return Math.abs(calculated - item.quantity) < 1e-8;
+  });
+}
+
+/** Record a stock movement atomically; refuse unknown items and exits that would create negative stock. */
+export function recordStockMovement(
+  items: StockItem[],
+  movements: StockMovement[],
+  movement: StockMovement
+): { items: StockItem[]; movements: StockMovement[] } | null {
+  if (!isStockMovementListValid([movement]) || movements.some((item) => item.id === movement.id)) return null;
+  const item = items.find((candidate) => candidate.id === movement.itemId);
+  if (!item) return null;
+  const nextQuantity = item.quantity + (movement.type === "Entrée" ? movement.quantity : -movement.quantity);
+  if (!Number.isFinite(nextQuantity) || nextQuantity < 0) return null;
+  return {
+    items: items.map((candidate) => candidate.id === item.id ? { ...candidate, quantity: nextQuantity } : candidate),
+    movements: [movement, ...movements]
+  };
+}
+
 export const orderStatuses: OrderStatus[] = [
   "À préparer",
   "En confection",
