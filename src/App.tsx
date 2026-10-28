@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
-import { addOrderPayment, areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, orderStatuses, saveMeasurementVersion, totalPaid, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
+import { addOrderPayment, areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, orderStatuses, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderStatus } from "./domain";
 import { usePersistentState } from "./usePersistentState";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", arm: "", neck: "", thigh: "", legLength: "", garmentType: "Tenue complète", note: "" };
@@ -54,6 +54,7 @@ function isNullableTimestamp(value: unknown): value is number | null {
 function App() {
   const [clients, setClients] = usePersistentState<Client[]>("yere-demo-clients-v1", [], isClientListValid);
   const [orders, setOrders] = usePersistentState<Order[]>("yere-demo-orders-v1", [], isOrderListValid);
+  const [expenses, setExpenses] = usePersistentState<Expense[]>("yere-demo-expenses-v1", [], isExpenseListValid);
   const [atelier, setAtelier] = usePersistentState<AtelierProfile>("yere-demo-atelier-v1", emptyAtelier, isAtelierProfileValid);
   const [supplier, setSupplier] = usePersistentState<SupplierProfile>("yere-supplier-profile-v1", emptySupplier, isSupplierProfileValid);
   const [marketplaceListings, setMarketplaceListings] = usePersistentState<MarketplaceListing[]>("yere-marketplace-listings-v1", [], isMarketplaceListingListValid);
@@ -73,6 +74,10 @@ function App() {
   const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
   const [paymentHistoryOrderId, setPaymentHistoryOrderId] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
+  const [expenseFormOpen, setExpenseFormOpen] = useState(false);
+  const [expenseCategory, setExpenseCategory] = useState("Fournitures");
+  const [expenseDescription, setExpenseDescription] = useState("");
+  const [expenseAmount, setExpenseAmount] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -86,6 +91,8 @@ function App() {
   const visibleClients = useMemo(() => clients.filter((client) => matchesClient(client, query)), [clients, query]);
   const outstanding = orders.reduce((sum, order) => sum + balanceDue(order), 0);
   const outstandingOrderCount = orders.filter((order) => balanceDue(order) > 0).length;
+  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const totalCollected = orders.reduce((sum, order) => sum + totalPaid(order), 0);
   const selected = clients.find((client) => client.id === selectedClient);
   const reminderSuggestions = useMemo(
     () => getClientReminderSuggestions(clients, orders, new Date().toISOString().slice(0, 10)),
@@ -160,9 +167,9 @@ function App() {
   function exportLocalBackup() {
     const backup = {
       format: "yere-local-backup",
-      schemaVersion: 1,
+      schemaVersion: 2,
       exportedAt: new Date().toISOString(),
-      data: { clients, orders, atelier, supplier, onboardingComplete, onboardingStartedAt }
+      data: { clients, orders, expenses, atelier, supplier, onboardingComplete, onboardingStartedAt }
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -182,13 +189,14 @@ function App() {
     if (!file) return;
     void file.text().then((raw) => {
       const parsed: unknown = JSON.parse(raw);
-      if (!isObjectRecord(parsed) || parsed.format !== "yere-local-backup" || parsed.schemaVersion !== 1 || !isObjectRecord(parsed.data)) {
+      if (!isObjectRecord(parsed) || parsed.format !== "yere-local-backup" || ![1, 2].includes(parsed.schemaVersion as number) || !isObjectRecord(parsed.data)) {
         throw new Error("Format de sauvegarde YÉRÉ non reconnu.");
       }
       const data = parsed.data;
       if (!isClientListValid(data.clients)
         || !isOrderListValid(data.orders)
         || !areClientOrderRelationsValid(data.clients, data.orders)
+        || (parsed.schemaVersion === 2 && !isExpenseListValid(data.expenses))
         || !isAtelierProfileValid(data.atelier)
         || (data.supplier !== undefined && !isSupplierProfileValid(data.supplier))
         || !isBooleanValue(data.onboardingComplete)
@@ -197,6 +205,7 @@ function App() {
       }
       setClients(data.clients);
       setOrders(data.orders);
+      setExpenses(isExpenseListValid(data.expenses) ? data.expenses : []);
       setAtelier(data.atelier);
       setSupplier(data.supplier !== undefined && isSupplierProfileValid(data.supplier) ? data.supplier : emptySupplier);
       setOnboardingComplete(data.onboardingComplete);
@@ -210,6 +219,29 @@ function App() {
       const message = error instanceof Error ? error.message : "Fichier impossible à lire.";
       setNotice(`Restauration refusée : ${message}`);
     });
+  }
+
+  function addExpense(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const category = expenseCategory.trim();
+    const description = expenseDescription.trim();
+    const amount = Number(expenseAmount);
+    if (!category || !description || !Number.isSafeInteger(amount) || amount <= 0) {
+      setNotice("Vérifiez la catégorie, le motif et le montant de la dépense. Le montant doit être un entier supérieur à zéro.");
+      return;
+    }
+    const expense: Expense = {
+      id: "EXP-" + Date.now(),
+      spentAt: new Date().toISOString().slice(0, 10),
+      category,
+      description,
+      amount
+    };
+    setExpenses((current) => [expense, ...current]);
+    setExpenseDescription("");
+    setExpenseAmount("");
+    setExpenseFormOpen(false);
+    setNotice("Dépense de " + formatXof(amount) + " enregistrée sur cet appareil. Aucune copie serveur n’est active.");
   }
 
   function recordOrderPayment(event: FormEvent<HTMLFormElement>) {
@@ -354,9 +386,15 @@ function App() {
 
           {view === "cash" && <section className="cash-page">
             <div className="cash-summary-grid">
-              <article className="content-card cash-summary"><span>Reste à encaisser</span><strong>{formatXof(outstanding)}</strong><small>Calculé à partir des commandes enregistrées dans ce prototype</small></article>
-              <article className="content-card cash-summary"><span>Total encaissé</span><strong>{formatXof(orders.reduce((sum, order) => sum + totalPaid(order), 0))}</strong><small>Somme des versements enregistrés dans ce prototype</small></article>
+              <article className="content-card cash-summary"><span>Reste à encaisser</span><strong>{formatXof(outstanding)}</strong><small>Soldes des commandes non réglées</small></article>
+              <article className="content-card cash-summary"><span>Total encaissé</span><strong>{formatXof(totalCollected)}</strong><small>Versements enregistrés dans ce prototype</small></article>
+              <article className="content-card cash-summary"><span>Dépenses enregistrées</span><strong>{formatXof(totalExpenses)}</strong><small>Dépenses saisies localement</small></article>
+              <article className="content-card cash-summary"><span>Encaissements − dépenses</span><strong>{formatXof(totalCollected - totalExpenses)}</strong><small>Indicateur simple, pas un solde comptable</small></article>
             </div>
+            <section className="content-card"><div className="section-heading"><div><h2>Dépenses de l’atelier</h2><p>Notez les achats et frais pour suivre les sorties d’argent.</p></div><button type="button" className="primary-button" onClick={() => setExpenseFormOpen((open) => !open)}>{expenseFormOpen ? "Annuler" : "＋ Nouvelle dépense"}</button></div>
+              {expenseFormOpen && <form className="new-order-form" onSubmit={addExpense}><label>Catégorie<select value={expenseCategory} onChange={(event) => setExpenseCategory(event.target.value)}><option>Fournitures</option><option>Tissus</option><option>Transport</option><option>Électricité / eau</option><option>Loyer</option><option>Main-d’œuvre</option><option>Entretien</option><option>Autre</option></select></label><label>Motif<input required maxLength={120} value={expenseDescription} onChange={(event) => setExpenseDescription(event.target.value)} placeholder="Ex. achat de fil et fermetures" /></label><label>Montant (FCFA)<input required type="number" min="1" step="1" inputMode="numeric" value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value)} placeholder="Ex. 7500" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setExpenseFormOpen(false)}>Annuler</button><button type="submit" className="primary-button">Enregistrer la dépense</button></div></form>}
+              {expenses.length === 0 ? <div className="empty-state">Aucune dépense enregistrée. Les dépenses saisies apparaîtront ici.</div> : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Catégorie</th><th>Motif</th><th>Montant</th></tr></thead><tbody>{expenses.map((expense) => <tr key={expense.id}><td>{expense.spentAt}</td><td>{expense.category}</td><td>{expense.description}</td><td><b>{formatXof(expense.amount)}</b></td></tr>)}</tbody></table></div>}
+            </section>
             <section className="content-card"><div className="section-heading"><div><h2>Situation par commande</h2><p>Reste dû = prix convenu moins l’ensemble des versements enregistrés.</p></div></div>
               {orders.length === 0 ? <div className="empty-state">Aucune commande pour le moment. Créez une commande pour commencer à suivre les montants.</div> : <div className="table-wrap"><table><thead><tr><th>Commande</th><th>Prix</th><th>Total encaissé</th><th>Reste</th><th>Action</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}><td><b>{order.garment}</b><small>{clients.find((client) => client.id === order.clientId)?.name || "Client inconnu"}</small></td><td>{formatXof(order.price)}</td><td>{formatXof(totalPaid(order))}</td><td><b>{formatXof(balanceDue(order))}</b></td><td><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setPaymentHistoryOrderId(order.id)}>Historique</button><button type="button" className="secondary-button" disabled={balanceDue(order) === 0} onClick={() => { setPaymentOrderId(order.id); setPaymentAmount(""); }}>Encaisser</button></div></td></tr>)}</tbody></table></div>}{paymentOrderId && orders.some((order) => order.id === paymentOrderId) && <form className="new-order-form" onSubmit={recordOrderPayment}><h3>Nouveau versement — {orders.find((order) => order.id === paymentOrderId)?.garment}</h3><p>Reste à payer : {formatXof(balanceDue(orders.find((order) => order.id === paymentOrderId)!))}</p><label>Montant reçu (FCFA)<input required type="number" min="1" step="1" inputMode="numeric" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} placeholder="Ex. 5000" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => { setPaymentOrderId(null); setPaymentAmount(""); }}>Annuler</button><button type="submit" className="primary-button">Confirmer le versement</button></div></form>}{paymentHistoryOrderId && orders.some((order) => order.id === paymentHistoryOrderId) && <section className="content-card"><div className="section-heading"><div><h2>Historique des versements</h2><p>{orders.find((order) => order.id === paymentHistoryOrderId)?.garment} · {clients.find((client) => client.id === orders.find((order) => order.id === paymentHistoryOrderId)?.clientId)?.name ?? "Client inconnu"}</p></div><button type="button" className="secondary-button" onClick={() => setPaymentHistoryOrderId(null)}>Fermer</button></div>{(orders.find((order) => order.id === paymentHistoryOrderId)?.payments ?? []).length === 0 ? <p className="empty-state">Aucun historique détaillé disponible pour cette ancienne commande. Son acompte historique reste pris en compte dans le solde et sera repris lors du prochain versement.</p> : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Libellé</th><th>Montant</th></tr></thead><tbody>{(orders.find((order) => order.id === paymentHistoryOrderId)?.payments ?? []).map((payment) => <tr key={payment.id}><td>{payment.paidAt}</td><td>{payment.note || "Versement"}</td><td>{formatXof(payment.amount)}</td></tr>)}</tbody></table></div>}</section>}
             </section>

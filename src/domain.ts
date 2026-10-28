@@ -153,6 +153,26 @@ export function areClientOrderRelationsValid(clients: Client[], orders: Order[])
     && orders.every((order) => clientIds.has(order.clientId));
 }
 
+
+export type Expense = {
+  id: string;
+  spentAt: string;
+  category: string;
+  description: string;
+  amount: number;
+};
+
+export function isExpenseListValid(value: unknown): value is Expense[] {
+  return Array.isArray(value) && value.every((item) =>
+    isRecord(item)
+    && typeof item.id === "string" && item.id.trim().length > 0
+    && isCalendarDate(item.spentAt)
+    && typeof item.category === "string" && item.category.trim().length > 0
+    && typeof item.description === "string" && item.description.trim().length > 0
+    && typeof item.amount === "number" && Number.isSafeInteger(item.amount) && item.amount > 0
+  ) && new Set(value.map((item) => (item as Record<string, unknown>).id)).size === value.length;
+}
+
 export const orderStatuses: OrderStatus[] = [
   "À préparer",
   "En confection",

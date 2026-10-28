@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addOrderPayment, areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, saveMeasurementVersion, totalPaid, type Client, type Measurement, type Order } from "./domain";
+import { addOrderPayment, areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order } from "./domain";
 
 const client: Client = {
   id: "c-1",
@@ -348,5 +348,26 @@ describe("historique des paiements", () => {
     expect(isOrderListValid([{ ...order, payments: [{ id: "p1", amount: 25000, paidAt: "2026-10-27" }, { id: "p2", amount: 6000, paidAt: "2026-10-27" }] }])).toBe(false);
     expect(isOrderListValid([{ ...order, payments: [{ id: "p1", amount: 5000, paidAt: "2026-02-31" }] }])).toBe(false);
     expect(isOrderListValid([{ ...order, payments: [{ id: "p1", amount: 5000, paidAt: "2026-10-27" }, { id: "p1", amount: 1000, paidAt: "2026-10-28" }] }])).toBe(false);
+  });
+});
+
+describe("validation des dépenses", () => {
+  const expense: Expense = {
+    id: "expense-1", spentAt: "2026-10-28", category: "Tissu",
+    description: "Achat de tissu pour commandes", amount: 12500
+  };
+
+  it("accepte une dépense complète et une liste vide", () => {
+    expect(isExpenseListValid([expense])).toBe(true);
+    expect(isExpenseListValid([])).toBe(true);
+  });
+
+  it("refuse les montants, dates, libellés et identifiants invalides", () => {
+    expect(isExpenseListValid([{ ...expense, amount: 0 }])).toBe(false);
+    expect(isExpenseListValid([{ ...expense, amount: 12.5 }])).toBe(false);
+    expect(isExpenseListValid([{ ...expense, spentAt: "2026-02-31" }])).toBe(false);
+    expect(isExpenseListValid([{ ...expense, category: " " }])).toBe(false);
+    expect(isExpenseListValid([{ ...expense, description: "" }])).toBe(false);
+    expect(isExpenseListValid([expense, expense])).toBe(false);
   });
 });
