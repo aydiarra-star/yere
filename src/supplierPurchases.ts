@@ -67,9 +67,10 @@ export function isSupplierPurchaseValid(value: unknown): value is SupplierPurcha
   const lineIds = value.lines.map((line) => (line as Record<string, unknown>).stockItemId);
   if (new Set(lineIds).size !== lineIds.length) return false;
 
+  // Les montants en FCFA sont entiers : arrondir chaque ligne avant d'additionner.
   const total = value.lines.reduce((sum, line) => {
     const item = line as Record<string, unknown>;
-    return sum + (item.quantity as number) * (item.unitCost as number);
+    return sum + Math.round((item.quantity as number) * (item.unitCost as number));
   }, 0);
   if (!Number.isFinite(total) || total < 0 || total > Number.MAX_SAFE_INTEGER) return false;
   if (value.payments !== undefined) {
@@ -100,8 +101,12 @@ export function isSupplierPurchaseListValid(value: unknown): value is SupplierPu
     && new Set(value.map((purchase) => purchase.id)).size === value.length;
 }
 
+export function supplierPurchaseLineTotal(line: Pick<SupplierPurchaseLine, "quantity" | "unitCost">): number {
+  return Math.round(line.quantity * line.unitCost);
+}
+
 export function supplierPurchaseTotal(purchase: Pick<SupplierPurchase, "lines">): number {
-  return purchase.lines.reduce((sum, line) => sum + line.quantity * line.unitCost, 0);
+  return purchase.lines.reduce((sum, line) => sum + supplierPurchaseLineTotal(line), 0);
 }
 
 export function supplierPurchasePaidTotal(purchase: Pick<SupplierPurchase, "payments">): number {

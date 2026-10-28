@@ -6,6 +6,7 @@ import {
   isSupplierPurchaseValid,
   receiveSupplierPurchase,
   supplierPurchaseTotal,
+  supplierPurchaseLineTotal,
   supplierPurchasePaidTotal,
   supplierPurchasesPaidTotal,
   supplierPurchaseBalance,
@@ -39,6 +40,19 @@ describe("achats fournisseurs liés au stock", () => {
     expect(isSupplierPurchaseValid(purchase)).toBe(true);
     expect(isSupplierPurchaseListValid([purchase])).toBe(true);
     expect(supplierPurchaseTotal(purchase)).toBe(20750);
+  });
+
+  it("arrondit chaque ligne en FCFA entier pour éviter un reste dû fractionnaire", () => {
+    const fractionalPurchase: SupplierPurchase = {
+      ...purchase,
+      lines: [{ stockItemId: "tissu", quantity: 0.333, unitCost: 100 }]
+    };
+    expect(supplierPurchaseLineTotal(fractionalPurchase.lines[0])).toBe(33);
+    expect(supplierPurchaseTotal(fractionalPurchase)).toBe(33);
+    expect(isSupplierPurchaseValid(fractionalPurchase)).toBe(true);
+    const settled = addSupplierPurchasePayment(fractionalPurchase, { id: "PAY-ROUND", paidAt: "2026-10-28", amount: 33 });
+    expect(settled).not.toBeNull();
+    expect(supplierPurchaseBalance(settled!)).toBe(0);
   });
 
   it("calcule les règlements fournisseurs sans les confondre avec la réception", () => {
