@@ -38,14 +38,17 @@ REVOKE UPDATE, DELETE ON public.paiement FROM authenticated;
 
 -- Un atelier est créé par un utilisateur authentifié; created_by ne peut pas
 -- être attribué à quelqu'un d'autre et ne peut pas être modifié après création.
-CREATE POLICY atelier_select_member ON public.atelier
+CREATE POLICY atelier_select_member_or_creator ON public.atelier
   FOR SELECT TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM public.atelier_membre m
-    WHERE m.atelier_id = atelier.id
-      AND m.user_id = (SELECT auth.uid())
-      AND m.actif
-  ));
+  USING (
+    created_by = (SELECT auth.uid())
+    OR EXISTS (
+      SELECT 1 FROM public.atelier_membre m
+      WHERE m.atelier_id = atelier.id
+        AND m.user_id = (SELECT auth.uid())
+        AND m.actif
+    )
+  );
 
 CREATE POLICY atelier_insert_self ON public.atelier
   FOR INSERT TO authenticated
@@ -68,6 +71,8 @@ CREATE POLICY atelier_update_member ON public.atelier
       AND m.role = 'proprietaire'
   ));
 
+-- La lecture de l'atelier par son créateur avant sa première appartenance est
+-- nécessaire pour éviter un blocage circulaire lors de l'inscription initiale.
 -- Un utilisateur ne lit que ses propres appartenances. La première appartenance
 -- doit être propriétaire de l'atelier qu'il vient de créer. Les propriétaires
 -- existants peuvent ajouter des membres de rôle non-propriétaire.
