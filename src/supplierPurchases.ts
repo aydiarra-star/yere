@@ -1,4 +1,5 @@
 import {
+  areStockRelationsValid,
   isStockItemListValid,
   isStockMovementListValid,
   recordStockMovement,
@@ -90,8 +91,7 @@ export function receiveSupplierPurchase(
     || !movementIdPrefix.trim()
     || !isStockItemListValid(items)
     || !isStockMovementListValid(movements)
-    || items.some((item) => !movements.every((movement) => movement.itemId !== item.id)
-      ? false : false)) return null;
+    || !areStockRelationsValid(items, movements)) return null;
 
   const itemIds = new Set(items.map((item) => item.id));
   if (!purchase.lines.every((line) => itemIds.has(line.stockItemId))) return null;
