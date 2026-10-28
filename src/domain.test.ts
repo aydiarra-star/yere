@@ -157,7 +157,7 @@ describe("matchesClient", () => {
 
 describe("historique des mensurations", () => {
   const blankMeasurement: Measurement = {
-    bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", note: ""
+    bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", garmentType: "Tenue complète", note: ""
   };
 
   it("conserve la prise précédente lors d'un nouvel enregistrement", () => {
