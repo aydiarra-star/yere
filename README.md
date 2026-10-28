@@ -36,18 +36,18 @@ Ces commandes doivent être exécutées dans un environnement Node avant de cons
 
 ## Priorités produit
 1. **YÉRÉ Atelier** — clients, mensurations historisées, commandes et production.
-2. **Gestion financière** — acomptes, soldes, recettes, dépenses et caisse.
+2. **Gestion financière** — acomptes, soldes, recettes, dépenses, dettes/créances.
 3. **Stocks et achats** — fournitures, consommables et fournisseurs.
-4. **Pilote terrain** — accompagnement porte-à-porte, retours et bouche-à-oreille.
+4. **Pilote terrain** — accompagnement porte-à-porte, retours et amélioration de l'expérience mobile.
 5. **YÉRÉ Fournisseurs**, puis **YÉRÉ Market** — après validation du cœur de gestion.
 
 ## Documentation
 - [Prompt maître](docs/PROMPT_MAITRE.md)
 - [Cahier des charges maître](docs/CAHIER_DES_CHARGES_MAITRE.md)
 - [Feuille de route](docs/FEUILLE_DE_ROUTE.md)
-- [Décision d'architecture](docs/DECISION_ARCHITECTURE.md)
 - [Backlog MVP](docs/BACKLOG_MVP.md)
-- [Plan pilote terrain](docs/PLAN_PILOTE_TERRAIN.md)
+- [Analyse concurrentielle et différenciation](docs/ANALYSE_CONCURRENTIELLE_ET_DIFFERENCIATION.md)
+- [Décision d'architecture](docs/DECISION_ARCHITECTURE.md)
 - [Modèle de données MVP](docs/MODELE_DONNEES_MVP.md)
 - [Plan de persistance serveur et sécurité](docs/PLAN_PERSISTENCE_ET_SECURITE.md)
 - [Charte graphique bleu et blanc](docs/CHARTE_GRAPHIQUE.md)
