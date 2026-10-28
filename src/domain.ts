@@ -428,6 +428,23 @@ export function getClientReminderSuggestions(
 }
 
 
+export type OrderDeliveryFilter = "all" | "overdue" | "upcoming";
+
+/** Filter active orders by delivery urgency; upcoming covers today through day seven. */
+export function filterOrdersByDelivery(orders: Order[], today: string, filter: OrderDeliveryFilter): Order[] {
+  if (filter === "all") return orders;
+  if (!isCalendarDate(today)) return [];
+  const todayTime = new Date(`${today}T12:00:00Z`).getTime();
+  const endTime = todayTime + 7 * 86_400_000;
+  return orders
+    .filter((order) => {
+      if (order.status === "Livré" || !isCalendarDate(order.dueDate)) return false;
+      const dueTime = new Date(`${order.dueDate}T12:00:00Z`).getTime();
+      return filter === "overdue" ? dueTime < todayTime : dueTime >= todayTime && dueTime <= endTime;
+    })
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+}
+
 export type DailyTask = {
   id: string;
   title: string;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type StockItem, type StockMovement } from "./domain";
+import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, filterOrdersByDelivery, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type StockItem, type StockMovement } from "./domain";
 
 const client: Client = {
   id: "c-1",
@@ -363,6 +363,30 @@ describe("suggestions de relance client", () => {
   });
 });
 
+
+describe("filtrage des commandes selon l'échéance", () => {
+  const orders: Order[] = [
+    { id: "late", clientId: "c-1", garment: "Boubou en retard", dueDate: "2026-10-20", price: 10000, deposit: 0, status: "En confection" },
+    { id: "today", clientId: "c-1", garment: "Pantalon aujourd'hui", dueDate: "2026-10-28", price: 10000, deposit: 0, status: "À préparer" },
+    { id: "week", clientId: "c-1", garment: "Robe dans sept jours", dueDate: "2026-11-04", price: 10000, deposit: 0, status: "Prêt" },
+    { id: "later", clientId: "c-1", garment: "Boubou plus tard", dueDate: "2026-11-05", price: 10000, deposit: 0, status: "À préparer" },
+    { id: "delivered", clientId: "c-1", garment: "Tenue livrée", dueDate: "2026-10-19", price: 10000, deposit: 0, status: "Livré" }
+  ];
+
+  it("préserve la liste complète et trie les retards par échéance", () => {
+    expect(filterOrdersByDelivery(orders, "2026-10-28", "all")).toEqual(orders);
+    expect(filterOrdersByDelivery(orders, "2026-10-28", "overdue").map((order) => order.id)).toEqual(["late"]);
+  });
+
+  it("inclut aujourd'hui et le septième jour, sans inclure les livrées", () => {
+    expect(filterOrdersByDelivery(orders, "2026-10-28", "upcoming").map((order) => order.id)).toEqual(["today", "week"]);
+  });
+
+  it("ne retourne pas de résultats d'urgence pour une date de référence invalide", () => {
+    expect(filterOrdersByDelivery(orders, "2026-02-31", "overdue")).toEqual([]);
+    expect(filterOrdersByDelivery(orders, "2026-02-31", "upcoming")).toEqual([]);
+  });
+});
 
 describe("assistant quotidien", () => {
   const clients: Client[] = [{ ...client, id: "daily-client", name: "Awa Sow" }];
