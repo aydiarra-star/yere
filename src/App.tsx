@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderStatus, type StockItem, type StockMovement } from "./domain";
-import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, atelierActivities, workModes, type AtelierProfile, type AtelierActivity, type WorkMode } from "./atelierProfile";
+import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, atelierActivities, workModes, getActivityExperience, type AtelierProfile, type AtelierActivity, type WorkMode } from "./atelierProfile";
 import { usePersistentState } from "./usePersistentState";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, receiveSupplierPurchase, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
@@ -109,6 +109,7 @@ function App() {
   const visibleClients = useMemo(() => clients.filter((client) => matchesClient(client, query)), [clients, query]);
   const outstanding = orders.reduce((sum, order) => sum + balanceDue(order), 0);
   const outstandingOrderCount = orders.filter((order) => balanceDue(order) > 0).length;
+  const activityExperience = getActivityExperience(atelier.activity);
   const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.voidedAt ? 0 : expense.amount), 0);
   const totalSupplierPayments = supplierPurchasesPaidTotal(supplierPurchases);
   const totalCashOutflows = totalExpenses + totalSupplierPayments;
@@ -571,7 +572,7 @@ function App() {
               <div className="section-heading"><div><h2>Commandes à suivre</h2><p>Les dernières pièces de votre atelier</p></div><button className="text-button" onClick={() => setView("orders")}>Toutes les commandes <span>→</span></button></div>
               <OrderTable orders={orders.slice(0, 3)} clients={clients} onStatusChange={updateStatus} onView={() => setView("orders")} />
             </section>
-            <section className="bottom-grid"><div className="content-card quick-card"><div className="section-heading"><div><h2>Accès rapide</h2><p>Les actions du quotidien</p></div></div><div className="quick-actions"><button onClick={() => { setShowForm(true); setView("clients"); }}><span className="quick-icon green">＋</span><span><b>Ajouter un client</b><small>Créer une fiche client</small></span><span className="quick-arrow">→</span></button><button onClick={() => setView("clients")}><span className="quick-icon purple">↗</span><span><b>Retrouver des mesures</b><small>Consulter les fiches existantes</small></span><span className="quick-arrow">→</span></button></div></div><div className="tip-card"><span className="tip-spark">✳</span><p className="eyebrow">LE CONSEIL YÉRÉ</p><h2>Une bonne couture commence par une bonne mesure.</h2><p>Conservez les mensurations de chaque client pour gagner du temps lors de sa prochaine commande.</p></div></section>
+            <section className="bottom-grid"><div className="content-card quick-card"><div className="section-heading"><div><h2>Accès rapide</h2><p>Raccourcis adaptés à votre activité</p></div></div><div className="quick-actions">{activityExperience.shortcuts.map((shortcut, index) => <button key={shortcut.action} onClick={() => { if (shortcut.action === "new-client") { setShowForm(true); setView("clients"); } else if (shortcut.action === "measurements") { setView("clients"); } else if (shortcut.action === "new-order") { setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); setShowOrderForm(true); setView("orders"); } else if (shortcut.action === "stock") { setView("stock"); } else { setView("marketplace"); } }}><span className={"quick-icon " + (index === 0 ? "green" : "purple")}>{index === 0 ? "＋" : "↗"}</span><span><b>{shortcut.title}</b><small>{shortcut.description}</small></span><span className="quick-arrow">→</span></button>)}</div></div><div className="tip-card"><span className="tip-spark">✳</span><p className="eyebrow">LE CONSEIL YÉRÉ · {activityExperience.label.toUpperCase()}</p><h2>{activityExperience.tipTitle}</h2><p>{activityExperience.tipDescription}</p></div></section>
           </>}
 
           {view === "clients" && <section className="content-card clients-card"><div className="section-heading"><div><h2>Répertoire clients</h2><p>{clients.length} fiche{clients.length > 1 ? "s" : ""} dans cet atelier</p></div><label className="search-box"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Nom ou téléphone…" aria-label="Rechercher un client" /></label></div>
@@ -616,8 +617,10 @@ function App() {
 
           {view === "account" && <section className="content-card account-page">
             <div className="section-heading account-section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div></div>
-            <form className="account-form" onSubmit={(event) => { event.preventDefault(); setNotice("Profil d'atelier mis à jour sur cet appareil uniquement."); }}>
-              <label>Nom de l'atelier<input required value={atelier.name} onChange={(event) => setAtelier((current) => ({ ...current, name: event.target.value }))} /></label>
+            <form className="account-form" onSubmit={(event) => { event.preventDefault(); setAtelier((current) => normalizeAtelierProfile(current)); setNotice("Profil d'atelier mis à jour sur cet appareil uniquement."); }}>
+              <label>Activité principale<select value={atelier.activity ?? "tailleur"} onChange={(event) => setAtelier((current) => ({ ...current, activity: event.target.value as AtelierActivity }))}>{atelierActivities.map((activity) => <option key={activity.value} value={activity.value}>{activity.label}</option>)}</select></label>
+              <label>Organisation du travail<select value={atelier.workMode ?? "independent"} onChange={(event) => setAtelier((current) => ({ ...current, workMode: event.target.value as WorkMode }))}>{workModes.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}</select></label>
+              <label>Nom de l'atelier ou de l'activité<input required value={atelier.name} onChange={(event) => setAtelier((current) => ({ ...current, name: event.target.value }))} /></label>
               <label>Téléphone<input value={atelier.phone} onChange={(event) => setAtelier((current) => ({ ...current, phone: event.target.value }))} /></label>
               <label>Ville<input value={atelier.city} onChange={(event) => setAtelier((current) => ({ ...current, city: event.target.value }))} /></label>
               <button type="submit" className="primary-button">Enregistrer le profil</button>

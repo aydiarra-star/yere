@@ -63,3 +63,64 @@ export function normalizeAtelierProfile(value: unknown): AtelierProfile {
     workMode: value.workMode ?? "independent"
   };
 }
+
+export type ActivityShortcut = {
+  action: "new-client" | "measurements" | "new-order" | "stock" | "marketplace";
+  title: string;
+  description: string;
+};
+
+export type ActivityExperience = {
+  label: string;
+  tipTitle: string;
+  tipDescription: string;
+  shortcuts: [ActivityShortcut, ActivityShortcut];
+};
+
+/** Personalizes dashboard copy and shortcuts while preserving the shared modules. */
+export function getActivityExperience(activity: AtelierActivity | undefined): ActivityExperience {
+  switch (activity) {
+    case "couturier":
+    case "couturiere":
+      return {
+        label: activity === "couturiere" ? "Couturière" : "Couturier",
+        tipTitle: "Suivez chaque confection jusqu'à la livraison.",
+        tipDescription: "Reliez les commandes aux étapes de confection et gardez les tissus et fournitures à portée de main.",
+        shortcuts: [
+          { action: "new-order", title: "Nouvelle commande", description: "Enregistrer une confection à suivre" },
+          { action: "stock", title: "Gérer les tissus", description: "Consulter les tissus et fournitures" }
+        ]
+      };
+    case "styliste":
+      return {
+        label: "Styliste",
+        tipTitle: "Donnez une suite claire à vos créations.",
+        tipDescription: "Rassemblez les demandes personnalisées dans les commandes et préparez une vitrine de vos réalisations.",
+        shortcuts: [
+          { action: "new-order", title: "Commande personnalisée", description: "Enregistrer une demande client" },
+          { action: "marketplace", title: "Préparer une vitrine", description: "Préparer la présentation locale de vos créations" }
+        ]
+      };
+    case "atelier_confection":
+      return {
+        label: "Atelier de confection",
+        tipTitle: "Gardez les commandes et les fournitures en vue.",
+        tipDescription: "Suivez les commandes en cours et vérifiez les tissus et consommables nécessaires à la production.",
+        shortcuts: [
+          { action: "new-order", title: "Suivre la production", description: "Créer ou consulter une commande" },
+          { action: "stock", title: "Gérer les fournitures", description: "Consulter les stocks et achats" }
+        ]
+      };
+    case "tailleur":
+    default:
+      return {
+        label: "Tailleur",
+        tipTitle: "Une bonne couture commence par une bonne mesure.",
+        tipDescription: "Conservez les mensurations de chaque client pour gagner du temps lors de sa prochaine commande.",
+        shortcuts: [
+          { action: "new-client", title: "Ajouter un client", description: "Créer une fiche client" },
+          { action: "measurements", title: "Retrouver des mesures", description: "Consulter les fiches et historiques" }
+        ]
+      };
+  }
+}
