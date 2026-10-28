@@ -10,6 +10,8 @@ export type Measurement = {
   neck?: string;
   thigh?: string;
   legLength?: string;
+  /** Saved with each measurement version so the form can adapt to the garment. */
+  garmentType?: string;
   note: string;
 };
 
@@ -73,7 +75,7 @@ function isMeasurementShape(value: unknown): value is Measurement {
   return isRecord(value)
     && ["bust", "waist", "hips", "shoulder", "sleeve", "length", "note"]
       .every((key) => typeof value[key] === "string")
-    && ["arm", "neck", "thigh", "legLength"]
+    && ["arm", "neck", "thigh", "legLength", "garmentType"]
       .every((key) => value[key] === undefined || typeof value[key] === "string");
 }
 
