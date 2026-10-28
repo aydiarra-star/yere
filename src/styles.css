@@ -1131,3 +1131,8 @@ button, .primary-button, .secondary-button, .nav-item, .mobile-nav-item {
     gap: 8px;
   }
 }
+
+
+/* Sélecteur de type de vêtement — même affordance que les champs de mensuration. */
+.measure-field select{display:block;width:100%;min-width:0;border:1px solid var(--yere-border);border-radius:6px;background:#fff;color:var(--yere-text);font:400 12px 'DM Sans',sans-serif;padding:9px 8px}
+.measure-field select:focus{border-color:var(--yere-blue);outline:2px solid var(--yere-sky-strong)}
