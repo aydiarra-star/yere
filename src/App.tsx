@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderStatus, type StockItem, type StockMovement } from "./domain";
 import { usePersistentState } from "./usePersistentState";
+import { isSupplierPurchaseListValid, receiveSupplierPurchase, supplierPurchaseTotal, type SupplierPurchase } from "./supplierPurchases";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", arm: "", neck: "", thigh: "", legLength: "", garmentType: "Tenue complète", note: "" };
 
@@ -91,6 +92,13 @@ function App() {
   const [stockMovementType, setStockMovementType] = useState<"Entrée" | "Sortie">("Entrée");
   const [stockMovementQuantity, setStockMovementQuantity] = useState("");
   const [stockMovementNote, setStockMovementNote] = useState("");
+  const [supplierPurchases, setSupplierPurchases] = usePersistentState<SupplierPurchase[]>("yere-demo-supplier-purchases-v1", [], isSupplierPurchaseListValid);
+  const [purchaseFormOpen, setPurchaseFormOpen] = useState(false);
+  const [purchaseSupplierName, setPurchaseSupplierName] = useState("");
+  const [purchaseStockItemId, setPurchaseStockItemId] = useState("");
+  const [purchaseQuantity, setPurchaseQuantity] = useState("");
+  const [purchaseUnitCost, setPurchaseUnitCost] = useState("");
+  const [purchaseNote, setPurchaseNote] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -180,9 +188,9 @@ function App() {
   function exportLocalBackup() {
     const backup = {
       format: "yere-local-backup",
-      schemaVersion: 3,
+      schemaVersion: 4,
       exportedAt: new Date().toISOString(),
-      data: { clients, orders, expenses, stockItems, stockMovements, atelier, supplier, onboardingComplete, onboardingStartedAt }
+      data: { clients, orders, expenses, stockItems, stockMovements, supplierPurchases, atelier, supplier, onboardingComplete, onboardingStartedAt }
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -202,7 +210,7 @@ function App() {
     if (!file) return;
     void file.text().then((raw) => {
       const parsed: unknown = JSON.parse(raw);
-      if (!isObjectRecord(parsed) || parsed.format !== "yere-local-backup" || ![1, 2, 3].includes(parsed.schemaVersion as number) || !isObjectRecord(parsed.data)) {
+      if (!isObjectRecord(parsed) || parsed.format !== "yere-local-backup" || ![1, 2, 3, 4].includes(parsed.schemaVersion as number) || !isObjectRecord(parsed.data)) {
         throw new Error("Format de sauvegarde YÉRÉ non reconnu.");
       }
       const data = parsed.data;
@@ -210,9 +218,10 @@ function App() {
         || !isOrderListValid(data.orders)
         || !areClientOrderRelationsValid(data.clients, data.orders)
         || ((parsed.schemaVersion === 2 || parsed.schemaVersion === 3) && !isExpenseListValid(data.expenses))
-        || (parsed.schemaVersion === 3 && (!isStockItemListValid(data.stockItems)
+        || ((parsed.schemaVersion === 3 || parsed.schemaVersion === 4) && (!isStockItemListValid(data.stockItems)
           || !isStockMovementListValid(data.stockMovements)
           || !areStockRelationsValid(data.stockItems, data.stockMovements)))
+        || (parsed.schemaVersion === 4 && !isSupplierPurchaseListValid(data.supplierPurchases))
         || !isAtelierProfileValid(data.atelier)
         || (data.supplier !== undefined && !isSupplierProfileValid(data.supplier))
         || !isBooleanValue(data.onboardingComplete)
@@ -224,6 +233,7 @@ function App() {
       setExpenses(isExpenseListValid(data.expenses) ? data.expenses : []);
       setStockItems(isStockItemListValid(data.stockItems) ? data.stockItems : []);
       setStockMovements(isStockMovementListValid(data.stockMovements) ? data.stockMovements : []);
+      setSupplierPurchases(isSupplierPurchaseListValid(data.supplierPurchases) ? data.supplierPurchases : []);
       setAtelier(data.atelier);
       setSupplier(data.supplier !== undefined && isSupplierProfileValid(data.supplier) ? data.supplier : emptySupplier);
       setOnboardingComplete(data.onboardingComplete);
@@ -312,6 +322,57 @@ function App() {
     setStockMovementQuantity("");
     setStockMovementNote("");
     setNotice("Mouvement de stock enregistré sur cet appareil.");
+  }
+
+  function addSupplierPurchase(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const supplierName = purchaseSupplierName.trim();
+    const quantity = Number(purchaseQuantity);
+    const unitCost = Number(purchaseUnitCost);
+    if (!supplierName || !purchaseStockItemId || !Number.isFinite(quantity) || quantity <= 0
+      || !Number.isSafeInteger(unitCost) || unitCost < 0
+      || !stockItems.some((item) => item.id === purchaseStockItemId)) {
+      setNotice("Vérifiez le fournisseur, l’article, la quantité et le coût unitaire.");
+      return;
+    }
+    const purchase: SupplierPurchase = {
+      id: "ACH-" + Date.now(),
+      supplierName,
+      orderedAt: new Date().toISOString().slice(0, 10),
+      status: "À recevoir",
+      lines: [{ stockItemId: purchaseStockItemId, quantity, unitCost }],
+      note: purchaseNote.trim() || undefined
+    };
+    if (!isSupplierPurchaseListValid([...supplierPurchases, purchase])) {
+      setNotice("Achat refusé : vérifiez les informations et l’identifiant de l’achat.");
+      return;
+    }
+    setSupplierPurchases((current) => [purchase, ...current]);
+    setPurchaseSupplierName("");
+    setPurchaseStockItemId("");
+    setPurchaseQuantity("");
+    setPurchaseUnitCost("");
+    setPurchaseNote("");
+    setPurchaseFormOpen(false);
+    setNotice("Achat fournisseur enregistré. Le stock ne changera qu’à la réception effective.");
+  }
+
+  function receivePurchase(purchaseId: string) {
+    const purchase = supplierPurchases.find((item) => item.id === purchaseId);
+    if (!purchase) return;
+    const result = receiveSupplierPurchase(
+      purchase, stockItems, stockMovements,
+      new Date().toISOString().slice(0, 10),
+      "MOV-" + Date.now() + "-purchase"
+    );
+    if (!result) {
+      setNotice("Réception refusée : vérifiez l’état de l’achat, le stock et l’historique des mouvements.");
+      return;
+    }
+    setStockItems(result.items);
+    setStockMovements(result.movements);
+    setSupplierPurchases((current) => current.map((item) => item.id === purchase.id ? result.purchase : item));
+    setNotice("Achat réceptionné : les entrées de stock et l’historique ont été mis à jour.");
   }
 
   function addExpense(event: FormEvent<HTMLFormElement>) {
@@ -526,8 +587,20 @@ function App() {
               {stockItems.length === 0 ? <div className="empty-state">Aucun article suivi. Ajoutez un tissu ou une fourniture pour commencer.</div> : <div className="table-wrap"><table><thead><tr><th>Article</th><th>Stock</th><th>Seuil</th><th>État</th><th>Action</th></tr></thead><tbody>{stockItems.map((item) => <tr key={item.id}><td><b>{item.name}</b><small>{item.unit}</small></td><td>{item.quantity} {item.unit}</td><td>{item.minimumQuantity} {item.unit}</td><td>{item.quantity <= item.minimumQuantity ? "À réapprovisionner" : "Disponible"}</td><td><div className="form-actions"><button type="button" className="secondary-button" onClick={() => { setStockMovementItemId(item.id); setStockMovementType("Entrée"); setStockMovementQuantity(""); setStockMovementNote(""); }}>Entrée</button><button type="button" className="secondary-button" disabled={item.quantity <= 0} onClick={() => { setStockMovementItemId(item.id); setStockMovementType("Sortie"); setStockMovementQuantity(""); setStockMovementNote(""); }}>Sortie</button></div></td></tr>)}</tbody></table></div>}
               {stockMovementItemId && stockItems.some((item) => item.id === stockMovementItemId) && <form className="new-order-form" onSubmit={saveStockMovement}><h3>{stockMovementType} de stock — {stockItems.find((item) => item.id === stockMovementItemId)?.name}</h3><label>Type de mouvement<select value={stockMovementType} onChange={(event) => setStockMovementType(event.target.value as "Entrée" | "Sortie")}><option>Entrée</option><option>Sortie</option></select></label><label>Quantité ({stockItems.find((item) => item.id === stockMovementItemId)?.unit})<input required type="number" min="0.01" step="any" inputMode="decimal" value={stockMovementQuantity} onChange={(event) => setStockMovementQuantity(event.target.value)} /></label><label>Note (facultative)<input maxLength={120} value={stockMovementNote} onChange={(event) => setStockMovementNote(event.target.value)} placeholder="Ex. achat fournisseur ou commande client" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setStockMovementItemId(null)}>Annuler</button><button type="submit" className="primary-button">Enregistrer le mouvement</button></div></form>}
             </section>
+            <section className="content-card">
+              <div className="section-heading"><div><h2>Achats fournisseurs</h2><p>Enregistrez une commande fournisseur, puis réceptionnez-la lorsque les fournitures arrivent.</p></div><button type="button" className="primary-button" disabled={stockItems.length === 0} onClick={() => setPurchaseFormOpen((open) => !open)}>{purchaseFormOpen ? "Annuler" : "＋ Nouvel achat"}</button></div>
+              {purchaseFormOpen && <form className="new-order-form" onSubmit={addSupplierPurchase}>
+                <label>Fournisseur<input required maxLength={120} value={purchaseSupplierName} onChange={(event) => setPurchaseSupplierName(event.target.value)} placeholder="Ex. Mercerie Ndiaye" /></label>
+                <label>Article à acheter<select required value={purchaseStockItemId} onChange={(event) => setPurchaseStockItemId(event.target.value)}><option value="">Choisir un article</option>{stockItems.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.unit})</option>)}</select></label>
+                <label>Quantité<input required type="number" min="0.01" step="any" inputMode="decimal" value={purchaseQuantity} onChange={(event) => setPurchaseQuantity(event.target.value)} /></label>
+                <label>Coût unitaire (FCFA)<input required type="number" min="0" step="1" inputMode="numeric" value={purchaseUnitCost} onChange={(event) => setPurchaseUnitCost(event.target.value)} /></label>
+                <label>Note (facultative)<input maxLength={160} value={purchaseNote} onChange={(event) => setPurchaseNote(event.target.value)} placeholder="Référence, livraison prévue…" /></label>
+                <div className="form-actions"><button type="button" className="secondary-button" onClick={() => setPurchaseFormOpen(false)}>Annuler</button><button type="submit" className="primary-button">Enregistrer l’achat</button></div>
+              </form>}
+              {supplierPurchases.length === 0 ? <div className="empty-state">Aucun achat fournisseur. Les achats enregistrés ici ne modifient pas le stock avant leur réception.</div> : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Fournisseur</th><th>Article</th><th>Montant</th><th>État</th><th>Action</th></tr></thead><tbody>{supplierPurchases.map((purchase) => <tr key={purchase.id}><td>{purchase.orderedAt}</td><td><b>{purchase.supplierName}</b><small>{purchase.note || purchase.id}</small></td><td>{purchase.lines.map((line) => <div key={line.stockItemId}>{stockItems.find((item) => item.id === line.stockItemId)?.name ?? "Article inconnu"} · {line.quantity}</div>)}</td><td>{formatXof(supplierPurchaseTotal(purchase))}</td><td>{purchase.status}{purchase.receivedAt ? <small>Reçu le {purchase.receivedAt}</small> : null}</td><td>{purchase.status === "À recevoir" ? <button type="button" className="secondary-button" onClick={() => receivePurchase(purchase.id)}>Confirmer la réception</button> : "—"}</td></tr>)}</tbody></table></div>}
+            </section>
             <section className="content-card"><div className="section-heading"><div><h2>Historique des mouvements</h2><p>Les mouvements restent visibles pour comprendre les variations de stock.</p></div></div>{stockMovements.length === 0 ? <div className="empty-state">Aucun mouvement enregistré.</div> : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Article</th><th>Type</th><th>Quantité</th><th>Note</th></tr></thead><tbody>{stockMovements.slice(0, 100).map((movement) => <tr key={movement.id}><td>{movement.movedAt}</td><td>{stockItems.find((item) => item.id === movement.itemId)?.name ?? "Article inconnu"}</td><td>{movement.type}</td><td>{movement.quantity} {stockItems.find((item) => item.id === movement.itemId)?.unit ?? ""}</td><td>{movement.note || "—"}</td></tr>)}</tbody></table></div>}</section>
-            <p className="privacy-note">Stock local uniquement : aucun achat fournisseur, coût moyen, inventaire comptable ou synchronisation serveur n’est encore géré.</p>
+            <p className="privacy-note">Les achats et réceptions sont enregistrés sur cet appareil. Chaque achat de ce premier écran porte sur un article ; les achats multi-articles, factures fournisseurs, paiements et synchronisation serveur restent à développer.</p>
           </section>}
           {view === "suppliers" && <section className="content-card supplier-page">
             <div className="section-heading"><div><h2>Profil fournisseur</h2><p>Renseignez les informations professionnelles de votre espace fournisseur.</p></div><span className="supplier-symbol"><NavIcon name="truck" /></span></div>
