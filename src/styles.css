@@ -1317,3 +1317,6 @@ button:disabled {
   cursor: not-allowed;
   opacity: 0.65;
 }
+
+/* YÉRÉ launch scope: one profession only. */
+.activity-options{display:none!important}

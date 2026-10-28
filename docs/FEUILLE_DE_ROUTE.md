@@ -13,7 +13,11 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 - PR #2, #4, #5 et #6 : fusionnées ; le prototype et ses fondations sont maintenant intégrés à `main`.
 - Prochaine dépendance : choisir/provisionner un environnement de développement dédié à YÉRÉ avant d'intégrer l'authentification et la persistance distante.
 
-## Lot transverse — Un socle commun pour les cinq métiers
+## Décision de cadrage — retour au lancement tailleurs uniquement
+
+YÉRÉ cible exclusivement les tailleurs. Les catégories couturier, couturière, styliste et atelier de confection, les activités secondaires et les espaces fournisseurs/marketplace sont reportés. Le mode de travail seul/collaborateurs/équipe reste facultatif. La migration du profil doit préserver les informations de l'atelier et les données métier.
+
+## Lot historique — Extension multi-métiers (reportée)
 
 - [x] Formaliser les cinq catégories cibles et le principe « une seule plateforme, plusieurs métiers » dans le cahier des charges et le prompt maître.
 - [x] Distinguer l'activité principale du mode de travail (indépendant, collaborateurs, atelier en équipe).

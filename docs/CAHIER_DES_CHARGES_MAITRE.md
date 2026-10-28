@@ -2,7 +2,7 @@
 
 **Statut :** référence produit initiale, à affiner après audit technique et entretiens terrain.  
 **Marché de départ :** Sénégal.  
-**Public cible :** tailleurs, couturiers, couturières, stylistes et ateliers de confection.  
+**Public cible au lancement :** tailleurs uniquement.  
 **Principe directeur :** aider chaque professionnel de la couture à mieux travailler, gagner du temps et comprendre ses finances avant d'ajouter une marketplace.
 
 ## 1. Vision
@@ -10,9 +10,9 @@ Construire un outil de gestion quotidien fiable, simple et abordable pour les at
 
 ## 1.1 Public cible et principe d'architecture
 
-YÉRÉ s'adresse à cinq catégories : **tailleurs, couturiers, couturières, stylistes et ateliers de confection**. Il s'agit d'une seule plateforme avec un socle commun et des modules activés ou mis en avant selon le métier et le mode de travail. Le métier n'est pas le type de structure : un styliste ou une couturière peut aussi diriger une équipe.
+YÉRÉ s'adresse exclusivement aux tailleurs pour le lancement. Il s'agit d'une seule plateforme avec un socle commun et des modules activés ou mis en avant selon le métier et le mode de travail. Le métier n'est pas le type de structure : un styliste ou une couturière peut aussi diriger une équipe.
 
-Le socle commun comprend clients, commandes, paiements, caisse, dépenses, stock, fournisseurs et tableau de bord. Les adaptations couvrent notamment les mensurations et retouches, le suivi de confection, les créations et galeries de modèles, ainsi que les tâches, employés, rôles et permissions. Le détail et les critères d'acceptation sont définis dans [Profils métiers et socle commun](PROFILS_METIERS_ET_SOCLE_COMMUN.md).
+Le cœur produit comprend clients, mensurations, commandes, suivi de confection, paiements, caisse, dépenses et stocks. Les parcours pour les autres métiers, les fournisseurs autonomes et la marketplace sont reportés après validation du produit de base. Le détail et les critères d'acceptation sont définis dans [Profils métiers et socle commun](PROFILS_METIERS_ET_SOCLE_COMMUN.md).
 
 **Règle :** ne jamais dupliquer l'application ou les données communes pour créer une version distincte par métier.
 
