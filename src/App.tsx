@@ -328,7 +328,8 @@ function App() {
   function addPurchaseLine() {
     const quantity = Number(purchaseQuantity);
     const unitCost = Number(purchaseUnitCost);
-    if (!purchaseStockItemId || !Number.isFinite(quantity) || quantity <= 0
+    if (!purchaseStockItemId || !purchaseQuantity.trim() || !purchaseUnitCost.trim()
+      || !Number.isFinite(quantity) || quantity <= 0
       || !Number.isSafeInteger(unitCost) || unitCost < 0
       || !stockItems.some((item) => item.id === purchaseStockItemId)) {
       setNotice("Choisissez un article et vérifiez sa quantité et son coût unitaire.");
