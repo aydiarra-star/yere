@@ -1260,3 +1260,37 @@ textarea,
 button {
   min-width: 0;
 }
+
+
+/* Navigation mobile : garder chaque libellé complet sur une ligne sans réduire la police uniforme. */
+@media (max-width: 760px) {
+  .mobile-bottom-nav {
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-bottom-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .mobile-bottom-nav .mobile-nav-item,
+  .mobile-bottom-nav .mobile-nav-item:visited {
+    flex: 0 0 auto;
+    min-width: max-content;
+    padding: 5px 10px;
+  }
+  .mobile-bottom-nav .mobile-nav-item > small {
+    display: block;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap !important;
+    font-size: 13px !important;
+    line-height: 1.35 !important;
+  }
+}
