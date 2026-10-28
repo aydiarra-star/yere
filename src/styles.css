@@ -1320,3 +1320,100 @@ button:disabled {
 
 /* YÉRÉ launch scope: one profession only. */
 .activity-options{display:none!important}
+
+
+/* YÉRÉ mobile UX polish: five fixed destinations, complete labels and safe-area spacing. */
+@media (max-width: 760px) {
+  .mobile-bottom-nav {
+    position: fixed;
+    z-index: 60;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: stretch;
+    justify-content: stretch;
+    gap: 2px;
+    width: 100%;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    overflow: visible !important;
+    border-top: 1px solid #e4eaf3;
+    background: rgba(255,255,255,.97);
+    box-shadow: 0 -8px 24px rgba(20, 40, 80, .08);
+    backdrop-filter: blur(16px);
+  }
+  .mobile-bottom-nav .mobile-nav-item,
+  .mobile-bottom-nav .mobile-nav-item:visited {
+    display: flex;
+    min-width: 0;
+    min-height: 52px;
+    flex: initial;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 5px 2px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: transparent;
+    color: #64748b;
+    white-space: nowrap;
+  }
+  .mobile-bottom-nav .mobile-nav-item.active {
+    color: #1d4ed8;
+    background: #eff6ff;
+    border-color: #dbeafe;
+  }
+  .mobile-bottom-nav .mobile-nav-item > span { display:flex; align-items:center; justify-content:center; }
+  .mobile-bottom-nav .mobile-nav-item > small {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap !important;
+    text-align: center;
+    font-size: clamp(10px, 2.7vw, 12px) !important;
+    line-height: 1.2 !important;
+  }
+  .main-content { padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)) !important; }
+  .page-wrap { padding-bottom: 18px; }
+  .overview-welcome { margin-bottom: 12px; }
+  .today-snapshot { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 12px; }
+  .snapshot-item { min-width: 0; gap: 7px; padding: 9px 7px; border-radius: 12px; }
+  .snapshot-item b { display:block; overflow-wrap:anywhere; font-size: 12px !important; }
+  .snapshot-item small { display:block; white-space:normal !important; font-size: 11px !important; line-height:1.25 !important; }
+  .daily-assistant { margin-top: 10px; }
+  .daily-task { gap: 8px; }
+  .daily-task .text-button { white-space: nowrap; }
+}
+.mobile-more-backdrop {
+  position: fixed;
+  z-index: 59;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px 12px calc(78px + env(safe-area-inset-bottom, 0px));
+  background: rgba(15, 23, 42, .32);
+}
+.mobile-more-menu {
+  width: min(100%, 520px);
+  padding: 16px;
+  border: 1px solid #e4eaf3;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, .2);
+}
+.mobile-more-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.mobile-more-heading b { color:#172554; font-weight:700 !important; }
+.mobile-more-heading button { width:34px; height:34px; border:0; border-radius:10px; background:#f1f5f9; color:#334155; font-size:22px !important; }
+.mobile-more-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.mobile-more-item { display:flex; align-items:center; gap:10px; min-height:48px; padding:10px; border:1px solid #e2e8f0; border-radius:12px; background:#fff; color:#334155; text-align:left; }
+.mobile-more-item svg { width:20px; height:20px; flex:0 0 auto; }
+.mobile-more-item.active { border-color:#bfdbfe; background:#eff6ff; color:#1d4ed8; }
+@media (min-width: 761px) {
+  .mobile-more-backdrop { display:none; }
+}
