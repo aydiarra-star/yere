@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { StockItem, StockMovement } from "./domain";
 import {
+  cancelSupplierPurchase,
   isSupplierPurchaseListValid,
   isSupplierPurchaseValid,
   receiveSupplierPurchase,
@@ -66,6 +67,19 @@ describe("achats fournisseurs liés au stock", () => {
   it("refuse un stock incohérent avec son historique de mouvements", () => {
     const inconsistentItems = items.map((item) => item.id === "tissu" ? { ...item, quantity: 99 } : item);
     expect(receiveSupplierPurchase(purchase, inconsistentItems, movements, "2026-10-28", "ACH-003-REC")).toBeNull();
+  });
+
+  it("annule un achat non reçu avec un motif daté et refuse les annulations invalides", () => {
+    const cancelled = cancelSupplierPurchase(purchase, "2026-10-28", "Fournisseur indisponible");
+    expect(cancelled?.status).toBe("Annulée");
+    expect(cancelled?.cancelledAt).toBe("2026-10-28");
+    expect(cancelled?.cancelReason).toBe("Fournisseur indisponible");
+    expect(isSupplierPurchaseValid(cancelled)).toBe(true);
+    expect(cancelSupplierPurchase(purchase, "2026-02-31", "Motif")).toBeNull();
+    expect(cancelSupplierPurchase(purchase, "2026-10-28", "   ")).toBeNull();
+    const received = { ...purchase, status: "Reçue" as const, receivedAt: "2026-10-28" };
+    expect(cancelSupplierPurchase(received, "2026-10-28", "Trop tard")).toBeNull();
+    expect(isSupplierPurchaseValid({ ...purchase, status: "Annulée" })).toBe(false);
   });
 
   it("refuse une date de réception invalide et ne modifie pas les données d'entrée", () => {
