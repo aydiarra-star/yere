@@ -129,6 +129,18 @@ export type Order = {
   status: OrderStatus;
 };
 
+/** Capture a validated, detached copy of a client's measurements for one order. */
+export function createOrderMeasurementSnapshot(
+  measurement: Measurement,
+  measuredAt: string
+): { measurementSnapshot: Measurement; measurementSnapshotAt: string } | null {
+  if (!isMeasurementShape(measurement) || !isMeasurementValid(measurement) || !isCalendarDate(measuredAt)) return null;
+  return {
+    measurementSnapshot: { ...measurement },
+    measurementSnapshotAt: measuredAt
+  };
+}
+
 export function isOrderListValid(value: unknown): value is Order[] {
   return Array.isArray(value) && value.every((item) =>
     isRecord(item)

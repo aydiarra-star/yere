@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type StockItem, type StockMovement } from "./domain";
+import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type StockItem, type StockMovement } from "./domain";
 
 const client: Client = {
   id: "c-1",
@@ -31,6 +31,27 @@ describe("compatibilité du type de travail des commandes", () => {
     expect(isOrderListValid([{ ...validOrder, measurementSnapshot }])).toBe(false);
     expect(isOrderListValid([{ ...validOrder, measurementSnapshot: { ...measurementSnapshot, bust: "invalide" }, measurementSnapshotAt: "2026-10-28" }])).toBe(false);
     expect(isOrderListValid([{ ...validOrder, measurementSnapshot, measurementSnapshotAt: "2026-02-31" }])).toBe(false);
+  });
+});
+
+describe("instantané des mensurations d'une commande", () => {
+  it("copie les mensurations sans partager l'objet du profil client", () => {
+    const current: Measurement = { bust: "92", waist: "74", hips: "98", shoulder: "40", sleeve: "60", length: "140", note: "Coupe ample" };
+    const snapshot = createOrderMeasurementSnapshot(current, "2026-10-28");
+    expect(snapshot).toEqual({
+      measurementSnapshot: { ...current },
+      measurementSnapshotAt: "2026-10-28"
+    });
+    current.bust = "100";
+    current.note = "Nouvelle préférence";
+    expect(snapshot?.measurementSnapshot.bust).toBe("92");
+    expect(snapshot?.measurementSnapshot.note).toBe("Coupe ample");
+  });
+
+  it("refuse un instantané avec des mensurations ou une date invalides", () => {
+    const current: Measurement = { bust: "92", waist: "74", hips: "98", shoulder: "40", sleeve: "60", length: "140", note: "" };
+    expect(createOrderMeasurementSnapshot({ ...current, bust: "invalide" }, "2026-10-28")).toBeNull();
+    expect(createOrderMeasurementSnapshot(current, "2026-02-31")).toBeNull();
   });
 });
 

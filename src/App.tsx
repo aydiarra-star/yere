@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
-import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderStatus, type StockItem, type StockMovement } from "./domain";
+import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderStatus, type StockItem, type StockMovement } from "./domain";
 import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, atelierActivities, workModes, getActivityExperience, withPrimaryActivity, toggleSecondaryActivity, type AtelierProfile, type AtelierActivity, type WorkMode } from "./atelierProfile";
 import { normalizeBackupOnboardingState, normalizeBackupMarketplaceListings } from "./localBackup";
 import { isMarketplaceListingListValid, type MarketplaceListing } from "./marketplace";
@@ -170,13 +170,17 @@ function App() {
       setNotice("Ce client n’est plus disponible. Sélectionnez à nouveau un client.");
       return;
     }
+    const measurementSnapshot = createOrderMeasurementSnapshot(orderClient.measurement, orderedAt);
+    if (!measurementSnapshot) {
+      setNotice("Les mensurations du client sont invalides. Vérifiez-les avant de créer la commande.");
+      return;
+    }
     const order: Order = {
       id: `YR-${Date.now()}`,
       clientId: newOrderClientId,
       garment: newOrderGarment.trim(),
       kind: newOrderKind,
-      measurementSnapshot: { ...orderClient.measurement },
-      measurementSnapshotAt: orderedAt,
+      ...measurementSnapshot,
       dueDate: newOrderDueDate,
       orderedAt,
       price,
