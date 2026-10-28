@@ -113,6 +113,10 @@ export type OrderPayment = {
 export type Order = {
   id: string;
   clientId: string;
+  /** Optional, immutable-at-creation copy of the client's measurements for this order. */
+  measurementSnapshot?: Measurement;
+  /** Local calendar date on which the order's measurement snapshot was captured. */
+  measurementSnapshotAt?: string;
   /** Optional for backward compatibility: distinguish tailoring work from a retouch. */
   kind?: "confection" | "retouche";
   garment: string;
@@ -132,6 +136,11 @@ export function isOrderListValid(value: unknown): value is Order[] {
     && typeof item.clientId === "string" && item.clientId.length > 0
     && typeof item.garment === "string" && item.garment.trim().length > 0
     && (item.kind === undefined || item.kind === "confection" || item.kind === "retouche")
+    && ((item.measurementSnapshot === undefined && item.measurementSnapshotAt === undefined)
+      || (item.measurementSnapshot !== undefined && item.measurementSnapshotAt !== undefined
+        && isMeasurementShape(item.measurementSnapshot)
+        && isMeasurementValid(item.measurementSnapshot)
+        && isCalendarDate(item.measurementSnapshotAt)))
     && isCalendarDate(item.dueDate)
     && (item.orderedAt === undefined || isCalendarDate(item.orderedAt))
     && typeof item.price === "number" && Number.isSafeInteger(item.price) && item.price > 0
