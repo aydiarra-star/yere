@@ -107,7 +107,7 @@ function App() {
   const visibleClients = useMemo(() => clients.filter((client) => matchesClient(client, query)), [clients, query]);
   const outstanding = orders.reduce((sum, order) => sum + balanceDue(order), 0);
   const outstandingOrderCount = orders.filter((order) => balanceDue(order) > 0).length;
-  const activityExperience = getActivityExperience(atelier.activity);
+  const activityExperience = getActivityExperience("tailleur");
   const atelierAvailableActivities = [atelier.activity ?? "tailleur", ...(atelier.secondaryActivities ?? [])];
   const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.voidedAt ? 0 : expense.amount), 0);
   const totalSupplierPayments = supplierPurchasesPaidTotal(supplierPurchases);
@@ -596,7 +596,7 @@ function App() {
               <div className="section-heading"><div><h2>Commandes à suivre</h2><p>Les dernières pièces de votre atelier</p></div><button className="text-button" onClick={() => setView("orders")}>Toutes les commandes <span>→</span></button></div>
               <OrderTable orders={orders.slice(0, 3)} clients={clients} onStatusChange={updateStatus} onRetouchStageChange={updateRetouchStage} onView={() => setView("orders")} />
             </section>
-            <section className="bottom-grid"><div className="content-card quick-card"><div className="section-heading"><div><h2>Accès rapide</h2><p>Raccourcis adaptés à votre activité</p></div></div><div className="quick-actions">{activityExperience.shortcuts.map((shortcut, index) => <button key={shortcut.action} onClick={() => { if (shortcut.action === "new-client") { setShowForm(true); setView("clients"); } else if (shortcut.action === "measurements") { setView("clients"); } else if (shortcut.action === "new-order") { setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); setShowOrderForm(true); setView("orders"); } else if (shortcut.action === "stock") { setView("stock"); } else { setView("marketplace"); } }}><span className={"quick-icon " + (index === 0 ? "green" : "purple")}>{index === 0 ? "＋" : "↗"}</span><span><b>{shortcut.title}</b><small>{shortcut.description}</small></span><span className="quick-arrow">→</span></button>)}</div></div><div className="tip-card"><span className="tip-spark">✳</span><p className="eyebrow">LE CONSEIL YÉRÉ · {activityExperience.label.toUpperCase()}</p><h2>{activityExperience.tipTitle}</h2><p>{activityExperience.tipDescription}</p></div></section>
+            <section className="bottom-grid"><div className="content-card quick-card"><div className="section-heading"><div><h2>Accès rapide</h2><p>Raccourcis pensés pour les tailleurs.</p></div></div><div className="quick-actions">{activityExperience.shortcuts.map((shortcut, index) => <button key={shortcut.action} onClick={() => { if (shortcut.action === "new-client") { setShowForm(true); setView("clients"); } else if (shortcut.action === "measurements") { setView("clients"); } else if (shortcut.action === "new-order") { setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); setShowOrderForm(true); setView("orders"); } else if (shortcut.action === "stock") { setView("stock"); } else { setView("marketplace"); } }}><span className={"quick-icon " + (index === 0 ? "green" : "purple")}>{index === 0 ? "＋" : "↗"}</span><span><b>{shortcut.title}</b><small>{shortcut.description}</small></span><span className="quick-arrow">→</span></button>)}</div></div><div className="tip-card"><span className="tip-spark">✳</span><p className="eyebrow">LE CONSEIL YÉRÉ · {activityExperience.label.toUpperCase()}</p><h2>{activityExperience.tipTitle}</h2><p>{activityExperience.tipDescription}</p></div></section>
           </>}
 
           {view === "clients" && <section className="content-card clients-card"><div className="section-heading"><div><h2>Répertoire clients</h2><p>{clients.length} fiche{clients.length > 1 ? "s" : ""} dans cet atelier</p></div><label className="search-box"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Nom ou téléphone…" aria-label="Rechercher un client" /></label></div>
@@ -803,7 +803,7 @@ function Onboarding({ atelier, onAtelierChange, onFinish }: {
         <p className="eyebrow">CONFIGURATION</p>
         <h1>Configurez votre espace YÉRÉ</h1>
         <h2>Un seul outil, adapté à votre métier.</h2>
-        <p className="onboarding-body">Choisissez votre activité et votre façon de travailler. Vous pourrez modifier votre profil plus tard ; les mêmes outils essentiels restent disponibles pour tous.</p>
+        <p className="onboarding-body">YÉRÉ est conçu pour les tailleurs. Configurez votre atelier et votre façon de travailler.</p>
         <form className="onboarding-form" onSubmit={(event) => { event.preventDefault(); onAtelierChange(normalizeAtelierProfile(draft)); onFinish(); }}>
           <label>Votre activité principale
             <select required value={draft.activity ?? "tailleur"} onChange={(event) => setDraft((previous) => withPrimaryActivity(previous, event.target.value as AtelierActivity))}>
@@ -811,8 +811,8 @@ function Onboarding({ atelier, onAtelierChange, onFinish }: {
             </select>
           </label>
           <fieldset className="activity-options">
-            <legend>Exercez-vous aussi d’autres métiers ? (facultatif)</legend>
-            <p>Choisissez les autres activités que vous pratiquez. Cela ne crée pas de nouvel espace ni de nouvelles données séparées.</p>
+            <legend></legend>
+            <p></p>
             {atelierActivities.filter((activity) => activity.value !== (draft.activity ?? "tailleur")).map((activity) => <label key={activity.value}><input type="checkbox" checked={(draft.secondaryActivities ?? []).includes(activity.value)} onChange={(event) => setDraft((previous) => toggleSecondaryActivity(previous, activity.value, event.target.checked))} />{activity.label}</label>)}
           </fieldset>
           <label>Comment travaillez-vous ?
