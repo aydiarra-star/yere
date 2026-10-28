@@ -385,9 +385,10 @@ describe("stock et mouvements", () => {
   const entry: StockMovement = { id: "movement-1", itemId: "stock-1", type: "Entrée", quantity: 5, movedAt: "2026-10-28", note: "Réassort" };
 
   it("valide les articles et mouvements correctement structurés", () => {
+    const opening: StockMovement = { id: "opening-1", itemId: "stock-1", type: "Entrée", quantity: 12.5, movedAt: "2026-10-28", note: "Stock initial" };
     expect(isStockItemListValid([item])).toBe(true);
     expect(isStockMovementListValid([entry])).toBe(true);
-    expect(areStockRelationsValid([{ ...item, quantity: 17.5 }], [entry])).toBe(true);
+    expect(areStockRelationsValid([{ ...item, quantity: 17.5 }], [entry, opening])).toBe(true);
     expect(areStockRelationsValid([item], [entry])).toBe(false);
   });
 
