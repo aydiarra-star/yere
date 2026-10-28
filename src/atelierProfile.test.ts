@@ -43,3 +43,22 @@ describe("YÉRÉ atelier profile", () => {
     expect(isAtelierProfileValid(null)).toBe(false);
   });
 });
+
+describe("activity-specific dashboard experience", () => {
+  it("provides tailored shortcuts for every target activity", async () => {
+    const { getActivityExperience } = await import("./atelierProfile");
+    for (const activity of atelierActivities) {
+      const experience = getActivityExperience(activity.value);
+      expect(experience.label).toBe(activity.label);
+      expect(experience.shortcuts).toHaveLength(2);
+      expect(experience.tipTitle.length).toBeGreaterThan(10);
+    }
+  });
+
+  it("keeps common client and order concepts while adapting the shortcuts", async () => {
+    const { getActivityExperience } = await import("./atelierProfile");
+    expect(getActivityExperience("tailleur").shortcuts.map((item) => item.action)).toEqual(["new-client", "measurements"]);
+    expect(getActivityExperience("styliste").shortcuts.map((item) => item.action)).toEqual(["new-order", "marketplace"]);
+    expect(getActivityExperience("atelier_confection").shortcuts.map((item) => item.action)).toEqual(["new-order", "stock"]);
+  });
+});
