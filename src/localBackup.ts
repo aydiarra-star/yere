@@ -13,3 +13,11 @@ export function normalizeBackupOnboardingState(
       : data.onboardingStartedAt
   };
 }
+
+/** Older backup formats predate marketplace export, so they restore an empty local vitrine. */
+export function normalizeBackupMarketplaceListings(
+  schemaVersion: number,
+  data: Record<string, unknown>
+): unknown {
+  return schemaVersion < 5 ? [] : data.marketplaceListings;
+}

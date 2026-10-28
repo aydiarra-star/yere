@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderStatus, type StockItem, type StockMovement } from "./domain";
 import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, atelierActivities, workModes, getActivityExperience, withPrimaryActivity, toggleSecondaryActivity, type AtelierProfile, type AtelierActivity, type WorkMode } from "./atelierProfile";
-import { normalizeBackupOnboardingState } from "./localBackup";
+import { normalizeBackupOnboardingState, normalizeBackupMarketplaceListings } from "./localBackup";
 import { isMarketplaceListingListValid, type MarketplaceListing } from "./marketplace";
 import { usePersistentState } from "./usePersistentState";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, receiveSupplierPurchase, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
@@ -198,7 +198,7 @@ function App() {
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setNotice("Export préparé. Conservez ce fichier dans un endroit sûr : il contient des données clients et mensurations.");
+    setNotice("Export préparé. Le fichier contient des données clients, mensurations, commandes et annonces de vitrine : conservez-le dans un endroit sûr.");
   }
 
   function importLocalBackup(event: ChangeEvent<HTMLInputElement>) {
@@ -212,6 +212,7 @@ function App() {
       }
       const data = parsed.data;
       const onboardingState = normalizeBackupOnboardingState(parsed.schemaVersion as number, data);
+      const marketplaceListingsForRestore = normalizeBackupMarketplaceListings(parsed.schemaVersion as number, data);
       if (!isClientListValid(data.clients)
         || !isOrderListValid(data.orders)
         || !areClientOrderRelationsValid(data.clients, data.orders)
@@ -220,7 +221,7 @@ function App() {
           || !isStockMovementListValid(data.stockMovements)
           || !areStockRelationsValid(data.stockItems, data.stockMovements)))
         || ([4, 5].includes(parsed.schemaVersion as number) && !isSupplierPurchaseListValid(data.supplierPurchases))
-        || (parsed.schemaVersion === 5 && !isMarketplaceListingListValid(data.marketplaceListings))
+        || (parsed.schemaVersion === 5 && !isMarketplaceListingListValid(marketplaceListingsForRestore))
         || !isAtelierProfileValid(data.atelier)
         || (data.supplier !== undefined && !isSupplierProfileValid(data.supplier))
         || !isBooleanValue(onboardingState.onboardingComplete)
@@ -233,7 +234,7 @@ function App() {
       setStockItems(isStockItemListValid(data.stockItems) ? data.stockItems : []);
       setStockMovements(isStockMovementListValid(data.stockMovements) ? data.stockMovements : []);
       setSupplierPurchases(isSupplierPurchaseListValid(data.supplierPurchases) ? data.supplierPurchases : []);
-      setMarketplaceListings(parsed.schemaVersion === 5 && isMarketplaceListingListValid(data.marketplaceListings) ? data.marketplaceListings : []);
+      setMarketplaceListings(isMarketplaceListingListValid(marketplaceListingsForRestore) ? marketplaceListingsForRestore : []);
       setAtelier(data.atelier);
       setSupplier(data.supplier !== undefined && isSupplierProfileValid(data.supplier) ? data.supplier : emptySupplier);
       setOnboardingComplete(onboardingState.onboardingComplete);
