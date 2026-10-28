@@ -36,7 +36,7 @@ export function saveMeasurementVersion(
   measuredAt: string,
   versionId: string
 ): Client {
-  const hasCurrentValues = Object.values(client.measurement).some((value) => value.trim() !== "");
+  const hasCurrentValues = [client.measurement.bust, client.measurement.waist, client.measurement.hips, client.measurement.shoulder, client.measurement.sleeve, client.measurement.length, client.measurement.arm ?? "", client.measurement.neck ?? "", client.measurement.thigh ?? "", client.measurement.legLength ?? "", client.measurement.note].some((value) => value.trim() !== "");
   const history = client.measurementHistory ?? (hasCurrentValues
     ? [{ id: `legacy-${client.id}`, measuredAt: client.createdAt, measurement: client.measurement }]
     : []);
