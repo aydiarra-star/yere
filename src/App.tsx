@@ -203,7 +203,19 @@ function App() {
     });
   }
 
-  function recordOrderPayment(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault();\n    const order = orders.find((item) => item.id === paymentOrderId);\n    const amount = Number(paymentAmount);\n    if (!order || !Number.isSafeInteger(amount) || amount <= 0) { setNotice("Saisissez un montant entier supérieur à zéro."); return; }\n    const updated = addOrderPayment(order, { id: "PAY-" + Date.now(), amount, paidAt: new Date().toISOString().slice(0, 10), note: "Versement enregistré manuellement" });\n    if (!updated) { setNotice("Paiement refusé : vérifiez le montant restant dû. Un paiement ne peut pas dépasser le solde."); return; }\n    setOrders((current) => current.map((item) => item.id === order.id ? updated : item));\n    setPaymentAmount(""); setPaymentOrderId(null);\n    setNotice("Versement de " + formatXof(amount) + " enregistré sur cet appareil. Aucune copie serveur n’est active.");\n  }\n\n  function updateStatus(orderId: string, status: OrderStatus) {
+  function recordOrderPayment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const order = orders.find((item) => item.id === paymentOrderId);
+    const amount = Number(paymentAmount);
+    if (!order || !Number.isSafeInteger(amount) || amount <= 0) { setNotice("Saisissez un montant entier supérieur à zéro."); return; }
+    const updated = addOrderPayment(order, { id: "PAY-" + Date.now(), amount, paidAt: new Date().toISOString().slice(0, 10), note: "Versement enregistré manuellement" });
+    if (!updated) { setNotice("Paiement refusé : vérifiez le montant restant dû. Un paiement ne peut pas dépasser le solde."); return; }
+    setOrders((current) => current.map((item) => item.id === order.id ? updated : item));
+    setPaymentAmount(""); setPaymentOrderId(null);
+    setNotice("Versement de " + formatXof(amount) + " enregistré sur cet appareil. Aucune copie serveur n’est active.");
+  }
+
+  function updateStatus(orderId: string, status: OrderStatus) {
     setOrders((current) => current.map((order) => order.id === orderId ? { ...order, status } : order));
   }
 
