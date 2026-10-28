@@ -23,6 +23,7 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 - [ ] Vérifier que les fonctions d'équipe peuvent servir toute activité qui travaille avec des collaborateurs.
 - [x] Ajouter des tests pour le changement de profil, les activités secondaires et la compatibilité des données.
 - [ ] Ajouter des tests d'intégration confirmant l'absence de duplication des entités communes.
+- [x] Corriger la restauration des sauvegardes historiques : les versions 1 à 3 sans champs d’onboarding reprennent avec un profil déjà configuré ; les champs invalides restent refusés.
 
 **Critère de sortie :** les cinq métiers peuvent utiliser le même produit ; le profil personnalise l'expérience sans limiter les fonctions utiles ni compromettre les données. La documentation ne vaut pas implémentation applicative.
 
