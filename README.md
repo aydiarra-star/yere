@@ -43,6 +43,7 @@ Ces commandes doivent être exécutées dans un environnement Node avant de cons
 
 ## Documentation
 - [Prompt maître](docs/PROMPT_MAITRE.md)
+- [Profils métiers et socle commun](docs/PROFILS_METIERS_ET_SOCLE_COMMUN.md)
 - [Cahier des charges maître](docs/CAHIER_DES_CHARGES_MAITRE.md)
 - [Feuille de route](docs/FEUILLE_DE_ROUTE.md)
 - [Backlog MVP](docs/BACKLOG_MVP.md)
