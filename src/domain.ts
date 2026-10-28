@@ -103,6 +103,10 @@ export function isClientListValid(value: unknown): value is Client[] {
 
 export type OrderStatus = "À préparer" | "En confection" | "Prêt" | "Livré";
 
+export type RetouchStage = "À examiner" | "En retouche" | "À essayer" | "Correction demandée" | "Terminée";
+
+export const retouchStages: RetouchStage[] = ["À examiner", "En retouche", "À essayer", "Correction demandée", "Terminée"];
+
 export type OrderPayment = {
   id: string;
   amount: number;
@@ -119,6 +123,8 @@ export type Order = {
   measurementSnapshotAt?: string;
   /** Optional for backward compatibility: distinguish tailoring work from a retouch. */
   kind?: "confection" | "retouche";
+  /** Optional retouch-only progress, separate from the general delivery status. */
+  retouchStage?: RetouchStage;
   garment: string;
   dueDate: string;
   orderedAt?: string;
@@ -148,6 +154,7 @@ export function isOrderListValid(value: unknown): value is Order[] {
     && typeof item.clientId === "string" && item.clientId.length > 0
     && typeof item.garment === "string" && item.garment.trim().length > 0
     && (item.kind === undefined || item.kind === "confection" || item.kind === "retouche")
+    && (item.retouchStage === undefined || (item.kind === "retouche" && retouchStages.some((stage) => stage === item.retouchStage)))
     && ((item.measurementSnapshot === undefined && item.measurementSnapshotAt === undefined)
       || (item.measurementSnapshot !== undefined && item.measurementSnapshotAt !== undefined
         && isMeasurementShape(item.measurementSnapshot)

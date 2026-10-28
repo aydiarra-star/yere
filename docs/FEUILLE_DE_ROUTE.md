@@ -23,6 +23,7 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 - [x] Distinguer les commandes de confection/création des retouches dans le même modèle de commande, avec compatibilité des anciennes données.
 - [x] Figer une copie datée des mensurations sur chaque nouvelle commande et afficher cet instantané sans modifier les commandes historiques.
 - [x] Tester la copie indépendante des mensurations de commande et refuser les instantanés invalides avant création.
+- [x] Ajouter un suivi spécifique des retouches (à examiner, en retouche, à essayer, correction demandée, terminée), séparé du statut général de livraison et validé par tests.
 - [ ] Vérifier que les fonctions d'équipe peuvent servir toute activité qui travaille avec des collaborateurs.
 - [x] Ajouter des tests pour le changement de profil, les activités secondaires et la compatibilité des données.
 - [ ] Ajouter des tests d'intégration confirmant l'absence de duplication des entités communes.

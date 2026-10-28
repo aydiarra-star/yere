@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, filterOrdersByDelivery, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type StockItem, type StockMovement } from "./domain";
+import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, filterOrdersByDelivery, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, recordStockMovement, retouchStages, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type StockItem, type StockMovement } from "./domain";
 
 const client: Client = {
   id: "c-1",
@@ -23,6 +23,13 @@ describe("compatibilité du type de travail des commandes", () => {
 
   it("refuse un type de travail inconnu dans les données persistées", () => {
     expect(isOrderListValid([{ ...validOrder, kind: "unknown" }])).toBe(false);
+  });
+
+  it("accepte les étapes de retouche connues uniquement sur une retouche", () => {
+    for (const retouchStage of retouchStages) expect(isOrderListValid([{ ...validOrder, kind: "retouche", retouchStage }])).toBe(true);
+    expect(isOrderListValid([{ ...validOrder, kind: "retouche", retouchStage: "À livrer" }])).toBe(false);
+    expect(isOrderListValid([{ ...validOrder, kind: "confection", retouchStage: "À essayer" }])).toBe(false);
+    expect(isOrderListValid([{ ...validOrder, retouchStage: "À examiner" }])).toBe(false);
   });
 
   it("valide et conserve un instantané de mensurations daté sur la commande", () => {

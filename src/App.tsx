@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
-import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, filterOrdersByDelivery, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderDeliveryFilter, type OrderStatus, type StockItem, type StockMovement } from "./domain";
+import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, filterOrdersByDelivery, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, retouchStages, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderDeliveryFilter, type OrderStatus, type RetouchStage, type StockItem, type StockMovement } from "./domain";
 import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, atelierActivities, workModes, getActivityExperience, withPrimaryActivity, toggleSecondaryActivity, type AtelierProfile, type AtelierActivity, type WorkMode } from "./atelierProfile";
 import { normalizeBackupOnboardingState, normalizeBackupMarketplaceListings } from "./localBackup";
 import { isMarketplaceListingListValid, type MarketplaceListing } from "./marketplace";
@@ -182,6 +182,7 @@ function App() {
       clientId: newOrderClientId,
       garment: newOrderGarment.trim(),
       kind: newOrderKind,
+      ...(newOrderKind === "retouche" ? { retouchStage: "À examiner" as RetouchStage } : {}),
       ...measurementSnapshot,
       dueDate: newOrderDueDate,
       orderedAt,
@@ -502,6 +503,11 @@ function App() {
     setOrders((current) => current.map((order) => order.id === orderId ? { ...order, status } : order));
   }
 
+  function updateRetouchStage(orderId: string, retouchStage: RetouchStage) {
+    setOrders((current) => current.map((order) => order.id === orderId && order.kind === "retouche" ? { ...order, retouchStage } : order));
+    setNotice("Étape de retouche mise à jour sur cet appareil. Aucune sauvegarde serveur n’est active.");
+  }
+
   function updateMeasurement(field: keyof Measurement, value: string) {
     setDraftMeasurement((current) => ({ ...current, [field]: value }));
   }
@@ -588,7 +594,7 @@ function App() {
             </section>
             <section className="content-card">
               <div className="section-heading"><div><h2>Commandes à suivre</h2><p>Les dernières pièces de votre atelier</p></div><button className="text-button" onClick={() => setView("orders")}>Toutes les commandes <span>→</span></button></div>
-              <OrderTable orders={orders.slice(0, 3)} clients={clients} onStatusChange={updateStatus} onView={() => setView("orders")} />
+              <OrderTable orders={orders.slice(0, 3)} clients={clients} onStatusChange={updateStatus} onRetouchStageChange={updateRetouchStage} onView={() => setView("orders")} />
             </section>
             <section className="bottom-grid"><div className="content-card quick-card"><div className="section-heading"><div><h2>Accès rapide</h2><p>Raccourcis adaptés à votre activité</p></div></div><div className="quick-actions">{activityExperience.shortcuts.map((shortcut, index) => <button key={shortcut.action} onClick={() => { if (shortcut.action === "new-client") { setShowForm(true); setView("clients"); } else if (shortcut.action === "measurements") { setView("clients"); } else if (shortcut.action === "new-order") { setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); setShowOrderForm(true); setView("orders"); } else if (shortcut.action === "stock") { setView("stock"); } else { setView("marketplace"); } }}><span className={"quick-icon " + (index === 0 ? "green" : "purple")}>{index === 0 ? "＋" : "↗"}</span><span><b>{shortcut.title}</b><small>{shortcut.description}</small></span><span className="quick-arrow">→</span></button>)}</div></div><div className="tip-card"><span className="tip-spark">✳</span><p className="eyebrow">LE CONSEIL YÉRÉ · {activityExperience.label.toUpperCase()}</p><h2>{activityExperience.tipTitle}</h2><p>{activityExperience.tipDescription}</p></div></section>
           </>}
@@ -623,7 +629,7 @@ function App() {
               </label>
               <p aria-live="polite">{filteredOrders.length} commande{filteredOrders.length === 1 ? "" : "s"} affichée{filteredOrders.length === 1 ? "" : "s"}</p>
             </div>
-            <OrderTable orders={filteredOrders} clients={clients} onStatusChange={updateStatus} /></section>}
+            <OrderTable orders={filteredOrders} clients={clients} onStatusChange={updateStatus} onRetouchStageChange={updateRetouchStage} /></section>}
 
 
           {view === "cash" && <section className="cash-page">
@@ -825,7 +831,7 @@ function Onboarding({ atelier, onAtelierChange, onFinish }: {
   </main>;
 }
 
-function OrderTable({ orders, clients, onStatusChange, onView }: { orders: Order[]; clients: Client[]; onStatusChange: (id: string, status: OrderStatus) => void; onView?: (order: Order) => void }) {
+function OrderTable({ orders, clients, onStatusChange, onRetouchStageChange, onView }: { orders: Order[]; clients: Client[]; onStatusChange: (id: string, status: OrderStatus) => void; onRetouchStageChange: (id: string, stage: RetouchStage) => void; onView?: (order: Order) => void }) {
   const measurementLabel = (order: Order) => {
     const measurement = order.measurementSnapshot;
     if (!measurement) return "Non disponible pour cette ancienne commande";
@@ -847,10 +853,11 @@ function OrderTable({ orders, clients, onStatusChange, onView }: { orders: Order
   const getStatusClass = (status: OrderStatus) => status === "Prêt" ? "ready" : status === "En confection" ? "progress" : status === "Livré" ? "delivered" : "todo";
   const formatDueDate = (date: string) => new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long" }).format(new Date(date + "T12:00:00"));
   const statusControl = (order: Order) => <select className={"status-select status-" + getStatusClass(order.status)} value={order.status} aria-label={"Statut de " + order.id} onChange={(event) => onStatusChange(order.id, event.target.value as OrderStatus)}>{orderStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select>;
+  const retouchStageControl = (order: Order) => order.kind !== "retouche" ? null : <label className="retouch-stage-control">Étape retouche<select value={order.retouchStage ?? "À examiner"} aria-label={"Étape de retouche de " + order.id} onChange={(event) => onRetouchStageChange(order.id, event.target.value as RetouchStage)}>{retouchStages.map((stage) => <option key={stage} value={stage}>{stage}</option>)}</select></label>;
 
   return <div className="orders-display">
-    <div className="table-wrap orders-desktop"><table><thead><tr><th>COMMANDE</th><th>CLIENT</th><th>DATE DE LIVRAISON</th><th>PRIX</th><th>RESTE DÛ</th><th>STATUT</th></tr></thead><tbody>{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <tr key={order.id}><td><b className="order-id">{order.id}</b><small className="table-secondary">{order.kind === "retouche" ? "Retouche · " : ""}{order.garment}</small><small className="table-secondary">{order.measurementSnapshotAt ? "Mesures du " + formatDueDate(order.measurementSnapshotAt) + " · " : ""}{measurementLabel(order)}</small></td><td><span className="table-client">{client?.name ?? "Client supprimé"}</span></td><td>{formatDueDate(order.dueDate)}</td><td>{formatXof(order.price)}</td><td><b className={balanceDue(order) === 0 ? "paid" : ""}>{formatXof(balanceDue(order))}</b></td><td>{statusControl(order)}</td></tr>; })}</tbody></table></div>
-    <div className="order-card-list" aria-label="Commandes sous forme de cartes">{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <article className="order-card" key={order.id}><div className="order-card-heading"><div><b className="order-id">{order.id}</b><strong>{order.kind === "retouche" ? "Retouche · " : ""}{order.garment}</strong></div><span className={"order-status-chip status-" + getStatusClass(order.status)}>{order.status}</span></div><p className="order-card-client"><span>Client</span><b>{client?.name ?? "Client supprimé"}</b></p><p className="order-card-client"><span>Mensurations à la commande</span><b>{measurementLabel(order)}</b></p><div className="order-card-details"><div><span>Livraison</span><b>{formatDueDate(order.dueDate)}</b></div><div><span>À encaisser</span><b className={balanceDue(order) === 0 ? "paid" : "order-balance"}>{formatXof(balanceDue(order))}</b></div></div>{onView && <button type="button" className="order-view-button" onClick={() => onView(order)}>Voir la commande <span aria-hidden="true">→</span></button>}</article>; })}</div>
+    <div className="table-wrap orders-desktop"><table><thead><tr><th>COMMANDE</th><th>CLIENT</th><th>DATE DE LIVRAISON</th><th>PRIX</th><th>RESTE DÛ</th><th>STATUT</th></tr></thead><tbody>{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <tr key={order.id}><td><b className="order-id">{order.id}</b><small className="table-secondary">{order.kind === "retouche" ? "Retouche · " : ""}{order.garment}</small><small className="table-secondary">{order.measurementSnapshotAt ? "Mesures du " + formatDueDate(order.measurementSnapshotAt) + " · " : ""}{measurementLabel(order)}</small></td><td><span className="table-client">{client?.name ?? "Client supprimé"}</span></td><td>{formatDueDate(order.dueDate)}</td><td>{formatXof(order.price)}</td><td><b className={balanceDue(order) === 0 ? "paid" : ""}>{formatXof(balanceDue(order))}</b></td><td>{statusControl(order)}{retouchStageControl(order)}</td></tr>; })}</tbody></table></div>
+    <div className="order-card-list" aria-label="Commandes sous forme de cartes">{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <article className="order-card" key={order.id}><div className="order-card-heading"><div><b className="order-id">{order.id}</b><strong>{order.kind === "retouche" ? "Retouche · " : ""}{order.garment}</strong></div><span className={"order-status-chip status-" + getStatusClass(order.status)}>{order.status}</span></div><p className="order-card-client"><span>Client</span><b>{client?.name ?? "Client supprimé"}</b></p><p className="order-card-client"><span>Mensurations à la commande</span><b>{measurementLabel(order)}</b></p>{order.kind === "retouche" && <p className="order-card-client"><span>Étape retouche</span><b>{order.retouchStage ?? "À examiner"}</b></p>}{retouchStageControl(order)}<div className="order-card-details"><div><span>Livraison</span><b>{formatDueDate(order.dueDate)}</b></div><div><span>À encaisser</span><b className={balanceDue(order) === 0 ? "paid" : "order-balance"}>{formatXof(balanceDue(order))}</b></div></div>{onView && <button type="button" className="order-view-button" onClick={() => onView(order)}>Voir la commande <span aria-hidden="true">→</span></button>}</article>; })}</div>
     {orders.length === 0 && <div className="empty-state">Aucune commande pour le moment. Créez votre première commande pour commencer.</div>}
   </div>;
 }
