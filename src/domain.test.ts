@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addOrderPayment, areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order } from "./domain";
+import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type StockItem, type StockMovement } from "./domain";
 
 const client: Client = {
   id: "c-1",
@@ -377,5 +377,41 @@ describe("validation des dépenses", () => {
     expect(isExpenseListValid([{ ...expense, voidedAt: "2026-10-28" }])).toBe(false);
     expect(isExpenseListValid([{ ...expense, voidReason: "Erreur" }])).toBe(false);
     expect(isExpenseListValid([{ ...expense, voidedAt: "2026-10-28", voidReason: " " }])).toBe(false);
+  });
+});
+
+describe("stock et mouvements", () => {
+  const item: StockItem = { id: "stock-1", name: "Tissu bazin", unit: "mètre", quantity: 12.5, minimumQuantity: 3, createdAt: "2026-10-28" };
+  const entry: StockMovement = { id: "movement-1", itemId: "stock-1", type: "Entrée", quantity: 5, movedAt: "2026-10-28", note: "Réassort" };
+
+  it("valide les articles et mouvements correctement structurés", () => {
+    expect(isStockItemListValid([item])).toBe(true);
+    expect(isStockMovementListValid([entry])).toBe(true);
+    expect(areStockRelationsValid([item], [entry])).toBe(true);
+  });
+
+  it("refuse les quantités négatives, les dates invalides et les identifiants dupliqués", () => {
+    expect(isStockItemListValid([{ ...item, quantity: -1 }])).toBe(false);
+    expect(isStockItemListValid([item, item])).toBe(false);
+    expect(isStockMovementListValid([{ ...entry, quantity: 0 }])).toBe(false);
+    expect(isStockMovementListValid([{ ...entry, movedAt: "2026-02-31" }])).toBe(false);
+    expect(isStockMovementListValid([entry, entry])).toBe(false);
+    expect(areStockRelationsValid([item], [{ ...entry, itemId: "missing" }])).toBe(false);
+  });
+
+  it("ajoute une entrée et met à jour le stock courant", () => {
+    const result = recordStockMovement([item], [], entry);
+    expect(result?.items[0].quantity).toBe(17.5);
+    expect(result?.movements).toEqual([entry]);
+  });
+
+  it("refuse une sortie qui ferait passer le stock sous zéro", () => {
+    const exit: StockMovement = { id: "exit-1", itemId: "stock-1", type: "Sortie", quantity: 13, movedAt: "2026-10-28" };
+    expect(recordStockMovement([item], [], exit)).toBeNull();
+  });
+
+  it("refuse un mouvement d'un article inconnu et un identifiant déjà utilisé", () => {
+    expect(recordStockMovement([item], [], { ...entry, itemId: "missing" })).toBeNull();
+    expect(recordStockMovement([item], [entry], entry)).toBeNull();
   });
 });
