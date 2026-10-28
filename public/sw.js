@@ -1,4 +1,4 @@
-const CACHE_NAME = "yere-atelier-shell-v2";
+const CACHE_NAME = "yere-atelier-shell-v3";
 const APP_SHELL = ["/", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
