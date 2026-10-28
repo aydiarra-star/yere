@@ -534,13 +534,11 @@ function App() {
     { id: "clients", label: "Clients", icon: "users" },
     { id: "orders", label: "Commandes", icon: "clipboard-list" },
     { id: "stock", label: "Stock", icon: "package" },
-    { id: "suppliers", label: "Fournisseurs", icon: "truck" },
-    { id: "marketplace", label: "Marketplace", icon: "store" },
     { id: "cash", label: "Caisse", icon: "wallet" },
     { id: "account", label: "Compte", icon: "user-round" },
     { id: "reminders", label: "Relances clients", icon: "bell-ring" }
   ];
-  const mobileNavItems = navItems.filter((item) => ["overview", "clients", "orders", "stock", "suppliers", "marketplace", "cash"].includes(item.id));
+  const mobileNavItems = navItems.filter((item) => ["overview", "clients", "orders", "stock", "cash"].includes(item.id));
 
   if (!onboardingComplete) {
     return <Onboarding
