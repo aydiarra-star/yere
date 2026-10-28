@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderStatus, type StockItem, type StockMovement } from "./domain";
 import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, atelierActivities, workModes, getActivityExperience, withPrimaryActivity, toggleSecondaryActivity, type AtelierProfile, type AtelierActivity, type WorkMode } from "./atelierProfile";
+import { normalizeBackupOnboardingState } from "./localBackup";
 import { usePersistentState } from "./usePersistentState";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, receiveSupplierPurchase, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
@@ -216,6 +217,7 @@ function App() {
         throw new Error("Format de sauvegarde YÉRÉ non reconnu.");
       }
       const data = parsed.data;
+      const onboardingState = normalizeBackupOnboardingState(parsed.schemaVersion as number, data);
       if (!isClientListValid(data.clients)
         || !isOrderListValid(data.orders)
         || !areClientOrderRelationsValid(data.clients, data.orders)
@@ -226,8 +228,8 @@ function App() {
         || (parsed.schemaVersion === 4 && !isSupplierPurchaseListValid(data.supplierPurchases))
         || !isAtelierProfileValid(data.atelier)
         || (data.supplier !== undefined && !isSupplierProfileValid(data.supplier))
-        || !isBooleanValue(data.onboardingComplete)
-        || !isNullableTimestamp(data.onboardingStartedAt)) {
+        || !isBooleanValue(onboardingState.onboardingComplete)
+        || !isNullableTimestamp(onboardingState.onboardingStartedAt)) {
         throw new Error("La sauvegarde est incomplète ou contient des données invalides. Aucune donnée n'a été modifiée.");
       }
       setClients(data.clients);
@@ -238,8 +240,8 @@ function App() {
       setSupplierPurchases(isSupplierPurchaseListValid(data.supplierPurchases) ? data.supplierPurchases : []);
       setAtelier(data.atelier);
       setSupplier(data.supplier !== undefined && isSupplierProfileValid(data.supplier) ? data.supplier : emptySupplier);
-      setOnboardingComplete(data.onboardingComplete);
-      setOnboardingStartedAt(data.onboardingStartedAt);
+      setOnboardingComplete(onboardingState.onboardingComplete);
+      setOnboardingStartedAt(onboardingState.onboardingStartedAt);
       setSelectedClient(null);
       setShowForm(false);
       setShowOrderForm(false);
