@@ -1011,3 +1011,72 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .marketplace-local-note{font-size:10px;line-height:1.6;color:#8290a5;margin:0;padding:0 2px}
 @media(max-width:980px){.marketplace-hero{align-items:flex-start;flex-direction:column}.marketplace-hero-actions{flex-direction:row;flex-wrap:wrap;width:100%}.marketplace-hero-actions>*{flex:1}.marketplace-listing-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.marketplace-page{gap:15px}.marketplace-hero{padding:20px;gap:18px}.marketplace-hero-copy h2{font-size:24px}.marketplace-hero-copy>p:last-child{font-size:11px}.marketplace-hero-actions{flex-direction:column}.marketplace-category-grid{grid-template-columns:1fr;gap:12px}.marketplace-category-card{padding:19px;border-radius:13px}.marketplace-category-art{width:45px;height:45px;margin-bottom:16px}.marketplace-category-card>strong{font-size:20px}.marketplace-listing-form{padding:16px}.marketplace-listing-form .section-heading{gap:10px}.marketplace-form-grid{grid-template-columns:1fr;gap:12px}.marketplace-field-wide{grid-column:auto}.marketplace-form-footer{align-items:stretch;flex-direction:column}.marketplace-form-footer>div>*{flex:1}.marketplace-listing-heading{align-items:flex-start}.marketplace-listing-grid{grid-template-columns:1fr}.marketplace-product-card{display:grid;grid-template-columns:112px minmax(0,1fr);grid-template-rows:auto auto}.marketplace-product-card>img,.marketplace-product-placeholder{height:100%;min-height:160px;grid-row:1/3}.marketplace-product-copy{padding:13px 12px}.marketplace-product-copy h3{font-size:13px}.marketplace-product-copy>p{-webkit-line-clamp:2}.marketplace-remove{grid-column:2;grid-row:2;padding:8px 12px}.marketplace-product-meta{font-size:8px}}
+
+
+/* Harmonisation transversale : titres mesurés, textes plus nets et actions secondaires. */
+.welcome-row h1,
+.overview-welcome h1 {
+  font-size: clamp(22px, 2vw, 27px);
+  line-height: 1.25;
+  letter-spacing: -.55px;
+}
+.section-heading h2,
+.daily-assistant .section-heading h2,
+.reminders-intro h2,
+.empty-reminders h2,
+.account-section-heading h2 {
+  font-size: 17px;
+  line-height: 1.35;
+  letter-spacing: -.2px;
+}
+.tip-card h2 { font-size: 16px; line-height: 1.4; }
+.marketplace-hero-copy h2 { font-size: clamp(22px, 2.4vw, 27px); line-height: 1.25; letter-spacing: -.55px; }
+.marketplace-listing-form .section-heading h2,
+.marketplace-listing-heading h2 { font-size: 17px; line-height: 1.35; }
+.marketplace-product-copy h3,
+.marketplace-empty h3 { font-size: 14px; line-height: 1.4; }
+
+/* Les boutons d'action internes restent accessibles, sans rivaliser avec la navigation. */
+.primary-button,
+.secondary-button,
+.marketplace-hero-actions .primary-button,
+.marketplace-hero-actions .secondary-button {
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.25;
+}
+.primary-button span { font-size: 14px; }
+.marketplace-hero-actions { gap: 8px; }
+.marketplace-category-card { padding: 20px; }
+.marketplace-category-link { margin-top: 16px; }
+
+/* Une ligne lorsque l'espace le permet, sans casser les petits écrans. */
+.page-subtitle,
+.section-heading p,
+.marketplace-hero-copy > p:last-child,
+.marketplace-listing-heading > div > p:last-child {
+  max-width: 100%;
+  text-wrap: pretty;
+}
+@media (min-width: 761px) {
+  .page-subtitle,
+  .marketplace-hero-copy > p:last-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+@media (max-width: 760px) {
+  .welcome-row h1,
+  .overview-welcome h1 { font-size: 23px; line-height: 1.25; }
+  .section-heading h2,
+  .daily-assistant .section-heading h2,
+  .reminders-intro h2,
+  .empty-reminders h2,
+  .account-section-heading h2 { font-size: 17px; }
+  .marketplace-hero-copy h2 { font-size: 23px; }
+  .primary-button,
+  .secondary-button { min-height: 36px; padding: 8px 11px; }
+}
