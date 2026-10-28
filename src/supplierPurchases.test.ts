@@ -6,6 +6,9 @@ import {
   isSupplierPurchaseValid,
   receiveSupplierPurchase,
   supplierPurchaseTotal,
+  supplierPurchasePaidTotal,
+  supplierPurchaseBalance,
+  addSupplierPurchasePayment,
   type SupplierPurchase
 } from "./supplierPurchases";
 
@@ -35,6 +38,39 @@ describe("achats fournisseurs liés au stock", () => {
     expect(isSupplierPurchaseValid(purchase)).toBe(true);
     expect(isSupplierPurchaseListValid([purchase])).toBe(true);
     expect(supplierPurchaseTotal(purchase)).toBe(20750);
+  });
+
+  it("calcule les règlements fournisseurs sans les confondre avec la réception", () => {
+    expect(supplierPurchasePaidTotal(purchase)).toBe(0);
+    expect(supplierPurchaseBalance(purchase)).toBe(20750);
+    const first = addSupplierPurchasePayment(purchase, { id: "PAY-1", paidAt: "2026-10-27", amount: 5000 });
+    expect(first).not.toBeNull();
+    expect(first?.status).toBe("À recevoir");
+    expect(supplierPurchasePaidTotal(first!)).toBe(5000);
+    expect(supplierPurchaseBalance(first!)).toBe(15750);
+    const second = addSupplierPurchasePayment(first!, { id: "PAY-2", paidAt: "2026-10-28", amount: 15750, note: "Solde" });
+    expect(supplierPurchasePaidTotal(second!)).toBe(20750);
+    expect(supplierPurchaseBalance(second!)).toBe(0);
+    expect(second?.status).toBe("À recevoir");
+  });
+
+  it("refuse les paiements invalides, en double, trop élevés ou sur un achat annulé", () => {
+    expect(addSupplierPurchasePayment(purchase, { id: "P-0", paidAt: "2026-10-27", amount: 0 })).toBeNull();
+    expect(addSupplierPurchasePayment(purchase, { id: "P-1", paidAt: "2026-02-31", amount: 1 })).toBeNull();
+    expect(addSupplierPurchasePayment(purchase, { id: "P-1", paidAt: "2026-10-27", amount: -1 })).toBeNull();
+    expect(addSupplierPurchasePayment(purchase, { id: "P-1", paidAt: "2026-10-27", amount: 20751 })).toBeNull();
+    const first = addSupplierPurchasePayment(purchase, { id: "P-1", paidAt: "2026-10-27", amount: 1000 })!;
+    expect(addSupplierPurchasePayment(first, { id: "P-1", paidAt: "2026-10-28", amount: 1000 })).toBeNull();
+    const cancelled = cancelSupplierPurchase(purchase, "2026-10-28", "Commande annulée")!;
+    expect(addSupplierPurchasePayment(cancelled, { id: "P-2", paidAt: "2026-10-28", amount: 1000 })).toBeNull();
+    expect(cancelSupplierPurchase(first, "2026-10-28", "Déjà payé")).toBeNull();
+  });
+
+  it("refuse les paiements incohérents dans une sauvegarde de l’achat", () => {
+    expect(isSupplierPurchaseValid({ ...purchase, payments: [{ id: "P-1", paidAt: "2026-10-27", amount: 5000 }, { id: "P-1", paidAt: "2026-10-28", amount: 5000 }] })).toBe(false);
+    expect(isSupplierPurchaseValid({ ...purchase, payments: [{ id: "P-1", paidAt: "2026-10-27", amount: 20751 }] })).toBe(false);
+    expect(isSupplierPurchaseValid({ ...purchase, payments: "invalid" })).toBe(false);
+    expect(isSupplierPurchaseValid(purchase)).toBe(true);
   });
 
   it("refuse les lignes dupliquées, les quantités invalides et les dates impossibles", () => {
