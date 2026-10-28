@@ -17,11 +17,12 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 
 - [x] Formaliser les cinq catégories cibles et le principe « une seule plateforme, plusieurs métiers » dans le cahier des charges et le prompt maître.
 - [x] Distinguer l'activité principale du mode de travail (indépendant, collaborateurs, atelier en équipe).
-- [ ] Auditer l'onboarding actuel et identifier les changements minimaux pour proposer les cinq métiers sans dupliquer les parcours.
-- [ ] Définir les valeurs contrôlées du profil métier et la compatibilité avec les profils locaux existants.
-- [ ] Adapter l'accueil et les raccourcis selon le profil, tout en gardant le socle commun accessible.
+- [x] Auditer l'onboarding actuel et proposer les cinq métiers sans dupliquer les parcours.
+- [x] Définir les valeurs contrôlées du profil métier et préserver la compatibilité avec les profils locaux existants.
+- [x] Adapter l'accueil et les raccourcis selon le profil, tout en gardant le socle commun accessible.
 - [ ] Vérifier que les fonctions d'équipe peuvent servir toute activité qui travaille avec des collaborateurs.
-- [ ] Ajouter des tests pour changement de profil, activité secondaire, compatibilité des données et absence de duplication des entités communes.
+- [x] Ajouter des tests pour le changement de profil, les activités secondaires et la compatibilité des données.
+- [ ] Ajouter des tests d'intégration confirmant l'absence de duplication des entités communes.
 
 **Critère de sortie :** les cinq métiers peuvent utiliser le même produit ; le profil personnalise l'expérience sans limiter les fonctions utiles ni compromettre les données. La documentation ne vaut pas implémentation applicative.
 

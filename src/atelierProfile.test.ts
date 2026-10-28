@@ -4,6 +4,8 @@ import {
   emptyAtelier,
   isAtelierProfileValid,
   normalizeAtelierProfile,
+  toggleSecondaryActivity,
+  withPrimaryActivity,
   workModes
 } from "./atelierProfile";
 
@@ -32,7 +34,8 @@ describe("YÉRÉ atelier profile", () => {
       phone: "770000000",
       city: "Dakar",
       activity: "tailleur",
-      workMode: "independent"
+      workMode: "independent",
+      secondaryActivities: []
     });
   });
 
@@ -60,5 +63,42 @@ describe("activity-specific dashboard experience", () => {
     expect(getActivityExperience("tailleur").shortcuts.map((item) => item.action)).toEqual(["new-client", "measurements"]);
     expect(getActivityExperience("styliste").shortcuts.map((item) => item.action)).toEqual(["new-order", "marketplace"]);
     expect(getActivityExperience("atelier_confection").shortcuts.map((item) => item.action)).toEqual(["new-order", "stock"]);
+  });
+});
+
+describe("secondary professional activities", () => {
+  it("supports multiple activities without creating a second profile", () => {
+    let profile = normalizeAtelierProfile({ name: "Atelier A", phone: "", city: "", activity: "tailleur" });
+    profile = toggleSecondaryActivity(profile, "couturiere", true);
+    profile = toggleSecondaryActivity(profile, "styliste", true);
+    expect(profile).toMatchObject({ activity: "tailleur", secondaryActivities: ["couturiere", "styliste"] });
+  });
+
+  it("removes an activity when it becomes the primary activity", () => {
+    const profile = withPrimaryActivity({
+      ...emptyAtelier,
+      activity: "tailleur",
+      secondaryActivities: ["couturiere", "styliste"]
+    }, "couturiere");
+    expect(profile.activity).toBe("couturiere");
+    expect(profile.secondaryActivities).toEqual(["styliste"]);
+  });
+
+  it("does not add the primary activity to the secondary list or duplicate selections", () => {
+    let profile = { ...emptyAtelier, activity: "tailleur" as const, secondaryActivities: [] as ("couturier" | "couturiere" | "styliste" | "atelier_confection")[] };
+    profile = toggleSecondaryActivity(profile, "styliste", true);
+    profile = toggleSecondaryActivity(profile, "styliste", true);
+    expect(profile.secondaryActivities).toEqual(["styliste"]);
+    expect(isAtelierProfileValid({ ...profile, secondaryActivities: ["styliste", "styliste"] })).toBe(false);
+    expect(isAtelierProfileValid({ ...profile, secondaryActivities: ["tailleur"] })).toBe(false);
+  });
+
+  it("preserves secondary activities through normalization and rejects unknown values", () => {
+    expect(normalizeAtelierProfile({
+      name: "Atelier B", phone: "", city: "", activity: "couturier", secondaryActivities: ["styliste"]
+    }).secondaryActivities).toEqual(["styliste"]);
+    expect(isAtelierProfileValid({
+      name: "Atelier B", phone: "", city: "", activity: "couturier", secondaryActivities: ["invented"]
+    })).toBe(false);
   });
 });

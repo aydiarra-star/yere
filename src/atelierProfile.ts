@@ -24,6 +24,8 @@ export type AtelierProfile = {
   activity?: AtelierActivity;
   /** Separate from activity: a stylist, couturière or tailor can also manage a team. */
   workMode?: WorkMode;
+  /** Optional secondary activities; omitted in old local profiles. */
+  secondaryActivities?: AtelierActivity[];
 };
 
 export const emptyAtelier: AtelierProfile = {
@@ -49,7 +51,13 @@ export function isAtelierProfileValid(value: unknown): value is AtelierProfile {
     && typeof profile.phone === "string"
     && typeof profile.city === "string"
     && (profile.activity === undefined || isAtelierActivity(profile.activity))
-    && (profile.workMode === undefined || isWorkMode(profile.workMode));
+    && (profile.workMode === undefined || isWorkMode(profile.workMode))
+    && (profile.secondaryActivities === undefined || (
+      Array.isArray(profile.secondaryActivities)
+      && profile.secondaryActivities.every(isAtelierActivity)
+      && new Set(profile.secondaryActivities).size === profile.secondaryActivities.length
+      && !profile.secondaryActivities.includes((profile.activity ?? "tailleur") as AtelierActivity)
+    ));
 }
 
 /** Adds safe defaults to older local profiles without discarding their existing fields. */
@@ -60,7 +68,27 @@ export function normalizeAtelierProfile(value: unknown): AtelierProfile {
     phone: value.phone,
     city: value.city,
     activity: value.activity ?? "tailleur",
-    workMode: value.workMode ?? "independent"
+    workMode: value.workMode ?? "independent",
+    secondaryActivities: (value.secondaryActivities ?? []).filter((activity) => activity !== (value.activity ?? "tailleur"))
+  };
+}
+
+export function withPrimaryActivity(profile: AtelierProfile, activity: AtelierActivity): AtelierProfile {
+  return {
+    ...profile,
+    activity,
+    secondaryActivities: (profile.secondaryActivities ?? []).filter((item) => item !== activity)
+  };
+}
+
+export function toggleSecondaryActivity(profile: AtelierProfile, activity: AtelierActivity, enabled: boolean): AtelierProfile {
+  const current = (profile.secondaryActivities ?? []).filter((item) => item !== profile.activity);
+  const next = enabled
+    ? [...new Set([...current, activity])]
+    : current.filter((item) => item !== activity);
+  return {
+    ...profile,
+    secondaryActivities: next.filter((item) => item !== profile.activity)
   };
 }
 
