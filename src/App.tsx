@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
-import { addOrderPayment, areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, orderStatuses, saveMeasurementVersion, totalPaid, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
+import { addOrderPayment, areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, orderStatuses, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderStatus } from "./domain";
 import { usePersistentState } from "./usePersistentState";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", arm: "", neck: "", thigh: "", legLength: "", garmentType: "Tenue complète", note: "" };
@@ -54,6 +54,7 @@ function isNullableTimestamp(value: unknown): value is number | null {
 function App() {
   const [clients, setClients] = usePersistentState<Client[]>("yere-demo-clients-v1", [], isClientListValid);
   const [orders, setOrders] = usePersistentState<Order[]>("yere-demo-orders-v1", [], isOrderListValid);
+  const [expenses, setExpenses] = usePersistentState<Expense[]>("yere-demo-expenses-v1", [], isExpenseListValid);
   const [atelier, setAtelier] = usePersistentState<AtelierProfile>("yere-demo-atelier-v1", emptyAtelier, isAtelierProfileValid);
   const [supplier, setSupplier] = usePersistentState<SupplierProfile>("yere-supplier-profile-v1", emptySupplier, isSupplierProfileValid);
   const [marketplaceListings, setMarketplaceListings] = usePersistentState<MarketplaceListing[]>("yere-marketplace-listings-v1", [], isMarketplaceListingListValid);
@@ -73,6 +74,10 @@ function App() {
   const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
   const [paymentHistoryOrderId, setPaymentHistoryOrderId] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
+  const [expenseFormOpen, setExpenseFormOpen] = useState(false);
+  const [expenseCategory, setExpenseCategory] = useState("Fournitures");
+  const [expenseDescription, setExpenseDescription] = useState("");
+  const [expenseAmount, setExpenseAmount] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -86,6 +91,8 @@ function App() {
   const visibleClients = useMemo(() => clients.filter((client) => matchesClient(client, query)), [clients, query]);
   const outstanding = orders.reduce((sum, order) => sum + balanceDue(order), 0);
   const outstandingOrderCount = orders.filter((order) => balanceDue(order) > 0).length;
+  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const totalCollected = orders.reduce((sum, order) => sum + totalPaid(order), 0);
   const selected = clients.find((client) => client.id === selectedClient);
   const reminderSuggestions = useMemo(
     () => getClientReminderSuggestions(clients, orders, new Date().toISOString().slice(0, 10)),
@@ -160,9 +167,9 @@ function App() {
   function exportLocalBackup() {
     const backup = {
       format: "yere-local-backup",
-      schemaVersion: 1,
+      schemaVersion: 2,
       exportedAt: new Date().toISOString(),
-      data: { clients, orders, atelier, supplier, onboardingComplete, onboardingStartedAt }
+      data: { clients, orders, expenses, atelier, supplier, onboardingComplete, onboardingStartedAt }
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -182,13 +189,14 @@ function App() {
     if (!file) return;
     void file.text().then((raw) => {
       const parsed: unknown = JSON.parse(raw);
-      if (!isObjectRecord(parsed) || parsed.format !== "yere-local-backup" || parsed.schemaVersion !== 1 || !isObjectRecord(parsed.data)) {
+      if (!isObjectRecord(parsed) || parsed.format !== "yere-local-backup" || ![1, 2].includes(parsed.schemaVersion as number) || !isObjectRecord(parsed.data)) {
         throw new Error("Format de sauvegarde YÉRÉ non reconnu.");
       }
       const data = parsed.data;
       if (!isClientListValid(data.clients)
         || !isOrderListValid(data.orders)
         || !areClientOrderRelationsValid(data.clients, data.orders)
+        || (parsed.schemaVersion === 2 && !isExpenseListValid(data.expenses))
         || !isAtelierProfileValid(data.atelier)
         || (data.supplier !== undefined && !isSupplierProfileValid(data.supplier))
         || !isBooleanValue(data.onboardingComplete)
@@ -197,6 +205,7 @@ function App() {
       }
       setClients(data.clients);
       setOrders(data.orders);
+      setExpenses(isExpenseListValid(data.expenses) ? data.expenses : []);
       setAtelier(data.atelier);
       setSupplier(data.supplier !== undefined && isSupplierProfileValid(data.supplier) ? data.supplier : emptySupplier);
       setOnboardingComplete(data.onboardingComplete);
@@ -210,6 +219,29 @@ function App() {
       const message = error instanceof Error ? error.message : "Fichier impossible à lire.";
       setNotice(`Restauration refusée : ${message}`);
     });
+  }
+
+  function addExpense(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const category = expenseCategory.trim();
+    const description = expenseDescription.trim();
+    const amount = Number(expenseAmount);
+    if (!category || !description || !Number.isSafeInteger(amount) || amount <= 0) {
+      setNotice("Vérifiez la catégorie, le motif et le montant de la dépense. Le montant doit être un entier supérieur à zéro.");
+      return;
+    }
+    const expense: Expense = {
+      id: "EXP-" + Date.now(),
+      spentAt: new Date().toISOString().slice(0, 10),
+      category,
+      description,
+      amount
+    };
+    setExpenses((current) => [expense, ...current]);
+    setExpenseDescription("");
+    setExpenseAmount("");
+    setExpenseFormOpen(false);
+    setNotice("Dépense de " + formatXof(amount) + " enregistrée sur cet appareil. Aucune copie serveur n’est active.");
   }
 
   function recordOrderPayment(event: FormEvent<HTMLFormElement>) {
