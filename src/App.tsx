@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderStatus, type StockItem, type StockMovement } from "./domain";
-import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, atelierActivities, workModes, getActivityExperience, type AtelierProfile, type AtelierActivity, type WorkMode } from "./atelierProfile";
+import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, atelierActivities, workModes, getActivityExperience, withPrimaryActivity, toggleSecondaryActivity, type AtelierProfile, type AtelierActivity, type WorkMode } from "./atelierProfile";
 import { usePersistentState } from "./usePersistentState";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, receiveSupplierPurchase, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
@@ -618,7 +618,11 @@ function App() {
           {view === "account" && <section className="content-card account-page">
             <div className="section-heading account-section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div></div>
             <form className="account-form" onSubmit={(event) => { event.preventDefault(); setAtelier((current) => normalizeAtelierProfile(current)); setNotice("Profil d'atelier mis à jour sur cet appareil uniquement."); }}>
-              <label>Activité principale<select value={atelier.activity ?? "tailleur"} onChange={(event) => setAtelier((current) => ({ ...current, activity: event.target.value as AtelierActivity }))}>{atelierActivities.map((activity) => <option key={activity.value} value={activity.value}>{activity.label}</option>)}</select></label>
+              <label>Activité principale<select value={atelier.activity ?? "tailleur"} onChange={(event) => setAtelier((current) => withPrimaryActivity(current, event.target.value as AtelierActivity))}>{atelierActivities.map((activity) => <option key={activity.value} value={activity.value}>{activity.label}</option>)}</select></label>
+              <fieldset className="activity-options account-activity-options">
+                <legend>Autres activités exercées (facultatif)</legend>
+                {atelierActivities.filter((activity) => activity.value !== (atelier.activity ?? "tailleur")).map((activity) => <label key={activity.value}><input type="checkbox" checked={(atelier.secondaryActivities ?? []).includes(activity.value)} onChange={(event) => setAtelier((current) => toggleSecondaryActivity(current, activity.value, event.target.checked))} />{activity.label}</label>)}
+              </fieldset>
               <label>Organisation du travail<select value={atelier.workMode ?? "independent"} onChange={(event) => setAtelier((current) => ({ ...current, workMode: event.target.value as WorkMode }))}>{workModes.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}</select></label>
               <label>Nom de l'atelier ou de l'activité<input required value={atelier.name} onChange={(event) => setAtelier((current) => ({ ...current, name: event.target.value }))} /></label>
               <label>Téléphone<input value={atelier.phone} onChange={(event) => setAtelier((current) => ({ ...current, phone: event.target.value }))} /></label>
@@ -766,10 +770,15 @@ function Onboarding({ atelier, onAtelierChange, onFinish }: {
         <p className="onboarding-body">Choisissez votre activité et votre façon de travailler. Vous pourrez modifier votre profil plus tard ; les mêmes outils essentiels restent disponibles pour tous.</p>
         <form className="onboarding-form" onSubmit={(event) => { event.preventDefault(); onAtelierChange(normalizeAtelierProfile(draft)); onFinish(); }}>
           <label>Votre activité principale
-            <select required value={draft.activity ?? "tailleur"} onChange={(event) => setDraft((previous) => ({ ...previous, activity: event.target.value as AtelierActivity }))}>
+            <select required value={draft.activity ?? "tailleur"} onChange={(event) => setDraft((previous) => withPrimaryActivity(previous, event.target.value as AtelierActivity))}>
               {atelierActivities.map((activity) => <option key={activity.value} value={activity.value}>{activity.label}</option>)}
             </select>
           </label>
+          <fieldset className="activity-options">
+            <legend>Exercez-vous aussi d’autres métiers ? (facultatif)</legend>
+            <p>Choisissez les autres activités que vous pratiquez. Cela ne crée pas de nouvel espace ni de nouvelles données séparées.</p>
+            {atelierActivities.filter((activity) => activity.value !== (draft.activity ?? "tailleur")).map((activity) => <label key={activity.value}><input type="checkbox" checked={(draft.secondaryActivities ?? []).includes(activity.value)} onChange={(event) => setDraft((previous) => toggleSecondaryActivity(previous, activity.value, event.target.checked))} />{activity.label}</label>)}
+          </fieldset>
           <label>Comment travaillez-vous ?
             <select required value={draft.workMode ?? "independent"} onChange={(event) => setDraft((previous) => ({ ...previous, workMode: event.target.value as WorkMode }))}>
               {workModes.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}
