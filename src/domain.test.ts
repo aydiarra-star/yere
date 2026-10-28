@@ -24,6 +24,14 @@ describe("compatibilité du type de travail des commandes", () => {
   it("refuse un type de travail inconnu dans les données persistées", () => {
     expect(isOrderListValid([{ ...validOrder, kind: "unknown" }])).toBe(false);
   });
+
+  it("valide et conserve un instantané de mensurations daté sur la commande", () => {
+    const measurementSnapshot = { bust: "92", waist: "74", hips: "98", shoulder: "40", sleeve: "60", length: "140", note: "Coupe ample" };
+    expect(isOrderListValid([{ ...validOrder, measurementSnapshot, measurementSnapshotAt: "2026-10-28" }])).toBe(true);
+    expect(isOrderListValid([{ ...validOrder, measurementSnapshot }])).toBe(false);
+    expect(isOrderListValid([{ ...validOrder, measurementSnapshot: { ...measurementSnapshot, bust: "invalide" }, measurementSnapshotAt: "2026-10-28" }])).toBe(false);
+    expect(isOrderListValid([{ ...validOrder, measurementSnapshot, measurementSnapshotAt: "2026-02-31" }])).toBe(false);
+  });
 });
 
 describe("validation des données restaurées", () => {

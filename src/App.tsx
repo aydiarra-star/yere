@@ -164,13 +164,21 @@ function App() {
       setNotice("Vérifiez le client, le vêtement, la date de livraison, le prix et l'acompte. Les montants doivent être des nombres entiers positifs, et l'acompte ne peut pas dépasser le prix.");
       return;
     }
+    const orderedAt = new Date().toISOString().slice(0, 10);
+    const orderClient = clients.find((client) => client.id === newOrderClientId);
+    if (!orderClient) {
+      setNotice("Ce client n’est plus disponible. Sélectionnez à nouveau un client.");
+      return;
+    }
     const order: Order = {
       id: `YR-${Date.now()}`,
       clientId: newOrderClientId,
       garment: newOrderGarment.trim(),
       kind: newOrderKind,
+      measurementSnapshot: { ...orderClient.measurement },
+      measurementSnapshotAt: orderedAt,
       dueDate: newOrderDueDate,
-      orderedAt: new Date().toISOString().slice(0, 10),
+      orderedAt,
       price,
       deposit,
       payments: deposit > 0 ? [{ id: "PAY-" + Date.now() + "-initial", amount: deposit, paidAt: new Date().toISOString().slice(0, 10), note: "Acompte initial" }] : [],
@@ -802,13 +810,31 @@ function Onboarding({ atelier, onAtelierChange, onFinish }: {
 }
 
 function OrderTable({ orders, clients, onStatusChange, onView }: { orders: Order[]; clients: Client[]; onStatusChange: (id: string, status: OrderStatus) => void; onView?: (order: Order) => void }) {
+  const measurementLabel = (order: Order) => {
+    const measurement = order.measurementSnapshot;
+    if (!measurement) return "Non disponible pour cette ancienne commande";
+    const details = [
+      measurement.garmentType,
+      measurement.bust && `Poitrine ${measurement.bust} cm`,
+      measurement.waist && `Taille ${measurement.waist} cm`,
+      measurement.hips && `Hanches ${measurement.hips} cm`,
+      measurement.shoulder && `Épaules ${measurement.shoulder} cm`,
+      measurement.sleeve && `Manche ${measurement.sleeve} cm`,
+      measurement.length && `Longueur ${measurement.length} cm`,
+      measurement.arm && `Bras ${measurement.arm} cm`,
+      measurement.neck && `Cou ${measurement.neck} cm`,
+      measurement.thigh && `Cuisse ${measurement.thigh} cm`,
+      measurement.legLength && `Entrejambe ${measurement.legLength} cm`
+    ].filter(Boolean);
+    return details.join(" · ") || "Aucune mensuration renseignée à la création";
+  };
   const getStatusClass = (status: OrderStatus) => status === "Prêt" ? "ready" : status === "En confection" ? "progress" : status === "Livré" ? "delivered" : "todo";
   const formatDueDate = (date: string) => new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long" }).format(new Date(date + "T12:00:00"));
   const statusControl = (order: Order) => <select className={"status-select status-" + getStatusClass(order.status)} value={order.status} aria-label={"Statut de " + order.id} onChange={(event) => onStatusChange(order.id, event.target.value as OrderStatus)}>{orderStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select>;
 
   return <div className="orders-display">
-    <div className="table-wrap orders-desktop"><table><thead><tr><th>COMMANDE</th><th>CLIENT</th><th>DATE DE LIVRAISON</th><th>PRIX</th><th>RESTE DÛ</th><th>STATUT</th></tr></thead><tbody>{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <tr key={order.id}><td><b className="order-id">{order.id}</b><small className="table-secondary">{order.kind === "retouche" ? "Retouche · " : ""}{order.garment}</small></td><td><span className="table-client">{client?.name ?? "Client supprimé"}</span></td><td>{formatDueDate(order.dueDate)}</td><td>{formatXof(order.price)}</td><td><b className={balanceDue(order) === 0 ? "paid" : ""}>{formatXof(balanceDue(order))}</b></td><td>{statusControl(order)}</td></tr>; })}</tbody></table></div>
-    <div className="order-card-list" aria-label="Commandes sous forme de cartes">{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <article className="order-card" key={order.id}><div className="order-card-heading"><div><b className="order-id">{order.id}</b><strong>{order.kind === "retouche" ? "Retouche · " : ""}{order.garment}</strong></div><span className={"order-status-chip status-" + getStatusClass(order.status)}>{order.status}</span></div><p className="order-card-client"><span>Client</span><b>{client?.name ?? "Client supprimé"}</b></p><div className="order-card-details"><div><span>Livraison</span><b>{formatDueDate(order.dueDate)}</b></div><div><span>À encaisser</span><b className={balanceDue(order) === 0 ? "paid" : "order-balance"}>{formatXof(balanceDue(order))}</b></div></div>{onView && <button type="button" className="order-view-button" onClick={() => onView(order)}>Voir la commande <span aria-hidden="true">→</span></button>}</article>; })}</div>
+    <div className="table-wrap orders-desktop"><table><thead><tr><th>COMMANDE</th><th>CLIENT</th><th>DATE DE LIVRAISON</th><th>PRIX</th><th>RESTE DÛ</th><th>STATUT</th></tr></thead><tbody>{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <tr key={order.id}><td><b className="order-id">{order.id}</b><small className="table-secondary">{order.kind === "retouche" ? "Retouche · " : ""}{order.garment}</small><small className="table-secondary">{order.measurementSnapshotAt ? "Mesures du " + formatDueDate(order.measurementSnapshotAt) + " · " : ""}{measurementLabel(order)}</small></td><td><span className="table-client">{client?.name ?? "Client supprimé"}</span></td><td>{formatDueDate(order.dueDate)}</td><td>{formatXof(order.price)}</td><td><b className={balanceDue(order) === 0 ? "paid" : ""}>{formatXof(balanceDue(order))}</b></td><td>{statusControl(order)}</td></tr>; })}</tbody></table></div>
+    <div className="order-card-list" aria-label="Commandes sous forme de cartes">{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <article className="order-card" key={order.id}><div className="order-card-heading"><div><b className="order-id">{order.id}</b><strong>{order.kind === "retouche" ? "Retouche · " : ""}{order.garment}</strong></div><span className={"order-status-chip status-" + getStatusClass(order.status)}>{order.status}</span></div><p className="order-card-client"><span>Client</span><b>{client?.name ?? "Client supprimé"}</b></p><p className="order-card-client"><span>Mensurations à la commande</span><b>{measurementLabel(order)}</b></p><div className="order-card-details"><div><span>Livraison</span><b>{formatDueDate(order.dueDate)}</b></div><div><span>À encaisser</span><b className={balanceDue(order) === 0 ? "paid" : "order-balance"}>{formatXof(balanceDue(order))}</b></div></div>{onView && <button type="button" className="order-view-button" onClick={() => onView(order)}>Voir la commande <span aria-hidden="true">→</span></button>}</article>; })}</div>
     {orders.length === 0 && <div className="empty-state">Aucune commande pour le moment. Créez votre première commande pour commencer.</div>}
   </div>;
 }
