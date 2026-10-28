@@ -108,6 +108,11 @@ export function supplierPurchasePaidTotal(purchase: Pick<SupplierPurchase, "paym
   return (purchase.payments ?? []).reduce((sum, payment) => sum + payment.amount, 0);
 }
 
+/** Total supplier cash paid across purchases, including partial payments. */
+export function supplierPurchasesPaidTotal(purchases: readonly SupplierPurchase[]): number {
+  return purchases.reduce((sum, purchase) => sum + supplierPurchasePaidTotal(purchase), 0);
+}
+
 export function supplierPurchaseBalance(purchase: Pick<SupplierPurchase, "lines" | "payments">): number {
   return supplierPurchaseTotal(purchase) - supplierPurchasePaidTotal(purchase);
 }

@@ -7,6 +7,7 @@ import {
   receiveSupplierPurchase,
   supplierPurchaseTotal,
   supplierPurchasePaidTotal,
+  supplierPurchasesPaidTotal,
   supplierPurchaseBalance,
   addSupplierPurchasePayment,
   type SupplierPurchase
@@ -52,6 +53,13 @@ describe("achats fournisseurs liés au stock", () => {
     expect(supplierPurchasePaidTotal(second!)).toBe(20750);
     expect(supplierPurchaseBalance(second!)).toBe(0);
     expect(second?.status).toBe("À recevoir");
+  });
+
+  it("additionne les sorties fournisseurs sans confondre paiement et réception", () => {
+    const partlyPaid = addSupplierPurchasePayment(purchase, { id: "PAY-CASH-1", paidAt: "2026-10-27", amount: 5000 })!;
+    const another = addSupplierPurchasePayment({ ...purchase, id: "ACH-002" }, { id: "PAY-CASH-2", paidAt: "2026-10-28", amount: 2500 })!;
+    expect(supplierPurchasesPaidTotal([partlyPaid, another])).toBe(7500);
+    expect(partlyPaid.status).toBe("À recevoir");
   });
 
   it("refuse les paiements invalides, en double, trop élevés ou sur un achat annulé", () => {
