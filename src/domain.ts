@@ -160,6 +160,9 @@ export type Expense = {
   category: string;
   description: string;
   amount: number;
+  /** A cancelled expense remains in the audit trail and is excluded from totals. */
+  voidedAt?: string;
+  voidReason?: string;
 };
 
 export function isExpenseListValid(value: unknown): value is Expense[] {
@@ -170,6 +173,9 @@ export function isExpenseListValid(value: unknown): value is Expense[] {
     && typeof item.category === "string" && item.category.trim().length > 0
     && typeof item.description === "string" && item.description.trim().length > 0
     && typeof item.amount === "number" && Number.isSafeInteger(item.amount) && item.amount > 0
+    && (item.voidedAt === undefined || isCalendarDate(item.voidedAt))
+    && (item.voidReason === undefined || (typeof item.voidReason === "string" && item.voidReason.trim().length > 0))
+    && ((item.voidedAt === undefined) === (item.voidReason === undefined))
   ) && new Set(value.map((item) => (item as Record<string, unknown>).id)).size === value.length;
 }
 
