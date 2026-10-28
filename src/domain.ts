@@ -224,8 +224,15 @@ export function isStockMovementListValid(value: unknown): value is StockMovement
 
 export function areStockRelationsValid(items: StockItem[], movements: StockMovement[]): boolean {
   const itemIds = new Set(items.map((item) => item.id));
-  return itemIds.size === items.length && new Set(movements.map((movement) => movement.id)).size === movements.length
-    && movements.every((movement) => itemIds.has(movement.itemId));
+  if (itemIds.size !== items.length
+    || new Set(movements.map((movement) => movement.id)).size !== movements.length
+    || !movements.every((movement) => itemIds.has(movement.itemId))) return false;
+  return items.every((item) => {
+    const calculated = movements
+      .filter((movement) => movement.itemId === item.id)
+      .reduce((quantity, movement) => quantity + (movement.type === "Entrée" ? movement.quantity : -movement.quantity), 0);
+    return Math.abs(calculated - item.quantity) < 1e-8;
+  });
 }
 
 /** Record a stock movement atomically; refuse unknown items and exits that would create negative stock. */
