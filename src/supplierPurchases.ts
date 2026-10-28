@@ -15,6 +15,13 @@ export type SupplierPurchaseLine = {
 
 export type SupplierPurchaseStatus = "À recevoir" | "Reçue" | "Annulée";
 
+export type SupplierPurchasePayment = {
+  id: string;
+  paidAt: string;
+  amount: number;
+  note?: string;
+};
+
 export type SupplierPurchase = {
   id: string;
   supplierName: string;
@@ -25,6 +32,8 @@ export type SupplierPurchase = {
   cancelledAt?: string;
   cancelReason?: string;
   note?: string;
+  /** Optional for backwards compatibility with purchases saved before payment tracking. */
+  payments?: SupplierPurchasePayment[];
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -58,6 +67,28 @@ export function isSupplierPurchaseValid(value: unknown): value is SupplierPurcha
   const lineIds = value.lines.map((line) => (line as Record<string, unknown>).stockItemId);
   if (new Set(lineIds).size !== lineIds.length) return false;
 
+  const total = value.lines.reduce((sum, line) => {
+    const item = line as Record<string, unknown>;
+    return sum + (item.quantity as number) * (item.unitCost as number);
+  }, 0);
+  if (!Number.isFinite(total) || total < 0 || total > Number.MAX_SAFE_INTEGER) return false;
+  if (value.payments !== undefined) {
+    if (!Array.isArray(value.payments)) return false;
+    const paymentIds = new Set<string>();
+    let paidTotal = 0;
+    for (const payment of value.payments) {
+      if (!isRecord(payment)
+        || typeof payment.id !== "string" || !payment.id.trim()
+        || !isCalendarDate(payment.paidAt)
+        || typeof payment.amount !== "number" || !Number.isSafeInteger(payment.amount) || payment.amount <= 0
+        || (payment.note !== undefined && typeof payment.note !== "string")
+        || paymentIds.has(payment.id)) return false;
+      paymentIds.add(payment.id);
+      paidTotal += payment.amount;
+      if (!Number.isSafeInteger(paidTotal) || paidTotal > total) return false;
+    }
+  }
+
   if (value.status === "Reçue") return isCalendarDate(value.receivedAt) && value.cancelledAt === undefined && value.cancelReason === undefined;
   if (value.status === "Annulée") return value.receivedAt === undefined && isCalendarDate(value.cancelledAt) && typeof value.cancelReason === "string" && Boolean(value.cancelReason.trim());
   return value.receivedAt === undefined && value.cancelledAt === undefined && value.cancelReason === undefined;
@@ -73,6 +104,36 @@ export function supplierPurchaseTotal(purchase: Pick<SupplierPurchase, "lines">)
   return purchase.lines.reduce((sum, line) => sum + line.quantity * line.unitCost, 0);
 }
 
+export function supplierPurchasePaidTotal(purchase: Pick<SupplierPurchase, "payments">): number {
+  return (purchase.payments ?? []).reduce((sum, payment) => sum + payment.amount, 0);
+}
+
+export function supplierPurchaseBalance(purchase: Pick<SupplierPurchase, "lines" | "payments">): number {
+  return supplierPurchaseTotal(purchase) - supplierPurchasePaidTotal(purchase);
+}
+
+/** Record a partial or final payment without changing receipt or stock state. */
+export function addSupplierPurchasePayment(
+  purchase: SupplierPurchase,
+  payment: SupplierPurchasePayment
+): SupplierPurchase | null {
+  if (!isSupplierPurchaseValid(purchase)
+    || purchase.status === "Annulée"
+    || !isRecord(payment)
+    || typeof payment.id !== "string" || !payment.id.trim()
+    || !isCalendarDate(payment.paidAt)
+    || !Number.isSafeInteger(payment.amount) || payment.amount <= 0
+    || (payment.note !== undefined && typeof payment.note !== "string")
+    || (purchase.payments ?? []).some((existing) => existing.id === payment.id)
+    || payment.amount > supplierPurchaseBalance(purchase)) return null;
+
+  const updated: SupplierPurchase = {
+    ...purchase,
+    payments: [...(purchase.payments ?? []), { ...payment }]
+  };
+  return isSupplierPurchaseValid(updated) ? updated : null;
+}
+
 /** Cancel an unreceived purchase with a dated, non-empty reason for the audit trail. */
 export function cancelSupplierPurchase(
   purchase: SupplierPurchase,
@@ -81,6 +142,7 @@ export function cancelSupplierPurchase(
 ): SupplierPurchase | null {
   if (!isSupplierPurchaseValid(purchase)
     || purchase.status !== "À recevoir"
+    || supplierPurchasePaidTotal(purchase) > 0
     || !isCalendarDate(cancelledAt)
     || !reason.trim()) return null;
   const cancelledPurchase: SupplierPurchase = {
