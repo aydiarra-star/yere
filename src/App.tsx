@@ -78,6 +78,8 @@ function App() {
   const [expenseCategory, setExpenseCategory] = useState("Fournitures");
   const [expenseDescription, setExpenseDescription] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
+  const [expenseToVoidId, setExpenseToVoidId] = useState<string | null>(null);
+  const [expenseVoidReason, setExpenseVoidReason] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -91,7 +93,7 @@ function App() {
   const visibleClients = useMemo(() => clients.filter((client) => matchesClient(client, query)), [clients, query]);
   const outstanding = orders.reduce((sum, order) => sum + balanceDue(order), 0);
   const outstandingOrderCount = orders.filter((order) => balanceDue(order) > 0).length;
-  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.voidedAt ? 0 : expense.amount), 0);
   const totalCollected = orders.reduce((sum, order) => sum + totalPaid(order), 0);
   const selected = clients.find((client) => client.id === selectedClient);
   const reminderSuggestions = useMemo(
@@ -219,6 +221,23 @@ function App() {
       const message = error instanceof Error ? error.message : "Fichier impossible à lire.";
       setNotice(`Restauration refusée : ${message}`);
     });
+  }
+
+  function voidExpense(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const expense = expenses.find((item) => item.id === expenseToVoidId);
+    const reason = expenseVoidReason.trim();
+    if (!expense || expense.voidedAt || !reason) {
+      setNotice("Choisissez une dépense active et indiquez le motif de l’annulation.");
+      return;
+    }
+    const voidedAt = new Date().toISOString().slice(0, 10);
+    setExpenses((current) => current.map((item) => item.id === expense.id
+      ? { ...item, voidedAt, voidReason: reason }
+      : item));
+    setExpenseToVoidId(null);
+    setExpenseVoidReason("");
+    setNotice("Dépense annulée et conservée dans l’historique. Le total des dépenses actives a été recalculé.");
   }
 
   function addExpense(event: FormEvent<HTMLFormElement>) {
@@ -393,7 +412,7 @@ function App() {
             </div>
             <section className="content-card"><div className="section-heading"><div><h2>Dépenses de l’atelier</h2><p>Notez les achats et frais pour suivre les sorties d’argent.</p></div><button type="button" className="primary-button" onClick={() => setExpenseFormOpen((open) => !open)}>{expenseFormOpen ? "Annuler" : "＋ Nouvelle dépense"}</button></div>
               {expenseFormOpen && <form className="new-order-form" onSubmit={addExpense}><label>Catégorie<select value={expenseCategory} onChange={(event) => setExpenseCategory(event.target.value)}><option>Fournitures</option><option>Tissus</option><option>Transport</option><option>Électricité / eau</option><option>Loyer</option><option>Main-d’œuvre</option><option>Entretien</option><option>Autre</option></select></label><label>Motif<input required maxLength={120} value={expenseDescription} onChange={(event) => setExpenseDescription(event.target.value)} placeholder="Ex. achat de fil et fermetures" /></label><label>Montant (FCFA)<input required type="number" min="1" step="1" inputMode="numeric" value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value)} placeholder="Ex. 7500" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setExpenseFormOpen(false)}>Annuler</button><button type="submit" className="primary-button">Enregistrer la dépense</button></div></form>}
-              {expenses.length === 0 ? <div className="empty-state">Aucune dépense enregistrée. Les dépenses saisies apparaîtront ici.</div> : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Catégorie</th><th>Motif</th><th>Montant</th></tr></thead><tbody>{expenses.map((expense) => <tr key={expense.id}><td>{expense.spentAt}</td><td>{expense.category}</td><td>{expense.description}</td><td><b>{formatXof(expense.amount)}</b></td></tr>)}</tbody></table></div>}
+              {expenses.length === 0 ? <div className="empty-state">Aucune dépense enregistrée. Les dépenses saisies apparaîtront ici.</div> : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Catégorie</th><th>Motif</th><th>Montant</th><th>État</th><th>Action</th></tr></thead><tbody>{expenses.map((expense) => <tr key={expense.id}><td>{expense.spentAt}</td><td>{expense.category}</td><td>{expense.description}{expense.voidReason && <small>Annulation : {expense.voidReason} · {expense.voidedAt}</small>}</td><td><b className={expense.voidedAt ? "paid" : ""}>{formatXof(expense.amount)}</b></td><td>{expense.voidedAt ? "Annulée" : "Active"}</td><td>{expense.voidedAt ? "—" : <button type="button" className="secondary-button" onClick={() => { setExpenseToVoidId(expense.id); setExpenseVoidReason(""); }}>Annuler</button>}</td></tr>)}</tbody></table></div>}{expenseToVoidId && expenses.some((expense) => expense.id === expenseToVoidId && !expense.voidedAt) && <form className="new-order-form" onSubmit={voidExpense}><h3>Annuler une dépense</h3><p>La dépense restera visible dans l’historique ; son montant sera exclu du total actif.</p><label>Motif obligatoire<input required maxLength={160} value={expenseVoidReason} onChange={(event) => setExpenseVoidReason(event.target.value)} placeholder="Ex. saisie en double" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => { setExpenseToVoidId(null); setExpenseVoidReason(""); }}>Retour</button><button type="submit" className="primary-button">Confirmer l’annulation</button></div></form>}
             </section>
             <section className="content-card"><div className="section-heading"><div><h2>Situation par commande</h2><p>Reste dû = prix convenu moins l’ensemble des versements enregistrés.</p></div></div>
               {orders.length === 0 ? <div className="empty-state">Aucune commande pour le moment. Créez une commande pour commencer à suivre les montants.</div> : <div className="table-wrap"><table><thead><tr><th>Commande</th><th>Prix</th><th>Total encaissé</th><th>Reste</th><th>Action</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}><td><b>{order.garment}</b><small>{clients.find((client) => client.id === order.clientId)?.name || "Client inconnu"}</small></td><td>{formatXof(order.price)}</td><td>{formatXof(totalPaid(order))}</td><td><b>{formatXof(balanceDue(order))}</b></td><td><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setPaymentHistoryOrderId(order.id)}>Historique</button><button type="button" className="secondary-button" disabled={balanceDue(order) === 0} onClick={() => { setPaymentOrderId(order.id); setPaymentAmount(""); }}>Encaisser</button></div></td></tr>)}</tbody></table></div>}{paymentOrderId && orders.some((order) => order.id === paymentOrderId) && <form className="new-order-form" onSubmit={recordOrderPayment}><h3>Nouveau versement — {orders.find((order) => order.id === paymentOrderId)?.garment}</h3><p>Reste à payer : {formatXof(balanceDue(orders.find((order) => order.id === paymentOrderId)!))}</p><label>Montant reçu (FCFA)<input required type="number" min="1" step="1" inputMode="numeric" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} placeholder="Ex. 5000" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => { setPaymentOrderId(null); setPaymentAmount(""); }}>Annuler</button><button type="submit" className="primary-button">Confirmer le versement</button></div></form>}{paymentHistoryOrderId && orders.some((order) => order.id === paymentHistoryOrderId) && <section className="content-card"><div className="section-heading"><div><h2>Historique des versements</h2><p>{orders.find((order) => order.id === paymentHistoryOrderId)?.garment} · {clients.find((client) => client.id === orders.find((order) => order.id === paymentHistoryOrderId)?.clientId)?.name ?? "Client inconnu"}</p></div><button type="button" className="secondary-button" onClick={() => setPaymentHistoryOrderId(null)}>Fermer</button></div>{(orders.find((order) => order.id === paymentHistoryOrderId)?.payments ?? []).length === 0 ? <p className="empty-state">Aucun historique détaillé disponible pour cette ancienne commande. Son acompte historique reste pris en compte dans le solde et sera repris lors du prochain versement.</p> : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Libellé</th><th>Montant</th></tr></thead><tbody>{(orders.find((order) => order.id === paymentHistoryOrderId)?.payments ?? []).map((payment) => <tr key={payment.id}><td>{payment.paidAt}</td><td>{payment.note || "Versement"}</td><td>{formatXof(payment.amount)}</td></tr>)}</tbody></table></div>}</section>}

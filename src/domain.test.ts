@@ -370,4 +370,12 @@ describe("validation des dépenses", () => {
     expect(isExpenseListValid([{ ...expense, description: "" }])).toBe(false);
     expect(isExpenseListValid([expense, expense])).toBe(false);
   });
+
+  it("conserve une dépense annulée avec date et motif, sans accepter une annulation incomplète", () => {
+    expect(isExpenseListValid([{ ...expense, voidedAt: "2026-10-28", voidReason: "Saisie en double" }])).toBe(true);
+    expect(isExpenseListValid([{ ...expense, voidedAt: "2026-02-31", voidReason: "Erreur" }])).toBe(false);
+    expect(isExpenseListValid([{ ...expense, voidedAt: "2026-10-28" }])).toBe(false);
+    expect(isExpenseListValid([{ ...expense, voidReason: "Erreur" }])).toBe(false);
+    expect(isExpenseListValid([{ ...expense, voidedAt: "2026-10-28", voidReason: " " }])).toBe(false);
+  });
 });
