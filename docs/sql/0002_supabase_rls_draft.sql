@@ -6,6 +6,7 @@
 -- Modèle d'accès :
 -- * l'identité vient uniquement de auth.uid();
 -- * chaque donnée métier est isolée par atelier_id + appartenance active;
+-- * les fonctions SECURITY DEFINER d'autorisation évitent la récursion RLS;
 -- * un utilisateur peut créer un atelier et sa propre appartenance propriétaire;
 -- * les membres ne peuvent pas se donner eux-mêmes un rôle élevé;
 -- * les paiements sont en écriture append-only depuis le client (pas d'UPDATE/DELETE).
@@ -36,18 +37,52 @@ REVOKE ALL ON public.atelier, public.atelier_membre, public.client,
   public.mensuration, public.commande, public.paiement FROM anon;
 REVOKE UPDATE, DELETE ON public.paiement FROM authenticated;
 
+-- Fonctions d'autorisation SECURITY DEFINER pour éviter la récursion RLS
+-- lorsqu'une politique consulte atelier_membre. Elles ne prennent jamais un
+-- user_id fourni par le client : l'identité vient uniquement de auth.uid().
+CREATE OR REPLACE FUNCTION public.is_active_atelier_member(p_atelier_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $
+  SELECT EXISTS (
+    SELECT 1 FROM public.atelier_membre m
+    WHERE m.atelier_id = p_atelier_id
+      AND m.user_id = (SELECT auth.uid())
+      AND m.actif
+  );
+$;
+
+CREATE OR REPLACE FUNCTION public.is_active_atelier_owner(p_atelier_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $
+  SELECT EXISTS (
+    SELECT 1 FROM public.atelier_membre m
+    WHERE m.atelier_id = p_atelier_id
+      AND m.user_id = (SELECT auth.uid())
+      AND m.actif
+      AND m.role = 'proprietaire'
+  );
+$;
+
+REVOKE ALL ON FUNCTION public.is_active_atelier_member(uuid) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.is_active_atelier_owner(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_active_atelier_member(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_active_atelier_owner(uuid) TO authenticated;
+
 -- Un atelier est créé par un utilisateur authentifié; created_by ne peut pas
 -- être attribué à quelqu'un d'autre et ne peut pas être modifié après création.
 CREATE POLICY atelier_select_member_or_creator ON public.atelier
   FOR SELECT TO authenticated
   USING (
     created_by = (SELECT auth.uid())
-    OR EXISTS (
-      SELECT 1 FROM public.atelier_membre m
-      WHERE m.atelier_id = atelier.id
-        AND m.user_id = (SELECT auth.uid())
-        AND m.actif
-    )
+    OR (SELECT public.is_active_atelier_member(atelier.id))
   );
 
 CREATE POLICY atelier_insert_self ON public.atelier
@@ -56,29 +91,23 @@ CREATE POLICY atelier_insert_self ON public.atelier
 
 CREATE POLICY atelier_update_member ON public.atelier
   FOR UPDATE TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM public.atelier_membre m
-    WHERE m.atelier_id = atelier.id
-      AND m.user_id = (SELECT auth.uid())
-      AND m.actif
-      AND m.role = 'proprietaire'
-  ))
-  WITH CHECK (created_by = (SELECT auth.uid()) OR EXISTS (
-    SELECT 1 FROM public.atelier_membre m
-    WHERE m.atelier_id = atelier.id
-      AND m.user_id = (SELECT auth.uid())
-      AND m.actif
-      AND m.role = 'proprietaire'
-  ));
+  USING ((SELECT public.is_active_atelier_owner(atelier.id)))
+  WITH CHECK (
+    created_by = (SELECT auth.uid())
+    OR (SELECT public.is_active_atelier_owner(atelier.id))
+  );
 
 -- La lecture de l'atelier par son créateur avant sa première appartenance est
 -- nécessaire pour éviter un blocage circulaire lors de l'inscription initiale.
 -- Un utilisateur ne lit que ses propres appartenances. La première appartenance
 -- doit être propriétaire de l'atelier qu'il vient de créer. Les propriétaires
 -- existants peuvent ajouter des membres de rôle non-propriétaire.
-CREATE POLICY atelier_membre_select_self ON public.atelier_membre
+CREATE POLICY atelier_membre_select_self_or_owner ON public.atelier_membre
   FOR SELECT TO authenticated
-  USING (user_id = (SELECT auth.uid()));
+  USING (
+    user_id = (SELECT auth.uid())
+    OR (SELECT public.is_active_atelier_owner(atelier_membre.atelier_id))
+  );
 
 CREATE POLICY atelier_membre_insert_owner_or_invited_member ON public.atelier_membre
   FOR INSERT TO authenticated
@@ -95,66 +124,32 @@ CREATE POLICY atelier_membre_insert_owner_or_invited_member ON public.atelier_me
     OR
     (
       role IN ('gestionnaire', 'employe')
-      AND EXISTS (
-        SELECT 1 FROM public.atelier_membre owner_membership
-        WHERE owner_membership.atelier_id = atelier_membre.atelier_id
-          AND owner_membership.user_id = (SELECT auth.uid())
-          AND owner_membership.role = 'proprietaire'
-          AND owner_membership.actif
-      )
+      AND (SELECT public.is_active_atelier_owner(atelier_membre.atelier_id))
     )
   );
 
 -- Les données métier ne sont accessibles qu'aux membres actifs de leur atelier.
 CREATE POLICY client_member_access ON public.client
   FOR ALL TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM public.atelier_membre m
-    WHERE m.atelier_id = client.atelier_id
-      AND m.user_id = (SELECT auth.uid()) AND m.actif
-  ))
-  WITH CHECK (EXISTS (
-    SELECT 1 FROM public.atelier_membre m
-    WHERE m.atelier_id = client.atelier_id
-      AND m.user_id = (SELECT auth.uid()) AND m.actif
-  ));
+  USING ((SELECT public.is_active_atelier_member(client.atelier_id)))
+  WITH CHECK ((SELECT public.is_active_atelier_member(client.atelier_id)));
 
 CREATE POLICY mensuration_member_access ON public.mensuration
   FOR ALL TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM public.atelier_membre m
-    WHERE m.atelier_id = mensuration.atelier_id
-      AND m.user_id = (SELECT auth.uid()) AND m.actif
-  ))
-  WITH CHECK (EXISTS (
-    SELECT 1 FROM public.atelier_membre m
-    WHERE m.atelier_id = mensuration.atelier_id
-      AND m.user_id = (SELECT auth.uid()) AND m.actif
-  ));
+  USING ((SELECT public.is_active_atelier_member(mensuration.atelier_id)))
+  WITH CHECK ((SELECT public.is_active_atelier_member(mensuration.atelier_id)));
 
 CREATE POLICY commande_member_access ON public.commande
   FOR ALL TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM public.atelier_membre m
-    WHERE m.atelier_id = commande.atelier_id
-      AND m.user_id = (SELECT auth.uid()) AND m.actif
-  ))
-  WITH CHECK (EXISTS (
-    SELECT 1 FROM public.atelier_membre m
-    WHERE m.atelier_id = commande.atelier_id
-      AND m.user_id = (SELECT auth.uid()) AND m.actif
-  ));
+  USING ((SELECT public.is_active_atelier_member(commande.atelier_id)))
+  WITH CHECK ((SELECT public.is_active_atelier_member(commande.atelier_id)));
 
 -- Paiements : le navigateur peut lire et ajouter des événements, jamais les
 -- réécrire ou les effacer. Les remboursements/corrections exigeront une fonction
 -- dédiée et auditée avant d'activer ce parcours dans l'interface.
 CREATE POLICY paiement_member_select ON public.paiement
   FOR SELECT TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM public.atelier_membre m
-    WHERE m.atelier_id = paiement.atelier_id
-      AND m.user_id = (SELECT auth.uid()) AND m.actif
-  ));
+  USING ((SELECT public.is_active_atelier_member(paiement.atelier_id)));
 
 CREATE POLICY paiement_member_insert ON public.paiement
   FOR INSERT TO authenticated
