@@ -25,7 +25,8 @@ ALTER TABLE public.paiement ENABLE ROW LEVEL SECURITY;
 
 -- Accès explicites : les politiques RLS restent obligatoires en plus des GRANT.
 GRANT USAGE ON SCHEMA public TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.atelier TO authenticated;
+GRANT SELECT, INSERT ON public.atelier TO authenticated;
+GRANT UPDATE (nom, telephone, ville, devise) ON public.atelier TO authenticated;
 GRANT SELECT, INSERT ON public.atelier_membre TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.client TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.mensuration TO authenticated;
