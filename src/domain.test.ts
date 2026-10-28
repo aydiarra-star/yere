@@ -9,6 +9,23 @@ const client: Client = {
   measurement: { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", note: "" }
 };
 
+describe("compatibilité du type de travail des commandes", () => {
+  const validOrder = { id: "order-1", clientId: "client-1", garment: "Pantalon", dueDate: "2026-11-05", price: 10000, deposit: 0, status: "À préparer" };
+
+  it("accepte les commandes de confection et de retouche", () => {
+    expect(isOrderListValid([{ ...validOrder, kind: "confection" }])).toBe(true);
+    expect(isOrderListValid([{ ...validOrder, kind: "retouche" }])).toBe(true);
+  });
+
+  it("conserve la compatibilité avec les anciennes commandes sans type", () => {
+    expect(isOrderListValid([validOrder])).toBe(true);
+  });
+
+  it("refuse un type de travail inconnu dans les données persistées", () => {
+    expect(isOrderListValid([{ ...validOrder, kind: "unknown" }])).toBe(false);
+  });
+});
+
 describe("validation des données restaurées", () => {
   it("accepte une liste de clients correctement structurée", () => {
     expect(isClientListValid([client])).toBe(true);

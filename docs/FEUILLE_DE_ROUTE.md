@@ -20,6 +20,7 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 - [x] Auditer l'onboarding actuel et proposer les cinq métiers sans dupliquer les parcours.
 - [x] Définir les valeurs contrôlées du profil métier et préserver la compatibilité avec les profils locaux existants.
 - [x] Adapter l'accueil et les raccourcis selon le profil, tout en gardant le socle commun accessible.
+- [x] Distinguer les commandes de confection/création des retouches dans le même modèle de commande, avec compatibilité des anciennes données.
 - [ ] Vérifier que les fonctions d'équipe peuvent servir toute activité qui travaille avec des collaborateurs.
 - [x] Ajouter des tests pour le changement de profil, les activités secondaires et la compatibilité des données.
 - [ ] Ajouter des tests d'intégration confirmant l'absence de duplication des entités communes.

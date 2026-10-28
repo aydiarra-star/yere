@@ -113,6 +113,8 @@ export type OrderPayment = {
 export type Order = {
   id: string;
   clientId: string;
+  /** Optional for backward compatibility: distinguish tailoring work from a retouch. */
+  kind?: "confection" | "retouche";
   garment: string;
   dueDate: string;
   orderedAt?: string;
@@ -129,6 +131,7 @@ export function isOrderListValid(value: unknown): value is Order[] {
     && typeof item.id === "string" && item.id.length > 0
     && typeof item.clientId === "string" && item.clientId.length > 0
     && typeof item.garment === "string" && item.garment.trim().length > 0
+    && (item.kind === undefined || item.kind === "confection" || item.kind === "retouche")
     && isCalendarDate(item.dueDate)
     && (item.orderedAt === undefined || isCalendarDate(item.orderedAt))
     && typeof item.price === "number" && Number.isSafeInteger(item.price) && item.price > 0
