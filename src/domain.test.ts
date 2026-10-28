@@ -387,7 +387,8 @@ describe("stock et mouvements", () => {
   it("valide les articles et mouvements correctement structurés", () => {
     expect(isStockItemListValid([item])).toBe(true);
     expect(isStockMovementListValid([entry])).toBe(true);
-    expect(areStockRelationsValid([item], [entry])).toBe(true);
+    expect(areStockRelationsValid([{ ...item, quantity: 17.5 }], [entry])).toBe(true);
+    expect(areStockRelationsValid([item], [entry])).toBe(false);
   });
 
   it("refuse les quantités négatives, les dates invalides et les identifiants dupliqués", () => {
