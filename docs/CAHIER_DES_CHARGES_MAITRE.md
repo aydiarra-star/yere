@@ -271,3 +271,39 @@ Ces décisions doivent être prises à partir du dépôt, des contraintes techni
 ## Banque d'idées stratégiques (hors périmètre automatique du MVP)
 
 La vision long terme, les concepts « Que dois-je faire aujourd'hui ? », client VIP, fiche client enrichie, mémoire de l'atelier, bibliothèque de mensurations, calculateur de prix, carnet des réussites, calendrier des saisons couture, portfolio Avant/Après, collections, score de santé de l'atelier, tendances anonymisées et commandes diaspora sont conservés dans [la banque d'idées stratégiques](./BANQUE_IDEES_STRATEGIQUES.md). Ce document est une réserve d'idées, pas une autorisation de développer toutes les fonctionnalités immédiatement. Chaque proposition doit passer le filtre « plus simple que le cahier, plus rapide que le cahier, apporte quelque chose que le cahier ne peut pas faire » et être priorisée selon les retours terrain. Les fondations de sécurité, sauvegarde/restauration, isolation multi-atelier et fiabilité des données restent prioritaires.
+
+## 4.7 Marketplace YÉRÉ — catalogue mode et approvisionnement
+
+**Objectif :** réunir dans une vitrine commune les vêtements confectionnés proposés à la vente et les produits d'approvisionnement utiles aux tailleurs. La marketplace n'est pas un simple espace fournisseur et ne doit pas être présentée comme opérationnelle tant que le catalogue public et les comptes sécurisés ne sont pas reliés au backend.
+
+### Deux parcours vendeur indépendants
+- **Tailleur / créateur :** créer un compte vendeur, compléter son profil et sa boutique, publier des vêtements déjà confectionnés (boubous, robes, ensembles, tenues traditionnelles, prêt-à-porter), gérer des collections et albums de créations, indiquer photos, tailles, couleurs, prix, disponibilité et zone de vente.
+- **Fournisseur / commerçant :** créer un compte vendeur, compléter son profil et sa boutique, publier tissus et bazin, fils, aiguilles, boutons, fermetures, mercerie, outils et matériaux de couture, ainsi que les produits d'épicerie pertinents pour les ateliers. Chaque offre doit préciser prix, unité, stock/disponibilité, conditionnement et zone de livraison quand applicable.
+- Les deux types de vendeur doivent pouvoir créer et gérer leur compte sans être redirigés automatiquement l'un vers l'autre. Le choix du type de vendeur doit être explicite et modifiable selon des règles de compte documentées.
+- Les visiteurs/acheteurs doivent pouvoir parcourir et filtrer les catégories sans devoir être tailleur ou fournisseur. La navigation vers « publier une création » ou « publier une offre » doit ouvrir un formulaire utilisable, avec erreurs de validation lisibles, et rester dans le parcours choisi.
+
+### Catalogue et expérience responsive
+- Une marketplace unique, avec entrées visuelles distinctes « Mode et créations » et « Tissus, mercerie et approvisionnement ».
+- Recherche et filtres minimum : catégorie, type de vendeur, ville/zone, fourchette de prix et disponibilité.
+- Les fiches publiques affichent photos, titre, description, prix, vendeur et zone. Ne pas afficher d'annonces privées, brouillons ou vendeurs suspendus.
+- Prévoir des états vides utiles, chargement, erreur réseau, annonces indisponibles et suppression/édition avec confirmation.
+- L'interface doit fonctionner sur téléphone, tablette et ordinateur, avec navigation clavier, libellés accessibles et boutons assez grands pour le tactile.
+
+### Backend et sécurité — critères bloquants
+- Authentification réelle et autorisation côté serveur ; le type de compte et la propriété d'une boutique ne doivent jamais être déterminés uniquement par des champs contrôlés dans le navigateur.
+- Modèle de données partagé : comptes/profils vendeurs, boutiques, annonces, catégories, médias, stock, zones de livraison et commandes. Conserver une relation claire entre vendeur et chaque ressource.
+- Isolation par propriétaire : un vendeur peut créer, lire, modifier et retirer uniquement ses propres brouillons et annonces ; les visiteurs ne lisent que les annonces publiées. Tester explicitement les accès croisés entre deux comptes.
+- Stockage d'images avec limites de taille/type, contrôle des fichiers et règles d'accès adaptées ; ne pas dépendre d'une simple URL de photo collée par l'utilisateur pour le fonctionnement final.
+- Modération, signalement, désactivation d'annonce, prévention du spam et règles de publication à définir avant ouverture publique.
+- Les commandes, paiements, frais, remboursements et livraisons constituent un lot distinct : ne pas afficher de bouton d'achat ou de confirmation de commande comme fonctionnel avant intégration et tests de bout en bout.
+- Sauvegarde, restauration, journaux utiles, politique de suppression/export et documentation support avant les pilotes réels.
+
+### Étapes de livraison
+1. **Interface locale** : formulaires utilisables et annonces persistées dans le navigateur ; avertissement explicite qu'elles ne sont pas publiques.
+2. **Fondations serveur** : choisir et approuver le fournisseur de backend, créer le schéma, authentification, politiques d'accès et stockage des médias.
+3. **Catalogue partagé** : lecture publique des annonces publiées, gestion propriétaire des annonces, recherche/filtres, validation et tests d'accès croisés.
+4. **Commandes** : panier ou demande de contact, commandes, disponibilité/stock et notifications uniquement après définition des règles commerciales et des responsabilités.
+5. **Paiements et logistique** : intégrations séparément approuvées, essais complets, sécurité et procédures de remboursement/litige.
+
+**État actuel :** les formulaires et annonces locales de la vitrine sont une préparation d'interface. Il n'existe pas encore de comptes marketplace sécurisés ni de catalogue public partagé. Le passage à l'étape 2 nécessite une décision explicite sur l'organisation, le fournisseur et les coûts du backend.
+
