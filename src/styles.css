@@ -2051,3 +2051,135 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .marketplace-product-card { grid-template-columns: minmax(0, 82px) minmax(0, 1fr); }
   .marketplace-product-copy { padding: 8px; }
 }
+
+
+/* Finition UI demandée : bottom bar bleue, pictogrammes blancs et cartes sans débordement. */
+.mobile-bottom-nav {
+  background: linear-gradient(105deg, #1557c0 0%, #1769df 55%, #2878ed 100%) !important;
+  border-top: 1px solid rgba(255,255,255,.22) !important;
+  box-shadow: 0 -8px 28px rgba(18, 73, 157, .22) !important;
+}
+.mobile-bottom-nav .mobile-nav-item,
+.mobile-bottom-nav .mobile-nav-item:visited {
+  color: rgba(255,255,255,.88) !important;
+  border-radius: 11px !important;
+  background: transparent !important;
+}
+.mobile-bottom-nav .mobile-nav-item > span,
+.mobile-bottom-nav .mobile-nav-item > span svg,
+.mobile-bottom-nav .mobile-nav-item > small {
+  color: #fff !important;
+  stroke: #fff !important;
+}
+.mobile-bottom-nav .mobile-nav-item > span {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 9px;
+}
+.mobile-bottom-nav .mobile-nav-item > span svg {
+  width: 22px !important;
+  height: 22px !important;
+  stroke-width: 2.1;
+}
+.mobile-bottom-nav .mobile-nav-item.active {
+  color: #fff !important;
+  background: rgba(255,255,255,.17) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.14);
+}
+.mobile-bottom-nav .mobile-nav-item.active::before {
+  top: -7px !important;
+  width: 36px !important;
+  height: 4px !important;
+  border-radius: 0 0 5px 5px !important;
+  background: #fff !important;
+}
+.mobile-bottom-nav .mobile-nav-item.active > span {
+  background: rgba(255,255,255,.16);
+}
+.mobile-bottom-nav .mobile-nav-item.active > span,
+.mobile-bottom-nav .mobile-nav-item.active > span svg,
+.mobile-bottom-nav .mobile-nav-item.active > small {
+  color: #fff !important;
+  stroke: #fff !important;
+}
+.mobile-bottom-nav .mobile-nav-item > small {
+  font-weight: 600 !important;
+  font-size: 10.5px !important;
+  letter-spacing: .05px;
+}
+.content-card, .stat-card, .cash-summary, .daily-assistant,
+.today-snapshot, .snapshot-item, .bottom-grid, .quick-card, .tip-card,
+.order-card, .reminders-intro, .reminder-card, .message-preview,
+.marketplace-hero, .marketplace-category-card, .marketplace-product-card {
+  min-width: 0;
+  max-width: 100%;
+}
+.content-card, .stat-card, .cash-summary, .daily-assistant,
+.reminders-intro, .reminder-card, .message-preview {
+  overflow-wrap: anywhere;
+}
+.content-card img, .content-card svg, .content-card canvas {
+  max-width: 100%;
+}
+.daily-assistant, .today-snapshot, .snapshot-item,
+.activity-report, .monthly-activity, .activity-summary,
+.monthly-report, .report-card, .report-grid {
+  min-width: 0;
+  max-width: 100%;
+}
+.activity-report, .monthly-activity, .activity-summary, .monthly-report, .report-card {
+  border: 1px solid #e2eaf7;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(23, 59, 120, .055);
+  padding: clamp(14px, 2vw, 22px);
+}
+.activity-report h2, .monthly-activity h2, .activity-summary h2,
+.monthly-report h2, .report-card h2 {
+  color: #163f82;
+  font-size: clamp(15px, 1.5vw, 18px);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.activity-report p, .monthly-activity p, .activity-summary p,
+.monthly-report p, .report-card p {
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.report-grid, .monthly-activity-grid, .activity-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.report-grid > *, .monthly-activity-grid > *, .activity-metrics > * {
+  min-width: 0;
+  max-width: 100%;
+}
+@media (max-width: 760px) {
+  .mobile-bottom-nav {
+    padding: 8px 5px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .mobile-bottom-nav .mobile-nav-item {
+    min-height: 58px !important;
+    padding: 7px 1px 5px !important;
+  }
+  .mobile-bottom-nav .mobile-nav-item > small {
+    font-size: 10px !important;
+  }
+  .daily-assistant, .today-snapshot, .activity-report, .monthly-activity,
+  .activity-summary, .monthly-report, .report-card, .report-grid,
+  .monthly-activity-grid, .activity-metrics {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .report-grid, .monthly-activity-grid, .activity-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .content-card { padding-left: 14px; padding-right: 14px; }
+  .section-heading > *, .stat-top > *, .snapshot-item > * {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}
