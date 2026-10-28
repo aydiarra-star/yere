@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, saveMeasurementVersion, type Client, type Measurement, type Order } from "./domain";
+import { addOrderPayment, areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, saveMeasurementVersion, totalPaid, type Client, type Measurement, type Order } from "./domain";
 
 const client: Client = {
   id: "c-1",
@@ -305,5 +305,41 @@ describe("assistant quotidien", () => {
   it("renvoie une liste vide si la date du jour est invalide", async () => {
     const { getDailyTasks } = await import("./domain");
     expect(getDailyTasks(clients, orders, "aujourd'hui")).toEqual([]);
+  });
+});
+
+describe("historique des paiements", () => {
+  const order: Order = {
+    id: "payment-order", clientId: "c-1", garment: "Boubou", dueDate: "2026-11-10",
+    orderedAt: "2026-10-20", price: 30000, deposit: 10000, status: "En confection"
+  };
+
+  it("conserve la compatibilité des commandes historiques avec un seul acompte", () => {
+    expect(totalPaid(order)).toBe(10000);
+    expect(balanceDue(order)).toBe(20000);
+    expect(isOrderListValid([order])).toBe(true);
+  });
+
+  it("migre l'acompte historique dans l'historique lors du prochain paiement", () => {
+    const updated = addOrderPayment(order, { id: "pay-2", amount: 5000, paidAt: "2026-10-27", note: "Deuxième versement" });
+    expect(updated).not.toBeNull();
+    expect(updated?.payments).toHaveLength(2);
+    expect(totalPaid(updated!)).toBe(15000);
+    expect(balanceDue(updated!)).toBe(15000);
+    expect(updated?.payments?.[0].amount).toBe(10000);
+  });
+
+  it("refuse un paiement supérieur au reste dû, nul, daté invalidement ou dupliqué", () => {
+    expect(addOrderPayment(order, { id: "too-much", amount: 20001, paidAt: "2026-10-27" })).toBeNull();
+    expect(addOrderPayment(order, { id: "zero", amount: 0, paidAt: "2026-10-27" })).toBeNull();
+    expect(addOrderPayment(order, { id: "bad-date", amount: 100, paidAt: "2026-02-31" })).toBeNull();
+    const first = addOrderPayment(order, { id: "same", amount: 1000, paidAt: "2026-10-27" })!;
+    expect(addOrderPayment(first, { id: "same", amount: 1000, paidAt: "2026-10-27" })).toBeNull();
+  });
+
+  it("refuse un historique restauré avec des paiements incohérents", () => {
+    expect(isOrderListValid([{ ...order, payments: [{ id: "p1", amount: 25000, paidAt: "2026-10-27" }, { id: "p2", amount: 6000, paidAt: "2026-10-27" }] }])).toBe(false);
+    expect(isOrderListValid([{ ...order, payments: [{ id: "p1", amount: 5000, paidAt: "2026-02-31" }] }])).toBe(false);
+    expect(isOrderListValid([{ ...order, payments: [{ id: "p1", amount: 5000, paidAt: "2026-10-27" }, { id: "p1", amount: 1000, paidAt: "2026-10-28" }] }])).toBe(false);
   });
 });
