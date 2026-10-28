@@ -209,7 +209,7 @@ function App() {
       if (!isClientListValid(data.clients)
         || !isOrderListValid(data.orders)
         || !areClientOrderRelationsValid(data.clients, data.orders)
-        || (parsed.schemaVersion >= 2 && !isExpenseListValid(data.expenses))
+        || ((parsed.schemaVersion === 2 || parsed.schemaVersion === 3) && !isExpenseListValid(data.expenses))
         || (parsed.schemaVersion === 3 && (!isStockItemListValid(data.stockItems)
           || !isStockMovementListValid(data.stockMovements)
           || !areStockRelationsValid(data.stockItems, data.stockMovements)))
