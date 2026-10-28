@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
-import { areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
+import { addOrderPayment, areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, orderStatuses, saveMeasurementVersion, totalPaid, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
 import { usePersistentState } from "./usePersistentState";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", arm: "", neck: "", thigh: "", legLength: "", note: "" };
@@ -61,6 +61,8 @@ function App() {
   const [newOrderDueDate, setNewOrderDueDate] = useState(() => new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
   const [newOrderPrice, setNewOrderPrice] = useState("");
   const [newOrderDeposit, setNewOrderDeposit] = useState("0");
+  const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -134,6 +136,7 @@ function App() {
       orderedAt: new Date().toISOString().slice(0, 10),
       price,
       deposit,
+      payments: deposit > 0 ? [{ id: "PAY-" + Date.now() + "-initial", amount: deposit, paidAt: new Date().toISOString().slice(0, 10), note: "Acompte initial" }] : [],
       status: "À préparer"
     };
     setOrders((current) => [order, ...current]);
@@ -199,7 +202,7 @@ function App() {
     });
   }
 
-  function updateStatus(orderId: string, status: OrderStatus) {
+  function recordOrderPayment(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault();\n    const order = orders.find((item) => item.id === paymentOrderId);\n    const amount = Number(paymentAmount);\n    if (!order || !Number.isSafeInteger(amount) || amount <= 0) { setNotice("Saisissez un montant entier supérieur à zéro."); return; }\n    const updated = addOrderPayment(order, { id: "PAY-" + Date.now(), amount, paidAt: new Date().toISOString().slice(0, 10), note: "Versement enregistré manuellement" });\n    if (!updated) { setNotice("Paiement refusé : vérifiez le montant restant dû. Un paiement ne peut pas dépasser le solde."); return; }\n    setOrders((current) => current.map((item) => item.id === order.id ? updated : item));\n    setPaymentAmount(""); setPaymentOrderId(null);\n    setNotice("Versement de " + formatXof(amount) + " enregistré sur cet appareil. Aucune copie serveur n’est active.");\n  }\n\n  function updateStatus(orderId: string, status: OrderStatus) {
     setOrders((current) => current.map((order) => order.id === orderId ? { ...order, status } : order));
   }
 
