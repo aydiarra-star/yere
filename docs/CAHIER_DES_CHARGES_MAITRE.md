@@ -2,11 +2,19 @@
 
 **Statut :** référence produit initiale, à affiner après audit technique et entretiens terrain.  
 **Marché de départ :** Sénégal.  
-**Public prioritaire :** tailleurs indépendants et ateliers de couture.  
-**Principe directeur :** aider chaque tailleur à mieux travailler, gagner du temps et comprendre ses finances avant d'ajouter une marketplace.
+**Public cible au lancement :** tailleurs uniquement.  
+**Principe directeur :** aider chaque professionnel de la couture à mieux travailler, gagner du temps et comprendre ses finances avant d'ajouter une marketplace.
 
 ## 1. Vision
 Construire un outil de gestion quotidien fiable, simple et abordable pour les ateliers de couture, puis un écosystème qui relie ateliers, fournisseurs et clients au Sénégal et, à terme, dans la diaspora.
+
+## 1.1 Public cible et principe d'architecture
+
+YÉRÉ s'adresse exclusivement aux tailleurs pour le lancement. Il s'agit d'une seule plateforme avec un socle commun et des modules activés ou mis en avant selon le métier et le mode de travail. Le métier n'est pas le type de structure : un styliste ou une couturière peut aussi diriger une équipe.
+
+Le cœur produit comprend clients, mensurations, commandes, suivi de confection, paiements, caisse, dépenses et stocks. Les parcours pour les autres métiers, les fournisseurs autonomes et la marketplace sont reportés après validation du produit de base. Le détail et les critères d'acceptation sont définis dans [Profils métiers et socle commun](PROFILS_METIERS_ET_SOCLE_COMMUN.md).
+
+**Règle :** ne jamais dupliquer l'application ou les données communes pour créer une version distincte par métier.
 
 ## 2. Priorités produit
 - **P0 — Fondations :** audit du dépôt, décisions techniques justifiées, sécurité, modèle de données, tests et sauvegardes.

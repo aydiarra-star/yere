@@ -10,6 +10,8 @@ export type Measurement = {
   neck?: string;
   thigh?: string;
   legLength?: string;
+  /** Saved with each measurement version so the form can adapt to the garment. */
+  garmentType?: string;
   note: string;
 };
 
@@ -34,7 +36,7 @@ export function saveMeasurementVersion(
   measuredAt: string,
   versionId: string
 ): Client {
-  const hasCurrentValues = Object.values(client.measurement).some((value) => value.trim() !== "");
+  const hasCurrentValues = [client.measurement.bust, client.measurement.waist, client.measurement.hips, client.measurement.shoulder, client.measurement.sleeve, client.measurement.length, client.measurement.arm ?? "", client.measurement.neck ?? "", client.measurement.thigh ?? "", client.measurement.legLength ?? "", client.measurement.note].some((value) => value.trim() !== "");
   const history = client.measurementHistory ?? (hasCurrentValues
     ? [{ id: `legacy-${client.id}`, measuredAt: client.createdAt, measurement: client.measurement }]
     : []);
@@ -73,7 +75,7 @@ function isMeasurementShape(value: unknown): value is Measurement {
   return isRecord(value)
     && ["bust", "waist", "hips", "shoulder", "sleeve", "length", "note"]
       .every((key) => typeof value[key] === "string")
-    && ["arm", "neck", "thigh", "legLength"]
+    && ["arm", "neck", "thigh", "legLength", "garmentType"]
       .every((key) => value[key] === undefined || typeof value[key] === "string");
 }
 
@@ -84,29 +86,66 @@ export function isClientListValid(value: unknown): value is Client[] {
       || typeof item.name !== "string"
       || typeof item.phone !== "string"
       || !isCalendarDate(item.createdAt)
-      || !isMeasurementShape(item.measurement)) return false;
+      || !isMeasurementShape(item.measurement)
+      || !isMeasurementValid(item.measurement)) return false;
     if (item.measurementHistory === undefined) return true;
-    return Array.isArray(item.measurementHistory) && item.measurementHistory.every((version) =>
-      isRecord(version)
-      && typeof version.id === "string"
-      && isCalendarDate(version.measuredAt)
-      && isMeasurementShape(version.measurement)
-    );
+    return Array.isArray(item.measurementHistory)
+      && item.measurementHistory.every((version) =>
+        isRecord(version)
+        && typeof version.id === "string" && version.id.trim().length > 0
+        && isCalendarDate(version.measuredAt)
+        && isMeasurementShape(version.measurement)
+        && isMeasurementValid(version.measurement)
+      )
+      && new Set(item.measurementHistory.map((version) => (version as Record<string, unknown>).id)).size === item.measurementHistory.length;
   });
 }
 
 export type OrderStatus = "À préparer" | "En confection" | "Prêt" | "Livré";
 
+export type RetouchStage = "À examiner" | "En retouche" | "À essayer" | "Correction demandée" | "Terminée";
+
+export const retouchStages: RetouchStage[] = ["À examiner", "En retouche", "À essayer", "Correction demandée", "Terminée"];
+
+export type OrderPayment = {
+  id: string;
+  amount: number;
+  paidAt: string;
+  note?: string;
+};
+
 export type Order = {
   id: string;
   clientId: string;
+  /** Optional, immutable-at-creation copy of the client's measurements for this order. */
+  measurementSnapshot?: Measurement;
+  /** Local calendar date on which the order's measurement snapshot was captured. */
+  measurementSnapshotAt?: string;
+  /** Optional for backward compatibility: distinguish tailoring work from a retouch. */
+  kind?: "confection" | "retouche";
+  /** Optional retouch-only progress, separate from the general delivery status. */
+  retouchStage?: RetouchStage;
   garment: string;
   dueDate: string;
   orderedAt?: string;
   price: number;
   deposit: number;
+  /** Optional for backward compatibility with older local backups. */
+  payments?: OrderPayment[];
   status: OrderStatus;
 };
+
+/** Capture a validated, detached copy of a client's measurements for one order. */
+export function createOrderMeasurementSnapshot(
+  measurement: Measurement,
+  measuredAt: string
+): { measurementSnapshot: Measurement; measurementSnapshotAt: string } | null {
+  if (!isMeasurementShape(measurement) || !isMeasurementValid(measurement) || !isCalendarDate(measuredAt)) return null;
+  return {
+    measurementSnapshot: { ...measurement },
+    measurementSnapshotAt: measuredAt
+  };
+}
 
 export function isOrderListValid(value: unknown): value is Order[] {
   return Array.isArray(value) && value.every((item) =>
@@ -114,11 +153,29 @@ export function isOrderListValid(value: unknown): value is Order[] {
     && typeof item.id === "string" && item.id.length > 0
     && typeof item.clientId === "string" && item.clientId.length > 0
     && typeof item.garment === "string" && item.garment.trim().length > 0
+    && (item.kind === undefined || item.kind === "confection" || item.kind === "retouche")
+    && (item.retouchStage === undefined || (item.kind === "retouche" && retouchStages.some((stage) => stage === item.retouchStage)))
+    && ((item.measurementSnapshot === undefined && item.measurementSnapshotAt === undefined)
+      || (item.measurementSnapshot !== undefined && item.measurementSnapshotAt !== undefined
+        && isMeasurementShape(item.measurementSnapshot)
+        && isMeasurementValid(item.measurementSnapshot)
+        && isCalendarDate(item.measurementSnapshotAt)))
     && isCalendarDate(item.dueDate)
     && (item.orderedAt === undefined || isCalendarDate(item.orderedAt))
     && typeof item.price === "number" && Number.isSafeInteger(item.price) && item.price > 0
     && typeof item.deposit === "number" && Number.isSafeInteger(item.deposit)
     && item.deposit >= 0 && item.deposit <= item.price
+    && (item.payments === undefined || (
+      Array.isArray(item.payments)
+      && item.payments.every((payment) => isRecord(payment)
+        && typeof payment.id === "string" && payment.id.length > 0
+        && typeof payment.amount === "number" && Number.isSafeInteger(payment.amount) && payment.amount > 0
+        && isCalendarDate(payment.paidAt)
+        && (payment.note === undefined || typeof payment.note === "string"))
+      && new Set(item.payments.map((payment) => (payment as Record<string, unknown>).id)).size === item.payments.length
+      && item.payments.reduce((sum, payment) => sum + (payment as Record<string, unknown>).amount as number, 0) <= item.price
+      && item.payments.reduce((sum, payment) => sum + (payment as Record<string, unknown>).amount as number, 0) >= item.deposit
+    ))
     && typeof item.status === "string" && ["À préparer", "En confection", "Prêt", "Livré"].some((status) => status === item.status)
   );
 }
@@ -132,6 +189,105 @@ export function areClientOrderRelationsValid(clients: Client[], orders: Order[])
     && orders.every((order) => clientIds.has(order.clientId));
 }
 
+
+export type Expense = {
+  id: string;
+  spentAt: string;
+  category: string;
+  description: string;
+  amount: number;
+  /** A cancelled expense remains in the audit trail and is excluded from totals. */
+  voidedAt?: string;
+  voidReason?: string;
+};
+
+export function isExpenseListValid(value: unknown): value is Expense[] {
+  return Array.isArray(value) && value.every((item) =>
+    isRecord(item)
+    && typeof item.id === "string" && item.id.trim().length > 0
+    && isCalendarDate(item.spentAt)
+    && typeof item.category === "string" && item.category.trim().length > 0
+    && typeof item.description === "string" && item.description.trim().length > 0
+    && typeof item.amount === "number" && Number.isSafeInteger(item.amount) && item.amount > 0
+    && (item.voidedAt === undefined || isCalendarDate(item.voidedAt))
+    && (item.voidReason === undefined || (typeof item.voidReason === "string" && item.voidReason.trim().length > 0))
+    && ((item.voidedAt === undefined) === (item.voidReason === undefined))
+  ) && new Set(value.map((item) => (item as Record<string, unknown>).id)).size === value.length;
+}
+
+
+export type StockItem = {
+  id: string;
+  name: string;
+  unit: string;
+  quantity: number;
+  minimumQuantity: number;
+  createdAt: string;
+};
+
+export type StockMovement = {
+  id: string;
+  itemId: string;
+  type: "Entrée" | "Sortie";
+  quantity: number;
+  movedAt: string;
+  note?: string;
+};
+
+export function isStockItemListValid(value: unknown): value is StockItem[] {
+  return Array.isArray(value) && value.every((item) =>
+    isRecord(item)
+    && typeof item.id === "string" && item.id.trim().length > 0
+    && typeof item.name === "string" && item.name.trim().length > 0
+    && typeof item.unit === "string" && item.unit.trim().length > 0
+    && typeof item.quantity === "number" && Number.isFinite(item.quantity) && item.quantity >= 0
+    && typeof item.minimumQuantity === "number" && Number.isFinite(item.minimumQuantity) && item.minimumQuantity >= 0
+    && isCalendarDate(item.createdAt)
+  ) && new Set(value.map((item) => (item as Record<string, unknown>).id)).size === value.length;
+}
+
+export function isStockMovementListValid(value: unknown): value is StockMovement[] {
+  return Array.isArray(value) && value.every((item) =>
+    isRecord(item)
+    && typeof item.id === "string" && item.id.trim().length > 0
+    && typeof item.itemId === "string" && item.itemId.trim().length > 0
+    && (item.type === "Entrée" || item.type === "Sortie")
+    && typeof item.quantity === "number" && Number.isFinite(item.quantity) && item.quantity > 0
+    && isCalendarDate(item.movedAt)
+    && (item.note === undefined || typeof item.note === "string")
+  ) && new Set(value.map((item) => (item as Record<string, unknown>).id)).size === value.length;
+}
+
+export function areStockRelationsValid(items: StockItem[], movements: StockMovement[]): boolean {
+  const itemIds = new Set(items.map((item) => item.id));
+  if (itemIds.size !== items.length
+    || new Set(movements.map((movement) => movement.id)).size !== movements.length
+    || !movements.every((movement) => itemIds.has(movement.itemId))) return false;
+  return items.every((item) => {
+    const calculated = movements
+      .filter((movement) => movement.itemId === item.id)
+      .reduce((quantity, movement) => quantity + (movement.type === "Entrée" ? movement.quantity : -movement.quantity), 0);
+    return Math.abs(calculated - item.quantity) < 1e-8;
+  });
+}
+
+/** Record a stock movement atomically; refuse unknown items and exits that would create negative stock. */
+export function recordStockMovement(
+  items: StockItem[],
+  movements: StockMovement[],
+  movement: StockMovement
+): { items: StockItem[]; movements: StockMovement[] } | null {
+  if (!isStockMovementListValid([movement]) || movements.some((item) => item.id === movement.id)) return null;
+  const item = items.find((candidate) => candidate.id === movement.itemId);
+  if (!item) return null;
+  const nextQuantity = item.quantity + (movement.type === "Entrée" ? movement.quantity : -movement.quantity);
+  if (!Number.isFinite(nextQuantity) || nextQuantity < 0) return null;
+  return {
+    items: items.map((candidate) => candidate.id === item.id ? { ...candidate, quantity: nextQuantity } : candidate),
+    movements: [movement, ...movements]
+  };
+}
+
 export const orderStatuses: OrderStatus[] = [
   "À préparer",
   "En confection",
@@ -139,8 +295,31 @@ export const orderStatuses: OrderStatus[] = [
   "Livré"
 ];
 
-export function balanceDue(order: Pick<Order, "price" | "deposit">): number {
-  return Math.max(0, order.price - order.deposit);
+/** Total actually recorded as paid, supporting legacy orders with one deposit field. */
+export function totalPaid(order: Pick<Order, "deposit" | "payments">): number {
+  return order.payments === undefined
+    ? order.deposit
+    : order.payments.reduce((sum, payment) => sum + payment.amount, 0);
+}
+
+export function balanceDue(order: Pick<Order, "price" | "deposit" | "payments">): number {
+  return Math.max(0, order.price - totalPaid(order));
+}
+
+/** Append a payment without losing a legacy deposit; reject invalid dates and overpayments. */
+export function addOrderPayment(order: Order, payment: OrderPayment): Order | null {
+  if (!isOrderListValid([order])) return null;
+  if (!payment.id.trim() || !Number.isSafeInteger(payment.amount) || payment.amount <= 0
+    || !isCalendarDate(payment.paidAt)
+    || (payment.note !== undefined && typeof payment.note !== "string")) return null;
+  const existing = order.payments ?? (order.deposit > 0 ? [{
+    id: "legacy-deposit-" + order.id, amount: order.deposit,
+    paidAt: order.orderedAt ?? payment.paidAt, note: "Acompte initial (donnée historique)"
+  }] : []);
+  if (existing.some((item) => item.id === payment.id)) return null;
+  const paidSoFar = existing.reduce((sum, item) => sum + item.amount, 0);
+  if (payment.amount > order.price - paidSoFar) return null;
+  return { ...order, payments: [...existing, { ...payment }] };
 }
 
 /** Validate a new order before it enters the prototype's local state. */
@@ -255,6 +434,23 @@ export function getClientReminderSuggestions(
   return suggestions.sort((a, b) => b.daysSinceOrder - a.daysSinceOrder);
 }
 
+
+export type OrderDeliveryFilter = "all" | "overdue" | "upcoming";
+
+/** Filter active orders by delivery urgency; upcoming covers today through day seven. */
+export function filterOrdersByDelivery(orders: Order[], today: string, filter: OrderDeliveryFilter): Order[] {
+  if (filter === "all") return orders;
+  if (!isCalendarDate(today)) return [];
+  const todayTime = new Date(`${today}T12:00:00Z`).getTime();
+  const endTime = todayTime + 7 * 86_400_000;
+  return orders
+    .filter((order) => {
+      if (order.status === "Livré" || !isCalendarDate(order.dueDate)) return false;
+      const dueTime = new Date(`${order.dueDate}T12:00:00Z`).getTime();
+      return filter === "overdue" ? dueTime < todayTime : dueTime >= todayTime && dueTime <= endTime;
+    })
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+}
 
 export type DailyTask = {
   id: string;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, saveMeasurementVersion, type Client, type Measurement, type Order } from "./domain";
+import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, filterOrdersByDelivery, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, recordStockMovement, retouchStages, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type StockItem, type StockMovement } from "./domain";
 
 const client: Client = {
   id: "c-1",
@@ -8,6 +8,59 @@ const client: Client = {
   createdAt: "2026-10-27",
   measurement: { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", note: "" }
 };
+
+describe("compatibilité du type de travail des commandes", () => {
+  const validOrder = { id: "order-1", clientId: "client-1", garment: "Pantalon", dueDate: "2026-11-05", price: 10000, deposit: 0, status: "À préparer" };
+
+  it("accepte les commandes de confection et de retouche", () => {
+    expect(isOrderListValid([{ ...validOrder, kind: "confection" }])).toBe(true);
+    expect(isOrderListValid([{ ...validOrder, kind: "retouche" }])).toBe(true);
+  });
+
+  it("conserve la compatibilité avec les anciennes commandes sans type", () => {
+    expect(isOrderListValid([validOrder])).toBe(true);
+  });
+
+  it("refuse un type de travail inconnu dans les données persistées", () => {
+    expect(isOrderListValid([{ ...validOrder, kind: "unknown" }])).toBe(false);
+  });
+
+  it("accepte les étapes de retouche connues uniquement sur une retouche", () => {
+    for (const retouchStage of retouchStages) expect(isOrderListValid([{ ...validOrder, kind: "retouche", retouchStage }])).toBe(true);
+    expect(isOrderListValid([{ ...validOrder, kind: "retouche", retouchStage: "À livrer" }])).toBe(false);
+    expect(isOrderListValid([{ ...validOrder, kind: "confection", retouchStage: "À essayer" }])).toBe(false);
+    expect(isOrderListValid([{ ...validOrder, retouchStage: "À examiner" }])).toBe(false);
+  });
+
+  it("valide et conserve un instantané de mensurations daté sur la commande", () => {
+    const measurementSnapshot = { bust: "92", waist: "74", hips: "98", shoulder: "40", sleeve: "60", length: "140", note: "Coupe ample" };
+    expect(isOrderListValid([{ ...validOrder, measurementSnapshot, measurementSnapshotAt: "2026-10-28" }])).toBe(true);
+    expect(isOrderListValid([{ ...validOrder, measurementSnapshot }])).toBe(false);
+    expect(isOrderListValid([{ ...validOrder, measurementSnapshot: { ...measurementSnapshot, bust: "invalide" }, measurementSnapshotAt: "2026-10-28" }])).toBe(false);
+    expect(isOrderListValid([{ ...validOrder, measurementSnapshot, measurementSnapshotAt: "2026-02-31" }])).toBe(false);
+  });
+});
+
+describe("instantané des mensurations d'une commande", () => {
+  it("copie les mensurations sans partager l'objet du profil client", () => {
+    const current: Measurement = { bust: "92", waist: "74", hips: "98", shoulder: "40", sleeve: "60", length: "140", note: "Coupe ample" };
+    const snapshot = createOrderMeasurementSnapshot(current, "2026-10-28");
+    expect(snapshot).toEqual({
+      measurementSnapshot: { ...current },
+      measurementSnapshotAt: "2026-10-28"
+    });
+    current.bust = "100";
+    current.note = "Nouvelle préférence";
+    expect(snapshot?.measurementSnapshot.bust).toBe("92");
+    expect(snapshot?.measurementSnapshot.note).toBe("Coupe ample");
+  });
+
+  it("refuse un instantané avec des mensurations ou une date invalides", () => {
+    const current: Measurement = { bust: "92", waist: "74", hips: "98", shoulder: "40", sleeve: "60", length: "140", note: "" };
+    expect(createOrderMeasurementSnapshot({ ...current, bust: "invalide" }, "2026-10-28")).toBeNull();
+    expect(createOrderMeasurementSnapshot(current, "2026-02-31")).toBeNull();
+  });
+});
 
 describe("validation des données restaurées", () => {
   it("accepte une liste de clients correctement structurée", () => {
@@ -20,8 +73,27 @@ describe("validation des données restaurées", () => {
     expect(isClientListValid([legacyClient])).toBe(true);
   });
 
+  it("accepte le type de vêtement optionnel et conserve la compatibilité des données existantes", () => {
+    const garmentClient = { ...client, measurement: { ...client.measurement, garmentType: "Pantalon" } };
+    expect(isClientListValid([garmentClient])).toBe(true);
+    expect(isClientListValid([client])).toBe(true);
+  });
+
   it("refuse les nouvelles mesures si leur valeur n'est pas une chaîne", () => {
     expect(isClientListValid([{ ...client, measurement: { ...client.measurement, arm: 42 } }])).toBe(false);
+  });
+
+  it("refuse les mensurations non numériques dans les données persistées", () => {
+    expect(isClientListValid([{ ...client, measurement: { ...client.measurement, bust: "abc" } }])).toBe(false);
+    expect(isClientListValid([{ ...client, measurement: { ...client.measurement, waist: "-2" } }])).toBe(false);
+    expect(isClientListValid([{ ...client, measurement: { ...client.measurement, bust: "92.5" } }])).toBe(true);
+  });
+
+  it("refuse un historique de mensurations invalide ou avec des identifiants dupliqués", () => {
+    const validVersion = { id: "v-1", measuredAt: "2026-10-27", measurement: { ...client.measurement, bust: "92" } };
+    expect(isClientListValid([{ ...client, measurementHistory: [validVersion, { ...validVersion, id: "v-2", measurement: { ...validVersion.measurement, hips: "invalide" } }] }])).toBe(false);
+    expect(isClientListValid([{ ...client, measurementHistory: [validVersion, { ...validVersion, measuredAt: "2026-10-28" }] }])).toBe(false);
+    expect(isClientListValid([{ ...client, measurementHistory: [validVersion] }])).toBe(true);
   });
 
   it("refuse les clients dont les champs indispensables sont absents ou mal typés", () => {
@@ -53,6 +125,18 @@ describe("validation des données restaurées", () => {
     expect(isOrderListValid([{ ...order, status: "Inconnu" }])).toBe(false);
     expect(isOrderListValid([{ ...order, clientId: "" }])).toBe(false);
   });
+
+  it("refuse un historique de paiements inférieur à l’acompte déclaré", () => {
+    const order: Order = {
+      id: "order-1", clientId: "c-1", garment: "Boubou",
+      dueDate: "2026-11-01", price: 25000, deposit: 10000,
+      payments: [{ id: "pay-1", amount: 5000, paidAt: "2026-10-27" }],
+      status: "En confection"
+    };
+    expect(isOrderListValid([order])).toBe(false);
+    expect(isOrderListValid([{ ...order, payments: [{ id: "pay-1", amount: 10000, paidAt: "2026-10-27" }] }])).toBe(true);
+    expect(isOrderListValid([{ ...order, payments: [{ id: "pay-1", amount: 15000, paidAt: "2026-10-27" }] }])).toBe(true);
+  });
 });
 
 
@@ -76,6 +160,18 @@ describe("cohérence des données restaurées", () => {
   it("refuse les identifiants dupliqués", () => {
     expect(areClientOrderRelationsValid([...clients, clients[0]], orders)).toBe(false);
     expect(areClientOrderRelationsValid(clients, [...orders, orders[0]])).toBe(false);
+  });
+});
+
+describe("paiements de commande", () => {
+  it("refuse d’ajouter un versement sur une commande dont l’historique est incohérent", () => {
+    const order: Order = {
+      id: "o-invalid", clientId: "c-1", garment: "Boubou",
+      dueDate: "2026-11-01", price: 25000, deposit: 10000,
+      payments: [{ id: "p-1", amount: 5000, paidAt: "2026-10-27" }],
+      status: "À préparer"
+    };
+    expect(addOrderPayment(order, { id: "p-2", amount: 1000, paidAt: "2026-10-28" })).toBeNull();
   });
 });
 
@@ -151,17 +247,18 @@ describe("matchesClient", () => {
 
 describe("historique des mensurations", () => {
   const blankMeasurement: Measurement = {
-    bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", note: ""
+    bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", garmentType: "Tenue complète", note: ""
   };
 
   it("conserve la prise précédente lors d'un nouvel enregistrement", () => {
     const first: Measurement = { ...blankMeasurement, bust: "92", note: "Coupe ample" };
     const initialClient: Client = { ...client, measurement: first };
-    const next: Measurement = { ...first, bust: "94" };
+    const next: Measurement = { ...first, bust: "94", garmentType: "Boubou / robe" };
 
     const updated = saveMeasurementVersion(initialClient, next, "2026-10-27", "m-2");
 
     expect(updated.measurement.bust).toBe("94");
+    expect(updated.measurement.garmentType).toBe("Boubou / robe");
     expect(updated.measurementHistory).toHaveLength(2);
     expect(updated.measurementHistory?.[0].measurement.bust).toBe("92");
     expect(updated.measurementHistory?.[1].measurement.bust).toBe("94");
@@ -274,6 +371,30 @@ describe("suggestions de relance client", () => {
 });
 
 
+describe("filtrage des commandes selon l'échéance", () => {
+  const orders: Order[] = [
+    { id: "late", clientId: "c-1", garment: "Boubou en retard", dueDate: "2026-10-20", price: 10000, deposit: 0, status: "En confection" },
+    { id: "today", clientId: "c-1", garment: "Pantalon aujourd'hui", dueDate: "2026-10-28", price: 10000, deposit: 0, status: "À préparer" },
+    { id: "week", clientId: "c-1", garment: "Robe dans sept jours", dueDate: "2026-11-04", price: 10000, deposit: 0, status: "Prêt" },
+    { id: "later", clientId: "c-1", garment: "Boubou plus tard", dueDate: "2026-11-05", price: 10000, deposit: 0, status: "À préparer" },
+    { id: "delivered", clientId: "c-1", garment: "Tenue livrée", dueDate: "2026-10-19", price: 10000, deposit: 0, status: "Livré" }
+  ];
+
+  it("préserve la liste complète et trie les retards par échéance", () => {
+    expect(filterOrdersByDelivery(orders, "2026-10-28", "all")).toEqual(orders);
+    expect(filterOrdersByDelivery(orders, "2026-10-28", "overdue").map((order) => order.id)).toEqual(["late"]);
+  });
+
+  it("inclut aujourd'hui et le septième jour, sans inclure les livrées", () => {
+    expect(filterOrdersByDelivery(orders, "2026-10-28", "upcoming").map((order) => order.id)).toEqual(["today", "week"]);
+  });
+
+  it("ne retourne pas de résultats d'urgence pour une date de référence invalide", () => {
+    expect(filterOrdersByDelivery(orders, "2026-02-31", "overdue")).toEqual([]);
+    expect(filterOrdersByDelivery(orders, "2026-02-31", "upcoming")).toEqual([]);
+  });
+});
+
 describe("assistant quotidien", () => {
   const clients: Client[] = [{ ...client, id: "daily-client", name: "Awa Sow" }];
   const orders: Order[] = [
@@ -305,5 +426,108 @@ describe("assistant quotidien", () => {
   it("renvoie une liste vide si la date du jour est invalide", async () => {
     const { getDailyTasks } = await import("./domain");
     expect(getDailyTasks(clients, orders, "aujourd'hui")).toEqual([]);
+  });
+});
+
+describe("historique des paiements", () => {
+  const order: Order = {
+    id: "payment-order", clientId: "c-1", garment: "Boubou", dueDate: "2026-11-10",
+    orderedAt: "2026-10-20", price: 30000, deposit: 10000, status: "En confection"
+  };
+
+  it("conserve la compatibilité des commandes historiques avec un seul acompte", () => {
+    expect(totalPaid(order)).toBe(10000);
+    expect(balanceDue(order)).toBe(20000);
+    expect(isOrderListValid([order])).toBe(true);
+  });
+
+  it("migre l'acompte historique dans l'historique lors du prochain paiement", () => {
+    const updated = addOrderPayment(order, { id: "pay-2", amount: 5000, paidAt: "2026-10-27", note: "Deuxième versement" });
+    expect(updated).not.toBeNull();
+    expect(updated?.payments).toHaveLength(2);
+    expect(totalPaid(updated!)).toBe(15000);
+    expect(balanceDue(updated!)).toBe(15000);
+    expect(updated?.payments?.[0].amount).toBe(10000);
+  });
+
+  it("refuse un paiement supérieur au reste dû, nul, daté invalidement ou dupliqué", () => {
+    expect(addOrderPayment(order, { id: "too-much", amount: 20001, paidAt: "2026-10-27" })).toBeNull();
+    expect(addOrderPayment(order, { id: "zero", amount: 0, paidAt: "2026-10-27" })).toBeNull();
+    expect(addOrderPayment(order, { id: "bad-date", amount: 100, paidAt: "2026-02-31" })).toBeNull();
+    const first = addOrderPayment(order, { id: "same", amount: 1000, paidAt: "2026-10-27" })!;
+    expect(addOrderPayment(first, { id: "same", amount: 1000, paidAt: "2026-10-27" })).toBeNull();
+  });
+
+  it("refuse un historique restauré avec des paiements incohérents", () => {
+    expect(isOrderListValid([{ ...order, payments: [{ id: "p1", amount: 25000, paidAt: "2026-10-27" }, { id: "p2", amount: 6000, paidAt: "2026-10-27" }] }])).toBe(false);
+    expect(isOrderListValid([{ ...order, payments: [{ id: "p1", amount: 5000, paidAt: "2026-02-31" }] }])).toBe(false);
+    expect(isOrderListValid([{ ...order, payments: [{ id: "p1", amount: 5000, paidAt: "2026-10-27" }, { id: "p1", amount: 1000, paidAt: "2026-10-28" }] }])).toBe(false);
+  });
+});
+
+describe("validation des dépenses", () => {
+  const expense: Expense = {
+    id: "expense-1", spentAt: "2026-10-28", category: "Tissu",
+    description: "Achat de tissu pour commandes", amount: 12500
+  };
+
+  it("accepte une dépense complète et une liste vide", () => {
+    expect(isExpenseListValid([expense])).toBe(true);
+    expect(isExpenseListValid([])).toBe(true);
+  });
+
+  it("refuse les montants, dates, libellés et identifiants invalides", () => {
+    expect(isExpenseListValid([{ ...expense, amount: 0 }])).toBe(false);
+    expect(isExpenseListValid([{ ...expense, amount: 12.5 }])).toBe(false);
+    expect(isExpenseListValid([{ ...expense, spentAt: "2026-02-31" }])).toBe(false);
+    expect(isExpenseListValid([{ ...expense, category: " " }])).toBe(false);
+    expect(isExpenseListValid([{ ...expense, description: "" }])).toBe(false);
+    expect(isExpenseListValid([expense, expense])).toBe(false);
+  });
+
+  it("conserve une dépense annulée avec date et motif, sans accepter une annulation incomplète", () => {
+    expect(isExpenseListValid([{ ...expense, voidedAt: "2026-10-28", voidReason: "Saisie en double" }])).toBe(true);
+    expect(isExpenseListValid([{ ...expense, voidedAt: "2026-02-31", voidReason: "Erreur" }])).toBe(false);
+    expect(isExpenseListValid([{ ...expense, voidedAt: "2026-10-28" }])).toBe(false);
+    expect(isExpenseListValid([{ ...expense, voidReason: "Erreur" }])).toBe(false);
+    expect(isExpenseListValid([{ ...expense, voidedAt: "2026-10-28", voidReason: " " }])).toBe(false);
+  });
+});
+
+describe("stock et mouvements", () => {
+  const item: StockItem = { id: "stock-1", name: "Tissu bazin", unit: "mètre", quantity: 12.5, minimumQuantity: 3, createdAt: "2026-10-28" };
+  const entry: StockMovement = { id: "movement-1", itemId: "stock-1", type: "Entrée", quantity: 5, movedAt: "2026-10-28", note: "Réassort" };
+
+  it("valide les articles et mouvements correctement structurés", () => {
+    const opening: StockMovement = { id: "opening-1", itemId: "stock-1", type: "Entrée", quantity: 12.5, movedAt: "2026-10-28", note: "Stock initial" };
+    expect(isStockItemListValid([item])).toBe(true);
+    expect(isStockMovementListValid([entry])).toBe(true);
+    expect(areStockRelationsValid([{ ...item, quantity: 17.5 }], [entry, opening])).toBe(true);
+    expect(areStockRelationsValid([item], [entry])).toBe(false);
+  });
+
+  it("refuse les quantités négatives, les dates invalides et les identifiants dupliqués", () => {
+    expect(isStockItemListValid([{ ...item, quantity: -1 }])).toBe(false);
+    expect(isStockItemListValid([item, item])).toBe(false);
+    expect(isStockMovementListValid([{ ...entry, quantity: 0 }])).toBe(false);
+    expect(isStockMovementListValid([{ ...entry, movedAt: "2026-02-31" }])).toBe(false);
+    expect(isStockMovementListValid([entry, entry])).toBe(false);
+    expect(areStockRelationsValid([item], [{ ...entry, itemId: "missing" }])).toBe(false);
+  });
+
+  it("ajoute une entrée et met à jour le stock courant", () => {
+    const result = recordStockMovement([item], [], entry);
+    expect(result?.items[0].quantity).toBe(17.5);
+    expect(result?.movements).toEqual([entry]);
+  });
+
+  it("refuse une sortie qui ferait passer le stock sous zéro", () => {
+    const exit: StockMovement = { id: "exit-1", itemId: "stock-1", type: "Sortie", quantity: 13, movedAt: "2026-10-28" };
+    expect(recordStockMovement([item], [], exit)).toBeNull();
+  });
+
+  it("refuse un mouvement d'un article inconnu et un identifiant déjà utilisé", () => {
+    expect(recordStockMovement([item], [], { ...entry, itemId: "missing" })).toBeNull();
+    expect(recordStockMovement([item], [entry], entry)).toBeNull();
   });
 });

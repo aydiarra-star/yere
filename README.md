@@ -2,7 +2,7 @@
 
 **La couture, mieux organisée.**
 
-YÉRÉ commence par aider les tailleurs et ateliers de couture au Sénégal à gérer leurs clients, mensurations, commandes, étapes de confection, paiements, caisse, dépenses et stocks. Un premier espace fournisseur permet de préparer un profil et une boutique locale ; la marketplace publique et les accès sécurisés nécessitent encore le backend.
+YÉRÉ est conçu d’abord et exclusivement pour les tailleurs au Sénégal : clients, mensurations, commandes, confection, paiements, caisse, dépenses et stocks. Les autres métiers de la mode et la marketplace sont hors du périmètre du lancement.
 
 ## Version applicative en chantier — YÉRÉ Atelier
 
@@ -12,7 +12,6 @@ Le premier socle est une application web React + TypeScript + Vite, conçue mobi
 - création de fiches client conservées dans le stockage local du navigateur ;
 - édition des mensurations et notes client, conservées localement ;
 - commandes, statut de confection et calcul du reste dû en FCFA ;
-- profil fournisseur et préparation d'une boutique, conservés localement.
 
 **Limites importantes :** les données saisies sont conservées uniquement dans le stockage local de ce navigateur ; aucune authentification réelle, base de données serveur, sauvegarde distante ou isolation multi-atelier n'est encore intégrée. L'export JSON et la restauration locale sont disponibles, mais ne remplacent pas une sauvegarde serveur. N'utilisez pas encore de données réelles de clients. Cette version n'est pas prête pour la production.
 
@@ -36,18 +35,18 @@ Ces commandes doivent être exécutées dans un environnement Node avant de cons
 
 ## Priorités produit
 1. **YÉRÉ Atelier** — clients, mensurations historisées, commandes et production.
-2. **Gestion financière** — acomptes, soldes, recettes, dépenses et caisse.
+2. **Gestion financière** — acomptes, soldes, recettes, dépenses, dettes/créances.
 3. **Stocks et achats** — fournitures, consommables et fournisseurs.
-4. **Pilote terrain** — accompagnement porte-à-porte, retours et bouche-à-oreille.
-5. **YÉRÉ Fournisseurs**, puis **YÉRÉ Market** — après validation du cœur de gestion.
+4. **Pilote terrain** — accompagnement porte-à-porte, retours et amélioration de l'expérience mobile.
+5. **Évolutions futures** — fournisseurs et marketplace uniquement après validation du cœur de gestion des tailleurs.
 
 ## Documentation
 - [Prompt maître](docs/PROMPT_MAITRE.md)
 - [Cahier des charges maître](docs/CAHIER_DES_CHARGES_MAITRE.md)
 - [Feuille de route](docs/FEUILLE_DE_ROUTE.md)
-- [Décision d'architecture](docs/DECISION_ARCHITECTURE.md)
 - [Backlog MVP](docs/BACKLOG_MVP.md)
-- [Plan pilote terrain](docs/PLAN_PILOTE_TERRAIN.md)
+- [Analyse concurrentielle et différenciation](docs/ANALYSE_CONCURRENTIELLE_ET_DIFFERENCIATION.md)
+- [Décision d'architecture](docs/DECISION_ARCHITECTURE.md)
 - [Modèle de données MVP](docs/MODELE_DONNEES_MVP.md)
 - [Plan de persistance serveur et sécurité](docs/PLAN_PERSISTENCE_ET_SECURITE.md)
 - [Charte graphique bleu et blanc](docs/CHARTE_GRAPHIQUE.md)

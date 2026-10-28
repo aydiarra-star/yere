@@ -22,6 +22,10 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install
+      - name: Audit dependency vulnerabilities
+        run: |
+          npm audit --json > npm-audit.json || true
+          node -e 'const a=require("./npm-audit.json"); const v=a.metadata?.vulnerabilities; console.log(JSON.stringify({summary:v, vulnerabilities:Object.entries(a.vulnerabilities||{}).map(([name,x])=>({name,severity:x.severity,isDirect:x.isDirect,range:x.range,fixAvailable:x.fixAvailable,via:x.via.map(y=>typeof y==="string"?y:{name:y.name,title:y.title,url:y.url,range:y.range})}))},null,2)); if (!v) { console.error("npm audit n\u2019a pas fourni de résumé valide"); process.exitCode=1; } else if ((v.high||0)>0 || (v.critical||0)>0) { console.error("Échec : vulnérabilité npm élevée ou critique détectée."); process.exitCode=1; }'
       - name: Run unit tests
         run: npm test
       - name: Build application

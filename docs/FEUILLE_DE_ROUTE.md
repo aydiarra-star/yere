@@ -13,6 +13,30 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 - PR #2, #4, #5 et #6 : fusionnées ; le prototype et ses fondations sont maintenant intégrés à `main`.
 - Prochaine dépendance : choisir/provisionner un environnement de développement dédié à YÉRÉ avant d'intégrer l'authentification et la persistance distante.
 
+## Décision de cadrage — retour au lancement tailleurs uniquement
+
+YÉRÉ cible exclusivement les tailleurs. Les catégories couturier, couturière, styliste et atelier de confection, les activités secondaires et les espaces fournisseurs/marketplace sont reportés. Le mode de travail seul/collaborateurs/équipe reste facultatif. La migration du profil doit préserver les informations de l'atelier et les données métier.
+
+## Lot historique — Extension multi-métiers (reportée)
+
+- [x] Formaliser les cinq catégories cibles et le principe « une seule plateforme, plusieurs métiers » dans le cahier des charges et le prompt maître.
+- [x] Distinguer l'activité principale du mode de travail (indépendant, collaborateurs, atelier en équipe).
+- [x] Auditer l'onboarding actuel et proposer les cinq métiers sans dupliquer les parcours.
+- [x] Définir les valeurs contrôlées du profil métier et préserver la compatibilité avec les profils locaux existants.
+- [x] Adapter l'accueil et les raccourcis selon le profil, tout en gardant le socle commun accessible.
+- [x] Distinguer les commandes de confection/création des retouches dans le même modèle de commande, avec compatibilité des anciennes données.
+- [x] Figer une copie datée des mensurations sur chaque nouvelle commande et afficher cet instantané sans modifier les commandes historiques.
+- [x] Tester la copie indépendante des mensurations de commande et refuser les instantanés invalides avant création.
+- [x] Ajouter un suivi spécifique des retouches (à examiner, en retouche, à essayer, correction demandée, terminée), séparé du statut général de livraison et validé par tests.
+- [ ] Vérifier que les fonctions d'équipe peuvent servir toute activité qui travaille avec des collaborateurs.
+- [x] Ajouter des tests pour le changement de profil, les activités secondaires et la compatibilité des données.
+- [ ] Ajouter des tests d'intégration confirmant l'absence de duplication des entités communes.
+- [x] Corriger la restauration des sauvegardes historiques : les versions 1 à 3 sans champs d’onboarding reprennent avec un profil déjà configuré ; les champs invalides restent refusés.
+- [x] Inclure les annonces de vitrine dans le format de sauvegarde v5 et valider les annonces avant toute restauration ; les sauvegardes v1 à v4 restent restaurables sans ce champ.
+- [x] Tester séparément la normalisation des annonces selon la version de sauvegarde, pour que les formats v1 à v4 ne dépendent pas d’un champ ajouté en v5.
+
+**Critère de sortie :** les cinq métiers peuvent utiliser le même produit ; le profil personnalise l'expérience sans limiter les fonctions utiles ni compromettre les données. La documentation ne vaut pas implémentation applicative.
+
 ## Lot 0 — Établir les fondations
 
 - [x] Inspecter le dépôt, branches, fichiers et paramètres accessibles.
@@ -74,7 +98,7 @@ Le prototype actuel permet de tester l'interface clients/mesures localement, mai
 - [ ] Créer une commande persistante liée à un client.
 - [ ] Prix, quantité, date de commande et échéance.
 - [ ] Étapes de production et historique.
-- [ ] Vues des commandes en cours, urgentes et en retard.
+- [x] Filtrer les commandes par toutes, en retard et à livrer sous sept jours, avec échéances triées et tests de bornes.
 - [ ] Acomptes, paiements partiels et solde dû enregistrés comme événements traçables.
 - [ ] Tests de calculs et de transitions d'état.
 
