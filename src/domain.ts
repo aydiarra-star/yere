@@ -10,6 +10,8 @@ export type Measurement = {
   neck?: string;
   thigh?: string;
   legLength?: string;
+  /** Saved with each measurement version so the form can adapt to the garment. */
+  garmentType?: string;
   note: string;
 };
 
@@ -34,7 +36,7 @@ export function saveMeasurementVersion(
   measuredAt: string,
   versionId: string
 ): Client {
-  const hasCurrentValues = Object.values(client.measurement).some((value) => value.trim() !== "");
+  const hasCurrentValues = [client.measurement.bust, client.measurement.waist, client.measurement.hips, client.measurement.shoulder, client.measurement.sleeve, client.measurement.length, client.measurement.arm ?? "", client.measurement.neck ?? "", client.measurement.thigh ?? "", client.measurement.legLength ?? "", client.measurement.note].some((value) => value.trim() !== "");
   const history = client.measurementHistory ?? (hasCurrentValues
     ? [{ id: `legacy-${client.id}`, measuredAt: client.createdAt, measurement: client.measurement }]
     : []);
@@ -73,7 +75,7 @@ function isMeasurementShape(value: unknown): value is Measurement {
   return isRecord(value)
     && ["bust", "waist", "hips", "shoulder", "sleeve", "length", "note"]
       .every((key) => typeof value[key] === "string")
-    && ["arm", "neck", "thigh", "legLength"]
+    && ["arm", "neck", "thigh", "legLength", "garmentType"]
       .every((key) => value[key] === undefined || typeof value[key] === "string");
 }
 
@@ -170,16 +172,12 @@ export function balanceDue(order: Pick<Order, "price" | "deposit" | "payments">)
 }
 
 /** Append a payment without losing a legacy deposit; reject invalid dates and overpayments. */
-export function addOrderPayment(
-  order: Order,
-  payment: OrderPayment
-): Order | null {
+export function addOrderPayment(order: Order, payment: OrderPayment): Order | null {
   if (!payment.id.trim() || !Number.isSafeInteger(payment.amount) || payment.amount <= 0
     || !isCalendarDate(payment.paidAt)
     || (payment.note !== undefined && typeof payment.note !== "string")) return null;
-
   const existing = order.payments ?? (order.deposit > 0 ? [{
-    id: `legacy-deposit-${order.id}`, amount: order.deposit,
+    id: "legacy-deposit-" + order.id, amount: order.deposit,
     paidAt: order.orderedAt ?? payment.paidAt, note: "Acompte initial (donnée historique)"
   }] : []);
   if (existing.some((item) => item.id === payment.id)) return null;
