@@ -1080,3 +1080,54 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .primary-button,
   .secondary-button { min-height: 36px; padding: 8px 11px; }
 }
+
+
+/* YERE TYPOGRAPHY CONTRACT: one readable typeface, one compact size, one line. */
+:root {
+  font-family: "DM Sans", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+body, button, input, select, textarea, option, label, p, h1, h2, h3, h4,
+small, strong, b, em, a, li, th, td, legend, summary, .eyebrow {
+  font-family: "DM Sans", sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 1.35 !important;
+  letter-spacing: normal !important;
+}
+h1, h2, h3, h4, p, label, button, a, small, strong, b, em, li, th, td,
+legend, summary, .eyebrow, .breadcrumb, .nav-caption, .notice, .empty-state,
+.privacy-note, .page-subtitle, .onboarding-detail, .onboarding-disclaimer {
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 100%;
+}
+input, select, textarea {
+  font: inherit;
+  max-width: 100%;
+}
+textarea {
+  white-space: pre;
+  overflow-x: auto;
+}
+button, .primary-button, .secondary-button, .nav-item, .mobile-nav-item {
+  min-width: 0;
+}
+.brand strong, .brand small, .brand-mark, .nav-icon, .snapshot-icon,
+.marketplace-mark, .visual-scissors, .atelier-avatar, .profile-avatar {
+  flex-shrink: 0;
+}
+@media (max-width: 760px) {
+  .sidebar, .main-content, .page-wrap, .welcome-row, .content-card,
+  .section-heading, .onboarding-layout, .onboarding-copy {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .welcome-row, .section-heading, .marketplace-hero, .reminders-intro {
+    gap: 8px;
+  }
+}
