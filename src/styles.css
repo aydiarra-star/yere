@@ -1236,3 +1236,27 @@ button, .primary-button, .secondary-button, .nav-item, .mobile-nav-item {
 .marketplace-category-link > * {
   min-width: 0;
 }
+
+/* Protection des pictogrammes : les libellés peuvent rétrécir, pas les icônes. */
+.nav-icon,
+.quick-icon,
+.stat-icon,
+.atelier-avatar,
+.profile-avatar,
+.client-avatar,
+.row-chevron,
+.marketplace-category-art,
+.help-icon,
+.tip-spark,
+.brand-mark,
+.measurement-panel .section-heading > *:first-child {
+  flex-shrink: 0;
+}
+
+/* Les contrôles restent visibles et utilisables malgré la règle typographique globale. */
+input,
+select,
+textarea,
+button {
+  min-width: 0;
+}
