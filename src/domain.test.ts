@@ -20,6 +20,12 @@ describe("validation des données restaurées", () => {
     expect(isClientListValid([legacyClient])).toBe(true);
   });
 
+  it("accepte le type de vêtement optionnel et conserve la compatibilité des données existantes", () => {
+    const garmentClient = { ...client, measurement: { ...client.measurement, garmentType: "Pantalon" } };
+    expect(isClientListValid([garmentClient])).toBe(true);
+    expect(isClientListValid([client])).toBe(true);
+  });
+
   it("refuse les nouvelles mesures si leur valeur n'est pas une chaîne", () => {
     expect(isClientListValid([{ ...client, measurement: { ...client.measurement, arm: 42 } }])).toBe(false);
   });
@@ -157,11 +163,12 @@ describe("historique des mensurations", () => {
   it("conserve la prise précédente lors d'un nouvel enregistrement", () => {
     const first: Measurement = { ...blankMeasurement, bust: "92", note: "Coupe ample" };
     const initialClient: Client = { ...client, measurement: first };
-    const next: Measurement = { ...first, bust: "94" };
+    const next: Measurement = { ...first, bust: "94", garmentType: "Boubou / robe" };
 
     const updated = saveMeasurementVersion(initialClient, next, "2026-10-27", "m-2");
 
     expect(updated.measurement.bust).toBe("94");
+    expect(updated.measurement.garmentType).toBe("Boubou / robe");
     expect(updated.measurementHistory).toHaveLength(2);
     expect(updated.measurementHistory?.[0].measurement.bust).toBe("92");
     expect(updated.measurementHistory?.[1].measurement.bust).toBe("94");
