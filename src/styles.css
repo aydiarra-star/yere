@@ -1187,9 +1187,7 @@ button, .primary-button, .secondary-button, .nav-item, .mobile-nav-item {
 
 /* Finalisation de la règle une ligne pour les libellés portés par des conteneurs flex. */
 .nav-item,
-.nav-item span,
 .mobile-nav-item,
-.mobile-nav-item span,
 .brand strong,
 .brand small,
 .atelier-switch b,
