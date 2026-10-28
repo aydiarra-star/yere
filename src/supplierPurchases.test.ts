@@ -63,6 +63,11 @@ describe("achats fournisseurs liés au stock", () => {
     }, items, movements, "2026-10-28", "ACH-002-REC")).toBeNull();
   });
 
+  it("refuse un stock incohérent avec son historique de mouvements", () => {
+    const inconsistentItems = items.map((item) => item.id === "tissu" ? { ...item, quantity: 99 } : item);
+    expect(receiveSupplierPurchase(purchase, inconsistentItems, movements, "2026-10-28", "ACH-003-REC")).toBeNull();
+  });
+
   it("refuse une date de réception invalide et ne modifie pas les données d'entrée", () => {
     const originalItems = structuredClone(items);
     const originalMovements = structuredClone(movements);
