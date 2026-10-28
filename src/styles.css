@@ -338,6 +338,42 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 
 /* Mobile usability pass: readable secondary text, compact metrics and order cards. */
+.order-filter-row {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0 0 1rem;
+}
+.order-filter-row label {
+  display: grid;
+  gap: .4rem;
+  min-width: min(100%, 15rem);
+  font-size: .9rem;
+  font-weight: 600;
+}
+.order-filter-row select {
+  min-height: 2.75rem;
+  max-width: 100%;
+  padding: .65rem .8rem;
+  border: 1px solid var(--border, #d6d9e0);
+  border-radius: .6rem;
+  background: var(--surface, #fff);
+  color: inherit;
+  font: inherit;
+}
+.order-filter-row p {
+  margin: 0;
+  font-size: .875rem;
+  color: var(--muted, #5e6472);
+}
+@media (max-width: 480px) {
+  .order-filter-row { align-items: stretch; }
+  .order-filter-row label { width: 100%; }
+  .order-filter-row select { width: 100%; }
+}
+
 .order-card-list{display:none}
 .order-card{border:1px solid var(--yere-border,#e5eaf2);border-radius:12px;padding:14px;background:#fff}
 .order-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}

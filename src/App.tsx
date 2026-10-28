@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
-import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderStatus, type StockItem, type StockMovement } from "./domain";
+import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, filterOrdersByDelivery, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderDeliveryFilter, type OrderStatus, type StockItem, type StockMovement } from "./domain";
 import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, atelierActivities, workModes, getActivityExperience, withPrimaryActivity, toggleSecondaryActivity, type AtelierProfile, type AtelierActivity, type WorkMode } from "./atelierProfile";
 import { normalizeBackupOnboardingState, normalizeBackupMarketplaceListings } from "./localBackup";
 import { isMarketplaceListingListValid, type MarketplaceListing } from "./marketplace";
@@ -57,6 +57,7 @@ function App() {
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [showOrderForm, setShowOrderForm] = useState(false);
+  const [orderDeliveryFilter, setOrderDeliveryFilter] = useState<OrderDeliveryFilter>("all");
   const [newOrderClientId, setNewOrderClientId] = useState("");
   const [newOrderGarment, setNewOrderGarment] = useState("");
   const [newOrderKind, setNewOrderKind] = useState<"confection" | "retouche">("confection");
@@ -124,6 +125,7 @@ function App() {
   const todayLabel = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" }).format(today);
   const dailyTasks = useMemo(() => getDailyTasks(clients, orders, todayKey), [clients, orders, todayKey]);
   const dailyTaskCount = dailyTasks.length;
+  const filteredOrders = useMemo(() => filterOrdersByDelivery(orders, todayKey, orderDeliveryFilter), [orders, todayKey, orderDeliveryFilter]);
 
   useEffect(() => {
     const client = clients.find((item) => item.id === selectedClient);
@@ -611,7 +613,17 @@ function App() {
               <div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowOrderForm(false)}>Annuler</button><button type="submit" className="primary-button" disabled={clients.length === 0}>Enregistrer la commande</button></div>
               {clients.length === 0 && <p className="history-empty">Créez d'abord un client pour lui associer une commande.</p>}
             </form>}
-            <OrderTable orders={orders} clients={clients} onStatusChange={updateStatus} /></section>}
+            <div className="order-filter-row">
+              <label>Afficher les commandes
+                <select value={orderDeliveryFilter} onChange={(event) => setOrderDeliveryFilter(event.target.value as OrderDeliveryFilter)}>
+                  <option value="all">Toutes les commandes</option>
+                  <option value="overdue">En retard</option>
+                  <option value="upcoming">À livrer sous 7 jours</option>
+                </select>
+              </label>
+              <p aria-live="polite">{filteredOrders.length} commande{filteredOrders.length === 1 ? "" : "s"} affichée{filteredOrders.length === 1 ? "" : "s"}</p>
+            </div>
+            <OrderTable orders={filteredOrders} clients={clients} onStatusChange={updateStatus} /></section>}
 
 
           {view === "cash" && <section className="cash-page">

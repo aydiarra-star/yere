@@ -93,7 +93,7 @@ Le prototype actuel permet de tester l'interface clients/mesures localement, mai
 - [ ] Créer une commande persistante liée à un client.
 - [ ] Prix, quantité, date de commande et échéance.
 - [ ] Étapes de production et historique.
-- [ ] Vues des commandes en cours, urgentes et en retard.
+- [x] Filtrer les commandes par toutes, en retard et à livrer sous sept jours, avec échéances triées et tests de bornes.
 - [ ] Acomptes, paiements partiels et solde dû enregistrés comme événements traçables.
 - [ ] Tests de calculs et de transitions d'état.
 
