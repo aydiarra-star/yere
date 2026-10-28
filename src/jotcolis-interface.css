@@ -286,3 +286,52 @@ html, body, #root, .app-shell, .main-content, .page-wrap, .onboarding-shell {
   .reminders-intro h2, .empty-reminders h2 { font-size:16px; }
   .reminders-intro p, .empty-reminders p { font-size:12px; }
 }
+
+
+/* En-tête commun : titre centré dans une bannière bleue, sans date. */
+.welcome-row {
+  justify-content: center;
+}
+.welcome-copy {
+  flex: 1 1 100% !important;
+  min-width: 0;
+  text-align: center;
+}
+.page-banner-title {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 16px !important;
+  padding: 12px 24px;
+  border: 1px solid #1d4ed8;
+  border-radius: 12px;
+  background: #2563eb !important;
+  color: #fff !important;
+  font-size: clamp(18px, 2.4vw, 28px) !important;
+  font-weight: 850 !important;
+  line-height: 1.25 !important;
+  letter-spacing: 0 !important;
+  text-align: center;
+  overflow-wrap: anywhere;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, .18);
+}
+.welcome-copy .page-subtitle {
+  max-width: 720px;
+  margin: 0 auto;
+  text-align: center;
+}
+.welcome-copy .today-snapshot {
+  text-align: left;
+}
+.welcome-action {
+  margin-inline: auto;
+}
+@media (max-width: 760px) {
+  .page-banner-title {
+    width: 100%;
+    padding: 11px 14px;
+    margin-bottom: 13px !important;
+    font-size: clamp(17px, 5vw, 22px) !important;
+    border-radius: 11px;
+  }
+}
