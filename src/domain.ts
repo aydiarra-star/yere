@@ -99,6 +99,13 @@ export function isClientListValid(value: unknown): value is Client[] {
 
 export type OrderStatus = "À préparer" | "En confection" | "Prêt" | "Livré";
 
+export type OrderPayment = {
+  id: string;
+  amount: number;
+  paidAt: string;
+  note?: string;
+};
+
 export type Order = {
   id: string;
   clientId: string;
@@ -107,6 +114,8 @@ export type Order = {
   orderedAt?: string;
   price: number;
   deposit: number;
+  /** Optional for backward compatibility with older local backups. */
+  payments?: OrderPayment[];
   status: OrderStatus;
 };
 
@@ -121,6 +130,16 @@ export function isOrderListValid(value: unknown): value is Order[] {
     && typeof item.price === "number" && Number.isSafeInteger(item.price) && item.price > 0
     && typeof item.deposit === "number" && Number.isSafeInteger(item.deposit)
     && item.deposit >= 0 && item.deposit <= item.price
+    && (item.payments === undefined || (
+      Array.isArray(item.payments)
+      && item.payments.every((payment) => isRecord(payment)
+        && typeof payment.id === "string" && payment.id.length > 0
+        && typeof payment.amount === "number" && Number.isSafeInteger(payment.amount) && payment.amount > 0
+        && isCalendarDate(payment.paidAt)
+        && (payment.note === undefined || typeof payment.note === "string"))
+      && new Set(item.payments.map((payment) => (payment as Record<string, unknown>).id)).size === item.payments.length
+      && item.payments.reduce((sum, payment) => sum + (payment as Record<string, unknown>).amount as number, 0) <= item.price
+    ))
     && typeof item.status === "string" && ["À préparer", "En confection", "Prêt", "Livré"].some((status) => status === item.status)
   );
 }
@@ -141,8 +160,30 @@ export const orderStatuses: OrderStatus[] = [
   "Livré"
 ];
 
-export function balanceDue(order: Pick<Order, "price" | "deposit">): number {
-  return Math.max(0, order.price - order.deposit);
+/** Total actually recorded as paid, supporting legacy orders with one deposit field. */
+export function totalPaid(order: Pick<Order, "deposit" | "payments">): number {
+  return order.payments === undefined
+    ? order.deposit
+    : order.payments.reduce((sum, payment) => sum + payment.amount, 0);
+}
+
+export function balanceDue(order: Pick<Order, "price" | "deposit" | "payments">): number {
+  return Math.max(0, order.price - totalPaid(order));
+}
+
+/** Append a payment without losing a legacy deposit; reject invalid dates and overpayments. */
+export function addOrderPayment(order: Order, payment: OrderPayment): Order | null {
+  if (!payment.id.trim() || !Number.isSafeInteger(payment.amount) || payment.amount <= 0
+    || !isCalendarDate(payment.paidAt)
+    || (payment.note !== undefined && typeof payment.note !== "string")) return null;
+  const existing = order.payments ?? (order.deposit > 0 ? [{
+    id: "legacy-deposit-" + order.id, amount: order.deposit,
+    paidAt: order.orderedAt ?? payment.paidAt, note: "Acompte initial (donnée historique)"
+  }] : []);
+  if (existing.some((item) => item.id === payment.id)) return null;
+  const paidSoFar = existing.reduce((sum, item) => sum + item.amount, 0);
+  if (payment.amount > order.price - paidSoFar) return null;
+  return { ...order, payments: [...existing, { ...payment }] };
 }
 
 /** Validate a new order before it enters the prototype's local state. */

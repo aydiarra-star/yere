@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
-import { areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, orderStatuses, saveMeasurementVersion, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
+import { addOrderPayment, areClientOrderRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, matchesClient, orderStatuses, saveMeasurementVersion, totalPaid, type Client, type Measurement, type Order, type OrderStatus } from "./domain";
 import { usePersistentState } from "./usePersistentState";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", arm: "", neck: "", thigh: "", legLength: "", garmentType: "Tenue complète", note: "" };
@@ -70,6 +70,9 @@ function App() {
   const [newOrderDueDate, setNewOrderDueDate] = useState(() => new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
   const [newOrderPrice, setNewOrderPrice] = useState("");
   const [newOrderDeposit, setNewOrderDeposit] = useState("0");
+  const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
+  const [paymentHistoryOrderId, setPaymentHistoryOrderId] = useState<string | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -143,6 +146,7 @@ function App() {
       orderedAt: new Date().toISOString().slice(0, 10),
       price,
       deposit,
+      payments: deposit > 0 ? [{ id: "PAY-" + Date.now() + "-initial", amount: deposit, paidAt: new Date().toISOString().slice(0, 10), note: "Acompte initial" }] : [],
       status: "À préparer"
     };
     setOrders((current) => [order, ...current]);
@@ -206,6 +210,30 @@ function App() {
       const message = error instanceof Error ? error.message : "Fichier impossible à lire.";
       setNotice(`Restauration refusée : ${message}`);
     });
+  }
+
+  function recordOrderPayment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const order = orders.find((item) => item.id === paymentOrderId);
+    const amount = Number(paymentAmount);
+    if (!order || !Number.isSafeInteger(amount) || amount <= 0) {
+      setNotice("Saisissez un montant entier supérieur à zéro.");
+      return;
+    }
+    const updated = addOrderPayment(order, {
+      id: "PAY-" + Date.now(),
+      amount,
+      paidAt: new Date().toISOString().slice(0, 10),
+      note: "Versement enregistré manuellement"
+    });
+    if (!updated) {
+      setNotice("Paiement refusé : vérifiez le montant restant dû. Un paiement ne peut pas dépasser le solde.");
+      return;
+    }
+    setOrders((current) => current.map((item) => item.id === order.id ? updated : item));
+    setPaymentAmount("");
+    setPaymentOrderId(null);
+    setNotice("Versement de " + formatXof(amount) + " enregistré sur cet appareil. Aucune copie serveur n’est active.");
   }
 
   function updateStatus(orderId: string, status: OrderStatus) {
@@ -327,12 +355,12 @@ function App() {
           {view === "cash" && <section className="cash-page">
             <div className="cash-summary-grid">
               <article className="content-card cash-summary"><span>Reste à encaisser</span><strong>{formatXof(outstanding)}</strong><small>Calculé à partir des commandes enregistrées dans ce prototype</small></article>
-              <article className="content-card cash-summary"><span>Acomptes enregistrés</span><strong>{formatXof(orders.reduce((sum, order) => sum + order.deposit, 0))}</strong><small>Somme des acomptes des commandes visibles ici</small></article>
+              <article className="content-card cash-summary"><span>Total encaissé</span><strong>{formatXof(orders.reduce((sum, order) => sum + totalPaid(order), 0))}</strong><small>Somme des versements enregistrés dans ce prototype</small></article>
             </div>
-            <section className="content-card"><div className="section-heading"><div><h2>Situation par commande</h2><p>Montant dû = prix convenu moins acompte enregistré.</p></div></div>
-              {orders.length === 0 ? <div className="empty-state">Aucune commande pour le moment. Créez une commande pour commencer à suivre les montants.</div> : <div className="table-wrap"><table><thead><tr><th>Commande</th><th>Prix</th><th>Acompte</th><th>Reste</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}><td><b>{order.garment}</b><small>{clients.find((client) => client.id === order.clientId)?.name || "Client inconnu"}</small></td><td>{formatXof(order.price)}</td><td>{formatXof(order.deposit)}</td><td><b>{formatXof(balanceDue(order))}</b></td></tr>)}</tbody></table></div>}
+            <section className="content-card"><div className="section-heading"><div><h2>Situation par commande</h2><p>Reste dû = prix convenu moins l’ensemble des versements enregistrés.</p></div></div>
+              {orders.length === 0 ? <div className="empty-state">Aucune commande pour le moment. Créez une commande pour commencer à suivre les montants.</div> : <div className="table-wrap"><table><thead><tr><th>Commande</th><th>Prix</th><th>Total encaissé</th><th>Reste</th><th>Action</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}><td><b>{order.garment}</b><small>{clients.find((client) => client.id === order.clientId)?.name || "Client inconnu"}</small></td><td>{formatXof(order.price)}</td><td>{formatXof(totalPaid(order))}</td><td><b>{formatXof(balanceDue(order))}</b></td><td><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setPaymentHistoryOrderId(order.id)}>Historique</button><button type="button" className="secondary-button" disabled={balanceDue(order) === 0} onClick={() => { setPaymentOrderId(order.id); setPaymentAmount(""); }}>Encaisser</button></div></td></tr>)}</tbody></table></div>}{paymentOrderId && orders.some((order) => order.id === paymentOrderId) && <form className="new-order-form" onSubmit={recordOrderPayment}><h3>Nouveau versement — {orders.find((order) => order.id === paymentOrderId)?.garment}</h3><p>Reste à payer : {formatXof(balanceDue(orders.find((order) => order.id === paymentOrderId)!))}</p><label>Montant reçu (FCFA)<input required type="number" min="1" step="1" inputMode="numeric" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} placeholder="Ex. 5000" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => { setPaymentOrderId(null); setPaymentAmount(""); }}>Annuler</button><button type="submit" className="primary-button">Confirmer le versement</button></div></form>}{paymentHistoryOrderId && orders.some((order) => order.id === paymentHistoryOrderId) && <section className="content-card"><div className="section-heading"><div><h2>Historique des versements</h2><p>{orders.find((order) => order.id === paymentHistoryOrderId)?.garment} · {clients.find((client) => client.id === orders.find((order) => order.id === paymentHistoryOrderId)?.clientId)?.name ?? "Client inconnu"}</p></div><button type="button" className="secondary-button" onClick={() => setPaymentHistoryOrderId(null)}>Fermer</button></div>{(orders.find((order) => order.id === paymentHistoryOrderId)?.payments ?? []).length === 0 ? <p className="empty-state">Aucun historique détaillé disponible pour cette ancienne commande. Son acompte historique reste pris en compte dans le solde et sera repris lors du prochain versement.</p> : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Libellé</th><th>Montant</th></tr></thead><tbody>{(orders.find((order) => order.id === paymentHistoryOrderId)?.payments ?? []).map((payment) => <tr key={payment.id}><td>{payment.paidAt}</td><td>{payment.note || "Versement"}</td><td>{formatXof(payment.amount)}</td></tr>)}</tbody></table></div>}</section>}
             </section>
-            <p className="privacy-note">Cette vue est un aperçu des montants des commandes. Les encaissements multiples, dépenses, rapprochement de caisse, écritures et rapports financiers restent à développer. Ne l'utilisez pas comme comptabilité officielle.</p>
+            <p className="privacy-note">Cette vue est un aperçu des montants des commandes. Les dépenses, le rapprochement de caisse, les écritures comptables et les rapports financiers restent à développer. Ne l'utilisez pas comme comptabilité officielle.</p>
           </section>}
 
           {view === "account" && <section className="content-card account-page">
