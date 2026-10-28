@@ -220,7 +220,7 @@ function App() {
       if (!isClientListValid(data.clients)
         || !isOrderListValid(data.orders)
         || !areClientOrderRelationsValid(data.clients, data.orders)
-        || ((parsed.schemaVersion === 2 || parsed.schemaVersion === 3) && !isExpenseListValid(data.expenses))
+        || ([2, 3, 4].includes(parsed.schemaVersion as number) && !isExpenseListValid(data.expenses))
         || ((parsed.schemaVersion === 3 || parsed.schemaVersion === 4) && (!isStockItemListValid(data.stockItems)
           || !isStockMovementListValid(data.stockMovements)
           || !areStockRelationsValid(data.stockItems, data.stockMovements)))
