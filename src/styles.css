@@ -1183,3 +1183,58 @@ button, .primary-button, .secondary-button, .nav-item, .mobile-nav-item {
 /* Sélecteur de type de vêtement — même affordance que les champs de mensuration. */
 .measure-field select{display:block;width:100%;min-width:0;border:1px solid var(--yere-border);border-radius:6px;background:#fff;color:var(--yere-text);font:400 12px 'DM Sans',sans-serif;padding:9px 8px}
 .measure-field select:focus{border-color:var(--yere-blue);outline:2px solid var(--yere-sky-strong)}
+
+
+/* Finalisation de la règle une ligne pour les libellés portés par des conteneurs flex. */
+.nav-item,
+.nav-item span,
+.mobile-nav-item,
+.mobile-nav-item span,
+.brand strong,
+.brand small,
+.atelier-switch b,
+.atelier-switch small,
+.profile b,
+.profile small,
+.stat-top,
+.stat-card > small,
+.quick-actions b,
+.quick-actions small,
+.quick-arrow,
+.demo-pill,
+.breadcrumb,
+.marketplace-category-kicker,
+.marketplace-category-link,
+.marketplace-product-type,
+.marketplace-product-meta,
+.marketplace-activity-tag,
+.marketplace-remove,
+.measurement-history li b,
+.measurement-history li span {
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-item,
+.mobile-nav-item,
+.brand,
+.atelier-switch,
+.profile,
+.stat-top,
+.quick-actions > button,
+.marketplace-category-link {
+  min-width: 0;
+}
+
+.nav-item > *,
+.mobile-nav-item > *,
+.atelier-switch > *,
+.profile > *,
+.stat-top > *,
+.quick-actions > button > *,
+.marketplace-category-link > * {
+  min-width: 0;
+}
