@@ -566,3 +566,16 @@ html, body, #root, .app-shell, .main-content {
     padding-right: 12px;
   }
 }
+
+
+/* Keep account profile text and fields inside the card on every screen. */
+.account-page,.account-page *, .account-section-heading,.account-section-heading *, .account-form,.account-form>*,.profile-profession{box-sizing:border-box;min-width:0;max-width:100%;}
+.account-section-heading,.account-section-heading>div{width:100%;}
+.account-page .section-heading h2,.account-page .section-heading p,.account-form,.account-form>label,.account-form .profile-profession,.account-form .profile-profession *{overflow-wrap:anywhere;white-space:normal;}
+.account-form{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;width:100%;}
+.account-form>label{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;width:100%;line-height:1.5;}
+.account-form>label input,.account-form>label select,.account-form>label textarea{display:block;width:100%;min-width:0;max-width:100%;}
+.account-form>.primary-button{justify-self:start;max-width:100%;white-space:normal;overflow-wrap:anywhere;}
+.account-form .profile-profession{display:grid;gap:5px;width:100%;padding:14px;border-radius:12px;background:#eff6ff;}
+.account-form .profile-profession span,.account-form .profile-profession strong,.account-form .profile-profession small{display:block;min-width:0;max-width:100%;overflow-wrap:anywhere;white-space:normal;}
+@media(max-width:760px){.account-page{width:100%;padding-left:13px;padding-right:13px;}.account-section-heading{align-items:stretch;flex-direction:column;text-align:center;}.account-section-heading h2,.account-section-heading p{width:100%;text-align:center;}.account-form{gap:14px;}.account-form>label{font-size:12px;}.account-form>.primary-button{justify-self:stretch;width:100%;}}
