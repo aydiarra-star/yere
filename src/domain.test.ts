@@ -72,6 +72,18 @@ describe("validation des données restaurées", () => {
     expect(isOrderListValid([{ ...order, status: "Inconnu" }])).toBe(false);
     expect(isOrderListValid([{ ...order, clientId: "" }])).toBe(false);
   });
+
+  it("refuse un historique de paiements inférieur à l’acompte déclaré", () => {
+    const order: Order = {
+      id: "order-1", clientId: "c-1", garment: "Boubou",
+      dueDate: "2026-11-01", price: 25000, deposit: 10000,
+      payments: [{ id: "pay-1", amount: 5000, paidAt: "2026-10-27" }],
+      status: "En confection"
+    };
+    expect(isOrderListValid([order])).toBe(false);
+    expect(isOrderListValid([{ ...order, payments: [{ id: "pay-1", amount: 10000, paidAt: "2026-10-27" }] }])).toBe(true);
+    expect(isOrderListValid([{ ...order, payments: [{ id: "pay-1", amount: 15000, paidAt: "2026-10-27" }] }])).toBe(true);
+  });
 });
 
 
@@ -95,6 +107,18 @@ describe("cohérence des données restaurées", () => {
   it("refuse les identifiants dupliqués", () => {
     expect(areClientOrderRelationsValid([...clients, clients[0]], orders)).toBe(false);
     expect(areClientOrderRelationsValid(clients, [...orders, orders[0]])).toBe(false);
+  });
+});
+
+describe("paiements de commande", () => {
+  it("refuse d’ajouter un versement sur une commande dont l’historique est incohérent", () => {
+    const order: Order = {
+      id: "o-invalid", clientId: "c-1", garment: "Boubou",
+      dueDate: "2026-11-01", price: 25000, deposit: 10000,
+      payments: [{ id: "p-1", amount: 5000, paidAt: "2026-10-27" }],
+      status: "À préparer"
+    };
+    expect(addOrderPayment(order, { id: "p-2", amount: 1000, paidAt: "2026-10-28" })).toBeNull();
   });
 });
 

@@ -143,6 +143,7 @@ export function isOrderListValid(value: unknown): value is Order[] {
         && (payment.note === undefined || typeof payment.note === "string"))
       && new Set(item.payments.map((payment) => (payment as Record<string, unknown>).id)).size === item.payments.length
       && item.payments.reduce((sum, payment) => sum + (payment as Record<string, unknown>).amount as number, 0) <= item.price
+      && item.payments.reduce((sum, payment) => sum + (payment as Record<string, unknown>).amount as number, 0) >= item.deposit
     ))
     && typeof item.status === "string" && ["À préparer", "En confection", "Prêt", "Livré"].some((status) => status === item.status)
   );
@@ -276,6 +277,7 @@ export function balanceDue(order: Pick<Order, "price" | "deposit" | "payments">)
 
 /** Append a payment without losing a legacy deposit; reject invalid dates and overpayments. */
 export function addOrderPayment(order: Order, payment: OrderPayment): Order | null {
+  if (!isOrderListValid([order])) return null;
   if (!payment.id.trim() || !Number.isSafeInteger(payment.amount) || payment.amount <= 0
     || !isCalendarDate(payment.paidAt)
     || (payment.note !== undefined && typeof payment.note !== "string")) return null;
