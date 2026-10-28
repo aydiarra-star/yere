@@ -22,6 +22,8 @@ export type SupplierPurchase = {
   lines: SupplierPurchaseLine[];
   status: SupplierPurchaseStatus;
   receivedAt?: string;
+  cancelledAt?: string;
+  cancelReason?: string;
   note?: string;
 };
 
@@ -43,6 +45,8 @@ export function isSupplierPurchaseValid(value: unknown): value is SupplierPurcha
     || !["À recevoir", "Reçue", "Annulée"].includes(value.status as string)
     || !Array.isArray(value.lines) || value.lines.length === 0
     || (value.receivedAt !== undefined && !isCalendarDate(value.receivedAt))
+    || (value.cancelledAt !== undefined && !isCalendarDate(value.cancelledAt))
+    || (value.cancelReason !== undefined && (typeof value.cancelReason !== "string" || !value.cancelReason.trim()))
     || (value.note !== undefined && typeof value.note !== "string")) return false;
 
   const linesValid = value.lines.every((line) => isRecord(line)
@@ -54,8 +58,9 @@ export function isSupplierPurchaseValid(value: unknown): value is SupplierPurcha
   const lineIds = value.lines.map((line) => (line as Record<string, unknown>).stockItemId);
   if (new Set(lineIds).size !== lineIds.length) return false;
 
-  if (value.status === "Reçue") return isCalendarDate(value.receivedAt);
-  return value.receivedAt === undefined;
+  if (value.status === "Reçue") return isCalendarDate(value.receivedAt) && value.cancelledAt === undefined && value.cancelReason === undefined;
+  if (value.status === "Annulée") return value.receivedAt === undefined && isCalendarDate(value.cancelledAt) && typeof value.cancelReason === "string" && Boolean(value.cancelReason.trim());
+  return value.receivedAt === undefined && value.cancelledAt === undefined && value.cancelReason === undefined;
 }
 
 export function isSupplierPurchaseListValid(value: unknown): value is SupplierPurchase[] {
@@ -66,6 +71,25 @@ export function isSupplierPurchaseListValid(value: unknown): value is SupplierPu
 
 export function supplierPurchaseTotal(purchase: Pick<SupplierPurchase, "lines">): number {
   return purchase.lines.reduce((sum, line) => sum + line.quantity * line.unitCost, 0);
+}
+
+/** Cancel an unreceived purchase with a dated, non-empty reason for the audit trail. */
+export function cancelSupplierPurchase(
+  purchase: SupplierPurchase,
+  cancelledAt: string,
+  reason: string
+): SupplierPurchase | null {
+  if (!isSupplierPurchaseValid(purchase)
+    || purchase.status !== "À recevoir"
+    || !isCalendarDate(cancelledAt)
+    || !reason.trim()) return null;
+  const cancelledPurchase: SupplierPurchase = {
+    ...purchase,
+    status: "Annulée",
+    cancelledAt,
+    cancelReason: reason.trim()
+  };
+  return isSupplierPurchaseValid(cancelledPurchase) ? cancelledPurchase : null;
 }
 
 export type ReceiveSupplierPurchaseResult = {
