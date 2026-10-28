@@ -30,6 +30,19 @@ describe("validation des données restaurées", () => {
     expect(isClientListValid([{ ...client, measurement: { ...client.measurement, arm: 42 } }])).toBe(false);
   });
 
+  it("refuse les mensurations non numériques dans les données persistées", () => {
+    expect(isClientListValid([{ ...client, measurement: { ...client.measurement, bust: "abc" } }])).toBe(false);
+    expect(isClientListValid([{ ...client, measurement: { ...client.measurement, waist: "-2" } }])).toBe(false);
+    expect(isClientListValid([{ ...client, measurement: { ...client.measurement, bust: "92.5" } }])).toBe(true);
+  });
+
+  it("refuse un historique de mensurations invalide ou avec des identifiants dupliqués", () => {
+    const validVersion = { id: "v-1", measuredAt: "2026-10-27", measurement: { ...client.measurement, bust: "92" } };
+    expect(isClientListValid([{ ...client, measurementHistory: [validVersion, { ...validVersion, id: "v-2", measurement: { ...validVersion.measurement, hips: "invalide" } }] }])).toBe(false);
+    expect(isClientListValid([{ ...client, measurementHistory: [validVersion, { ...validVersion, measuredAt: "2026-10-28" }] }])).toBe(false);
+    expect(isClientListValid([{ ...client, measurementHistory: [validVersion] }])).toBe(true);
+  });
+
   it("refuse les clients dont les champs indispensables sont absents ou mal typés", () => {
     expect(isClientListValid({})).toBe(false);
     expect(isClientListValid([{ ...client, measurement: null }])).toBe(false);

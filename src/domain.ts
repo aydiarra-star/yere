@@ -86,14 +86,18 @@ export function isClientListValid(value: unknown): value is Client[] {
       || typeof item.name !== "string"
       || typeof item.phone !== "string"
       || !isCalendarDate(item.createdAt)
-      || !isMeasurementShape(item.measurement)) return false;
+      || !isMeasurementShape(item.measurement)
+      || !isMeasurementValid(item.measurement)) return false;
     if (item.measurementHistory === undefined) return true;
-    return Array.isArray(item.measurementHistory) && item.measurementHistory.every((version) =>
-      isRecord(version)
-      && typeof version.id === "string"
-      && isCalendarDate(version.measuredAt)
-      && isMeasurementShape(version.measurement)
-    );
+    return Array.isArray(item.measurementHistory)
+      && item.measurementHistory.every((version) =>
+        isRecord(version)
+        && typeof version.id === "string" && version.id.trim().length > 0
+        && isCalendarDate(version.measuredAt)
+        && isMeasurementShape(version.measurement)
+        && isMeasurementValid(version.measurement)
+      )
+      && new Set(item.measurementHistory.map((version) => (version as Record<string, unknown>).id)).size === item.measurementHistory.length;
   });
 }
 
