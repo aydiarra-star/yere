@@ -185,6 +185,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .onboarding-form{display:grid;gap:13px;width:100%;max-width:440px;margin-top:22px}
 .onboarding-form label{display:grid;gap:6px;font-size:11px;font-weight:700;color:#43564b}
 .onboarding-form input{width:100%;min-height:43px;border:1px solid #dfe7df;border-radius:8px;padding:11px 12px;background:#fff;color:#253a2e}
+.onboarding-form select{width:100%;min-height:48px;border:1px solid #dfe7df;border-radius:8px;padding:11px 12px;background:#fff;color:#253a2e;font:inherit}
 .onboarding-form input::placeholder{color:#a0aaa3;font-weight:400}
 .onboarding-form .onboarding-primary{margin-top:5px;width:100%}
 .onboarding-visual{position:relative;overflow:hidden;min-height:600px;background:radial-gradient(ellipse at 55% 45%,#f9fff8 0,#e6f0e4 48%,#d8e7d8 100%);display:flex;align-items:center;justify-content:center}

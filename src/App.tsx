@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderStatus, type StockItem, type StockMovement } from "./domain";
+import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, atelierActivities, workModes, type AtelierProfile, type AtelierActivity, type WorkMode } from "./atelierProfile";
 import { usePersistentState } from "./usePersistentState";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, receiveSupplierPurchase, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
@@ -15,8 +16,6 @@ const measurementFieldsByGarment: Record<string, Array<[string, keyof Measuremen
 };
 
 type View = "overview" | "clients" | "orders" | "cash" | "stock" | "account" | "marketplace" | "reminders" | "suppliers";
-type AtelierProfile = { name: string; phone: string; city: string };
-const emptyAtelier: AtelierProfile = { name: "", phone: "", city: "" };
 type SupplierProfile = { businessName: string; contactName: string; phone: string; city: string; category: string; shopName: string; description: string };
 type MarketplaceListing = { id: string; sellerType: "tailor" | "supplier"; title: string; category: string; price: string; description: string; sellerName: string; city: string; imageUrl: string };
 const emptyListing: Omit<MarketplaceListing, "id"> = { sellerType: "tailor", title: "", category: "Vêtements prêts à vendre", price: "", description: "", sellerName: "", city: "", imageUrl: "" };
@@ -26,13 +25,6 @@ function isMarketplaceListingListValid(value: unknown): value is MarketplaceList
     && ["title", "category", "price", "description", "sellerName", "city", "imageUrl"].every((key) => typeof (item as Record<string, unknown>)[key] === "string"));
 }
 const emptySupplier: SupplierProfile = { businessName: "", contactName: "", phone: "", city: "", category: "", shopName: "", description: "" };
-
-function isAtelierProfileValid(value: unknown): value is AtelierProfile {
-  return typeof value === "object" && value !== null
-    && "name" in value && typeof value.name === "string"
-    && "phone" in value && typeof value.phone === "string"
-    && "city" in value && typeof value.city === "string";
-}
 
 function isSupplierProfileValid(value: unknown): value is SupplierProfile {
   return typeof value === "object" && value !== null
@@ -757,8 +749,8 @@ function Onboarding({ atelier, onAtelierChange, onFinish }: {
   onAtelierChange: (value: AtelierProfile) => void;
   onFinish: () => void;
 }) {
-  const [draft, setDraft] = useState<AtelierProfile>(atelier);
-  function update(field: keyof AtelierProfile, value: string) {
+  const [draft, setDraft] = useState<AtelierProfile>(() => normalizeAtelierProfile(atelier));
+  function update(field: "name" | "phone" | "city", value: string) {
     setDraft((previous) => ({ ...previous, [field]: value }));
   }
   return <main className="onboarding-shell">
@@ -766,16 +758,26 @@ function Onboarding({ atelier, onAtelierChange, onFinish }: {
     <div className="onboarding-layout onboarding-layout-simple">
       <section className="onboarding-copy">
         <p className="eyebrow">CONFIGURATION</p>
-        <h1>Configurez votre atelier</h1>
-        <h2>Un espace de travail à votre nom.</h2>
-        <p className="onboarding-body">Renseignez les informations de votre atelier pour commencer à saisir vos propres données.</p>
-        <form className="onboarding-form" onSubmit={(event) => { event.preventDefault(); onAtelierChange(draft); onFinish(); }}>
-          <label>Nom de l'atelier<input required autoFocus value={draft.name} onChange={(event) => update("name", event.target.value)} placeholder="Nom de l'atelier" /></label>
+        <h1>Configurez votre espace YÉRÉ</h1>
+        <h2>Un seul outil, adapté à votre métier.</h2>
+        <p className="onboarding-body">Choisissez votre activité et votre façon de travailler. Vous pourrez modifier votre profil plus tard ; les mêmes outils essentiels restent disponibles pour tous.</p>
+        <form className="onboarding-form" onSubmit={(event) => { event.preventDefault(); onAtelierChange(normalizeAtelierProfile(draft)); onFinish(); }}>
+          <label>Votre activité principale
+            <select required value={draft.activity ?? "tailleur"} onChange={(event) => setDraft((previous) => ({ ...previous, activity: event.target.value as AtelierActivity }))}>
+              {atelierActivities.map((activity) => <option key={activity.value} value={activity.value}>{activity.label}</option>)}
+            </select>
+          </label>
+          <label>Comment travaillez-vous ?
+            <select required value={draft.workMode ?? "independent"} onChange={(event) => setDraft((previous) => ({ ...previous, workMode: event.target.value as WorkMode }))}>
+              {workModes.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}
+            </select>
+          </label>
+          <label>Nom de l'atelier ou de votre activité<input required autoFocus value={draft.name} onChange={(event) => update("name", event.target.value)} placeholder="Nom de l'atelier ou de l'activité" /></label>
           <label>Téléphone<input type="tel" value={draft.phone} onChange={(event) => update("phone", event.target.value)} placeholder="Téléphone" /></label>
           <label>Ville<input value={draft.city} onChange={(event) => update("city", event.target.value)} placeholder="Ville" /></label>
-          <button className="primary-button onboarding-primary" type="submit">Créer mon espace atelier <span>→</span></button>
+          <button className="primary-button onboarding-primary" type="submit">Créer mon espace YÉRÉ <span>→</span></button>
         </form>
-        <p className="onboarding-privacy">Les données de cette version sont conservées dans ce navigateur.</p>
+        <p className="onboarding-privacy">Prototype : les données sont conservées dans ce navigateur. Aucun compte serveur n'est créé.</p>
       </section>
     </div>
   </main>;
