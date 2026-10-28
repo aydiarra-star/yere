@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type Re
 import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderStatus, type StockItem, type StockMovement } from "./domain";
 import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, atelierActivities, workModes, getActivityExperience, withPrimaryActivity, toggleSecondaryActivity, type AtelierProfile, type AtelierActivity, type WorkMode } from "./atelierProfile";
 import { normalizeBackupOnboardingState } from "./localBackup";
+import { isMarketplaceListingListValid, type MarketplaceListing } from "./marketplace";
 import { usePersistentState } from "./usePersistentState";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, receiveSupplierPurchase, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
@@ -18,14 +19,7 @@ const measurementFieldsByGarment: Record<string, Array<[string, keyof Measuremen
 
 type View = "overview" | "clients" | "orders" | "cash" | "stock" | "account" | "marketplace" | "reminders" | "suppliers";
 type SupplierProfile = { businessName: string; contactName: string; phone: string; city: string; category: string; shopName: string; description: string };
-type MarketplaceListing = { id: string; sellerType: "tailor" | "supplier"; sellerActivity?: AtelierActivity; title: string; category: string; price: string; description: string; sellerName: string; city: string; imageUrl: string };
 const emptyListing: Omit<MarketplaceListing, "id"> = { sellerType: "tailor", title: "", category: "Vêtements prêts à vendre", price: "", description: "", sellerName: "", city: "", imageUrl: "" };
-function isMarketplaceListingListValid(value: unknown): value is MarketplaceListing[] {
-  return Array.isArray(value) && value.every((item) => typeof item === "object" && item !== null
-    && typeof item.id === "string" && (item.sellerType === "tailor" || item.sellerType === "supplier")
-    && ((item as Record<string, unknown>).sellerActivity === undefined || atelierActivities.some((activity) => activity.value === (item as Record<string, unknown>).sellerActivity))
-    && ["title", "category", "price", "description", "sellerName", "city", "imageUrl"].every((key) => typeof (item as Record<string, unknown>)[key] === "string"));
-}
 const emptySupplier: SupplierProfile = { businessName: "", contactName: "", phone: "", city: "", category: "", shopName: "", description: "" };
 
 function isSupplierProfileValid(value: unknown): value is SupplierProfile {
@@ -191,9 +185,9 @@ function App() {
   function exportLocalBackup() {
     const backup = {
       format: "yere-local-backup",
-      schemaVersion: 4,
+      schemaVersion: 5,
       exportedAt: new Date().toISOString(),
-      data: { clients, orders, expenses, stockItems, stockMovements, supplierPurchases, atelier, supplier, onboardingComplete, onboardingStartedAt }
+      data: { clients, orders, expenses, stockItems, stockMovements, supplierPurchases, marketplaceListings, atelier, supplier, onboardingComplete, onboardingStartedAt }
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -213,7 +207,7 @@ function App() {
     if (!file) return;
     void file.text().then((raw) => {
       const parsed: unknown = JSON.parse(raw);
-      if (!isObjectRecord(parsed) || parsed.format !== "yere-local-backup" || ![1, 2, 3, 4].includes(parsed.schemaVersion as number) || !isObjectRecord(parsed.data)) {
+      if (!isObjectRecord(parsed) || parsed.format !== "yere-local-backup" || ![1, 2, 3, 4, 5].includes(parsed.schemaVersion as number) || !isObjectRecord(parsed.data)) {
         throw new Error("Format de sauvegarde YÉRÉ non reconnu.");
       }
       const data = parsed.data;
@@ -221,11 +215,12 @@ function App() {
       if (!isClientListValid(data.clients)
         || !isOrderListValid(data.orders)
         || !areClientOrderRelationsValid(data.clients, data.orders)
-        || ([2, 3, 4].includes(parsed.schemaVersion as number) && !isExpenseListValid(data.expenses))
-        || ((parsed.schemaVersion === 3 || parsed.schemaVersion === 4) && (!isStockItemListValid(data.stockItems)
+        || ([2, 3, 4, 5].includes(parsed.schemaVersion as number) && !isExpenseListValid(data.expenses))
+        || (([3, 4, 5].includes(parsed.schemaVersion as number)) && (!isStockItemListValid(data.stockItems)
           || !isStockMovementListValid(data.stockMovements)
           || !areStockRelationsValid(data.stockItems, data.stockMovements)))
-        || (parsed.schemaVersion === 4 && !isSupplierPurchaseListValid(data.supplierPurchases))
+        || ([4, 5].includes(parsed.schemaVersion as number) && !isSupplierPurchaseListValid(data.supplierPurchases))
+        || (parsed.schemaVersion === 5 && !isMarketplaceListingListValid(data.marketplaceListings))
         || !isAtelierProfileValid(data.atelier)
         || (data.supplier !== undefined && !isSupplierProfileValid(data.supplier))
         || !isBooleanValue(onboardingState.onboardingComplete)
@@ -238,6 +233,7 @@ function App() {
       setStockItems(isStockItemListValid(data.stockItems) ? data.stockItems : []);
       setStockMovements(isStockMovementListValid(data.stockMovements) ? data.stockMovements : []);
       setSupplierPurchases(isSupplierPurchaseListValid(data.supplierPurchases) ? data.supplierPurchases : []);
+      setMarketplaceListings(parsed.schemaVersion === 5 && isMarketplaceListingListValid(data.marketplaceListings) ? data.marketplaceListings : []);
       setAtelier(data.atelier);
       setSupplier(data.supplier !== undefined && isSupplierProfileValid(data.supplier) ? data.supplier : emptySupplier);
       setOnboardingComplete(onboardingState.onboardingComplete);
@@ -634,7 +630,7 @@ function App() {
               <button type="submit" className="primary-button">Enregistrer le profil</button>
             </form>
             <section className="backup-panel" aria-labelledby="backup-title">
-              <div><h3 id="backup-title">Sauvegarde locale</h3><p>Exportez vos fiches, mensurations, commandes et profil. La restauration remplace les données actuellement enregistrées sur cet appareil.</p></div>
+              <div><h3 id="backup-title">Sauvegarde locale</h3><p>Exportez vos fiches, mensurations, commandes, annonces de vitrine et profil. La restauration remplace les données actuellement enregistrées sur cet appareil.</p></div>
               <div className="backup-actions">
                 <button type="button" className="primary-button" onClick={exportLocalBackup}>Exporter une sauvegarde (.json)</button>
                 <label className="secondary-button backup-import-label" htmlFor="yere-backup-file">Restaurer une sauvegarde</label>
