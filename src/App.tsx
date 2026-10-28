@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, formatXof, getClientReminderSuggestions, getDailyTasks, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderStatus, type StockItem, type StockMovement } from "./domain";
 import { usePersistentState } from "./usePersistentState";
-import { isSupplierPurchaseListValid, receiveSupplierPurchase, supplierPurchaseTotal, type SupplierPurchase } from "./supplierPurchases";
+import { isSupplierPurchaseListValid, receiveSupplierPurchase, supplierPurchaseTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", arm: "", neck: "", thigh: "", legLength: "", garmentType: "Tenue complète", note: "" };
 
@@ -99,6 +99,7 @@ function App() {
   const [purchaseQuantity, setPurchaseQuantity] = useState("");
   const [purchaseUnitCost, setPurchaseUnitCost] = useState("");
   const [purchaseNote, setPurchaseNote] = useState("");
+  const [purchaseDraftLines, setPurchaseDraftLines] = useState<SupplierPurchaseLine[]>([]);
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -324,15 +325,32 @@ function App() {
     setNotice("Mouvement de stock enregistré sur cet appareil.");
   }
 
+  function addPurchaseLine() {
+    const quantity = Number(purchaseQuantity);
+    const unitCost = Number(purchaseUnitCost);
+    if (!purchaseStockItemId || !purchaseQuantity.trim() || !purchaseUnitCost.trim()
+      || !Number.isFinite(quantity) || quantity <= 0
+      || !Number.isSafeInteger(unitCost) || unitCost < 0
+      || !stockItems.some((item) => item.id === purchaseStockItemId)) {
+      setNotice("Choisissez un article et vérifiez sa quantité et son coût unitaire.");
+      return;
+    }
+    if (purchaseDraftLines.some((line) => line.stockItemId === purchaseStockItemId)) {
+      setNotice("Cet article est déjà dans l’achat. Modifiez sa ligne plutôt que de le dupliquer.");
+      return;
+    }
+    setPurchaseDraftLines((current) => [...current, { stockItemId: purchaseStockItemId, quantity, unitCost }]);
+    setPurchaseStockItemId("");
+    setPurchaseQuantity("");
+    setPurchaseUnitCost("");
+    setNotice("Article ajouté à l’achat. Vous pouvez ajouter d’autres articles avant d’enregistrer.");
+  }
+
   function addSupplierPurchase(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const supplierName = purchaseSupplierName.trim();
-    const quantity = Number(purchaseQuantity);
-    const unitCost = Number(purchaseUnitCost);
-    if (!supplierName || !purchaseStockItemId || !Number.isFinite(quantity) || quantity <= 0
-      || !Number.isSafeInteger(unitCost) || unitCost < 0
-      || !stockItems.some((item) => item.id === purchaseStockItemId)) {
-      setNotice("Vérifiez le fournisseur, l’article, la quantité et le coût unitaire.");
+    if (!supplierName || purchaseDraftLines.length === 0) {
+      setNotice("Indiquez le fournisseur et ajoutez au moins un article à l’achat.");
       return;
     }
     const purchase: SupplierPurchase = {
@@ -340,7 +358,7 @@ function App() {
       supplierName,
       orderedAt: new Date().toISOString().slice(0, 10),
       status: "À recevoir",
-      lines: [{ stockItemId: purchaseStockItemId, quantity, unitCost }],
+      lines: purchaseDraftLines.map((line) => ({ ...line })),
       note: purchaseNote.trim() || undefined
     };
     if (!isSupplierPurchaseListValid([...supplierPurchases, purchase])) {
@@ -353,6 +371,7 @@ function App() {
     setPurchaseQuantity("");
     setPurchaseUnitCost("");
     setPurchaseNote("");
+    setPurchaseDraftLines([]);
     setPurchaseFormOpen(false);
     setNotice("Achat fournisseur enregistré. Le stock ne changera qu’à la réception effective.");
   }
@@ -591,16 +610,19 @@ function App() {
               <div className="section-heading"><div><h2>Achats fournisseurs</h2><p>Enregistrez une commande fournisseur, puis réceptionnez-la lorsque les fournitures arrivent.</p></div><button type="button" className="primary-button" disabled={stockItems.length === 0} onClick={() => setPurchaseFormOpen((open) => !open)}>{purchaseFormOpen ? "Annuler" : "＋ Nouvel achat"}</button></div>
               {purchaseFormOpen && <form className="new-order-form" onSubmit={addSupplierPurchase}>
                 <label>Fournisseur<input required maxLength={120} value={purchaseSupplierName} onChange={(event) => setPurchaseSupplierName(event.target.value)} placeholder="Ex. Mercerie Ndiaye" /></label>
-                <label>Article à acheter<select required value={purchaseStockItemId} onChange={(event) => setPurchaseStockItemId(event.target.value)}><option value="">Choisir un article</option>{stockItems.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.unit})</option>)}</select></label>
-                <label>Quantité<input required type="number" min="0.01" step="any" inputMode="decimal" value={purchaseQuantity} onChange={(event) => setPurchaseQuantity(event.target.value)} /></label>
-                <label>Coût unitaire (FCFA)<input required type="number" min="0" step="1" inputMode="numeric" value={purchaseUnitCost} onChange={(event) => setPurchaseUnitCost(event.target.value)} /></label>
+                <div className="section-heading"><div><h3>Articles de l’achat</h3><p>Ajoutez chaque tissu ou fourniture avant d’enregistrer la commande.</p></div></div>
+                <label>Article à acheter<select value={purchaseStockItemId} onChange={(event) => setPurchaseStockItemId(event.target.value)}><option value="">Choisir un article</option>{stockItems.filter((item) => !purchaseDraftLines.some((line) => line.stockItemId === item.id)).map((item) => <option key={item.id} value={item.id}>{item.name} ({item.unit})</option>)}</select></label>
+                <label>Quantité<input type="number" min="0.01" step="any" inputMode="decimal" value={purchaseQuantity} onChange={(event) => setPurchaseQuantity(event.target.value)} /></label>
+                <label>Coût unitaire (FCFA)<input type="number" min="0" step="1" inputMode="numeric" value={purchaseUnitCost} onChange={(event) => setPurchaseUnitCost(event.target.value)} /></label>
+                <div className="form-actions"><button type="button" className="secondary-button" onClick={addPurchaseLine}>＋ Ajouter cet article</button></div>
+                {purchaseDraftLines.length > 0 && <div className="table-wrap"><table><thead><tr><th>Article</th><th>Quantité</th><th>Coût unitaire</th><th>Total ligne</th><th>Action</th></tr></thead><tbody>{purchaseDraftLines.map((line) => <tr key={line.stockItemId}><td>{stockItems.find((item) => item.id === line.stockItemId)?.name ?? "Article inconnu"}</td><td>{line.quantity} {stockItems.find((item) => item.id === line.stockItemId)?.unit ?? ""}</td><td>{formatXof(line.unitCost)}</td><td>{formatXof(line.quantity * line.unitCost)}</td><td><button type="button" className="text-button" onClick={() => setPurchaseDraftLines((current) => current.filter((item) => item.stockItemId !== line.stockItemId))}>Retirer</button></td></tr>)}</tbody><tfoot><tr><th colSpan={3}>Total estimé</th><th>{formatXof(purchaseDraftLines.reduce((sum, line) => sum + line.quantity * line.unitCost, 0))}</th><th /></tr></tfoot></table></div>}
                 <label>Note (facultative)<input maxLength={160} value={purchaseNote} onChange={(event) => setPurchaseNote(event.target.value)} placeholder="Référence, livraison prévue…" /></label>
-                <div className="form-actions"><button type="button" className="secondary-button" onClick={() => setPurchaseFormOpen(false)}>Annuler</button><button type="submit" className="primary-button">Enregistrer l’achat</button></div>
+                <div className="form-actions"><button type="button" className="secondary-button" onClick={() => { setPurchaseFormOpen(false); setPurchaseDraftLines([]); setPurchaseSupplierName(""); setPurchaseNote(""); }}>Annuler</button><button type="submit" className="primary-button" disabled={purchaseDraftLines.length === 0}>Enregistrer l’achat</button></div>
               </form>}
               {supplierPurchases.length === 0 ? <div className="empty-state">Aucun achat fournisseur. Les achats enregistrés ici ne modifient pas le stock avant leur réception.</div> : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Fournisseur</th><th>Article</th><th>Montant</th><th>État</th><th>Action</th></tr></thead><tbody>{supplierPurchases.map((purchase) => <tr key={purchase.id}><td>{purchase.orderedAt}</td><td><b>{purchase.supplierName}</b><small>{purchase.note || purchase.id}</small></td><td>{purchase.lines.map((line) => <div key={line.stockItemId}>{stockItems.find((item) => item.id === line.stockItemId)?.name ?? "Article inconnu"} · {line.quantity}</div>)}</td><td>{formatXof(supplierPurchaseTotal(purchase))}</td><td>{purchase.status}{purchase.receivedAt ? <small>Reçu le {purchase.receivedAt}</small> : null}</td><td>{purchase.status === "À recevoir" ? <button type="button" className="secondary-button" onClick={() => receivePurchase(purchase.id)}>Confirmer la réception</button> : "—"}</td></tr>)}</tbody></table></div>}
             </section>
             <section className="content-card"><div className="section-heading"><div><h2>Historique des mouvements</h2><p>Les mouvements restent visibles pour comprendre les variations de stock.</p></div></div>{stockMovements.length === 0 ? <div className="empty-state">Aucun mouvement enregistré.</div> : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Article</th><th>Type</th><th>Quantité</th><th>Note</th></tr></thead><tbody>{stockMovements.slice(0, 100).map((movement) => <tr key={movement.id}><td>{movement.movedAt}</td><td>{stockItems.find((item) => item.id === movement.itemId)?.name ?? "Article inconnu"}</td><td>{movement.type}</td><td>{movement.quantity} {stockItems.find((item) => item.id === movement.itemId)?.unit ?? ""}</td><td>{movement.note || "—"}</td></tr>)}</tbody></table></div>}</section>
-            <p className="privacy-note">Les achats et réceptions sont enregistrés sur cet appareil. Chaque achat de ce premier écran porte sur un article ; les achats multi-articles, factures fournisseurs, paiements et synchronisation serveur restent à développer.</p>
+            <p className="privacy-note">Les achats peuvent regrouper plusieurs articles et leurs réceptions alimentent l’historique de stock. Les factures fournisseurs, paiements et synchronisation serveur restent à développer.</p>
           </section>}
           {view === "suppliers" && <section className="content-card supplier-page">
             <div className="section-heading"><div><h2>Profil fournisseur</h2><p>Renseignez les informations professionnelles de votre espace fournisseur.</p></div><span className="supplier-symbol"><NavIcon name="truck" /></span></div>
