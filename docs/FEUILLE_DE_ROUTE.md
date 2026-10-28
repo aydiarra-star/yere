@@ -25,6 +25,7 @@ Cette feuille de route suit le prompt maître. Les coches indiquent uniquement u
 - [ ] Ajouter des tests d'intégration confirmant l'absence de duplication des entités communes.
 - [x] Corriger la restauration des sauvegardes historiques : les versions 1 à 3 sans champs d’onboarding reprennent avec un profil déjà configuré ; les champs invalides restent refusés.
 - [x] Inclure les annonces de vitrine dans le format de sauvegarde v5 et valider les annonces avant toute restauration ; les sauvegardes v1 à v4 restent restaurables sans ce champ.
+- [x] Tester séparément la normalisation des annonces selon la version de sauvegarde, pour que les formats v1 à v4 ne dépendent pas d’un champ ajouté en v5.
 
 **Critère de sortie :** les cinq métiers peuvent utiliser le même produit ; le profil personnalise l'expérience sans limiter les fonctions utiles ni compromettre les données. La documentation ne vaut pas implémentation applicative.
 

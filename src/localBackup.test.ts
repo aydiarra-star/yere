@@ -38,3 +38,20 @@ describe("legacy local backup onboarding compatibility", () => {
     });
   });
 });
+
+describe("marketplace listings across backup versions", () => {
+  it("defaults old formats to an empty vitrine without trusting an absent field", async () => {
+    const { normalizeBackupMarketplaceListings } = await import("./localBackup");
+    for (const schemaVersion of [1, 2, 3, 4]) {
+      expect(normalizeBackupMarketplaceListings(schemaVersion, {})).toEqual([]);
+      expect(normalizeBackupMarketplaceListings(schemaVersion, { marketplaceListings: "malformed" })).toEqual([]);
+    }
+  });
+
+  it("requires the current format to provide its marketplace listings field", async () => {
+    const { normalizeBackupMarketplaceListings } = await import("./localBackup");
+    expect(normalizeBackupMarketplaceListings(5, {})).toBeUndefined();
+    const listings = [{ id: "listing-1", title: "Robe" }];
+    expect(normalizeBackupMarketplaceListings(5, { marketplaceListings: listings })).toBe(listings);
+  });
+});
