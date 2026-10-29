@@ -192,3 +192,46 @@ body, .main-content { color: #1F2937; }
   .tailor-badge { font-size: 9px !important; padding: 4px 6px !important; }
   .primary-button.welcome-action { width: 100%; min-height: 48px; }
 }
+
+
+/* Homepage reading order: welcome title -> subtitle -> three priorities -> main action -> follow-up sections. */
+.page-wrap:has(.overview-welcome) {
+  display: flex;
+  flex-direction: column;
+}
+.page-wrap:has(.overview-welcome) > .overview-welcome {
+  display: contents !important;
+}
+.page-wrap:has(.overview-welcome) > .overview-welcome > .welcome-copy {
+  display: contents !important;
+}
+.page-wrap:has(.overview-welcome) .overview-welcome .page-banner-title {
+  order: 1;
+  margin-bottom: 0;
+}
+.page-wrap:has(.overview-welcome) .overview-welcome .page-subtitle {
+  order: 2;
+  margin-bottom: 14px;
+}
+.page-wrap:has(.overview-welcome) .overview-welcome .today-snapshot {
+  order: 5;
+  margin: 0 0 18px;
+}
+.page-wrap:has(.overview-welcome) > .tailor-priority-grid {
+  order: 3;
+}
+.page-wrap:has(.overview-welcome) > .welcome-action {
+  order: 4;
+  align-self: flex-start;
+}
+.page-wrap:has(.overview-welcome) > .content-card {
+  order: 6;
+}
+.page-wrap:has(.overview-welcome) > .bottom-grid {
+  order: 7;
+}
+@media (max-width: 760px) {
+  .page-wrap:has(.overview-welcome) > .welcome-action {
+    align-self: stretch;
+  }
+}
