@@ -54,7 +54,6 @@ describe("preserveRejectedStorageValue", () => {
 
     expect(preserveRejectedStorageValue(storage, "yere-clients", "bad data")).toBe(false);
   });
-});
 
   it("reuses a later recovery slot when the rejected value already exists there", () => {
     const raw = '{"snapshot":"kept"}';
