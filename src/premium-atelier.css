@@ -1,13 +1,13 @@
 /* YÉRÉ Atelier — a single, mobile-first indigo visual language. */
 :root {
-  --atelier-ink: #1c2449;
-  --atelier-indigo: #1a204e;
-  --atelier-indigo-deep: #131a42;
+  --atelier-ink: #171e49;
+  --atelier-indigo: #171e49;
+  --atelier-indigo-deep: #11173b;
   --atelier-indigo-mid: #455182;
   --atelier-muted: #6e7892;
   --atelier-line: #e5e8f1;
   --atelier-canvas: #f7f8fc;
-  --atelier-orange: #ff6b13;
+  --atelier-orange: #171e49;
 }
 html, body, #root {
   background: var(--atelier-canvas) !important;
@@ -232,7 +232,7 @@ body, button, input, select, textarea {
 .priority-open:hover > span { background: #e9edfa; color: #26376f; }
 .priority-open svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 
-/* The only vivid accent is reserved for the primary action. */
+/* Primary action unified with the indigo bottom navigation bar (#171e49). */
 .app-shell.yere-app .create-order-cta {
   display: flex;
   align-items: center;
@@ -242,18 +242,18 @@ body, button, input, select, textarea {
   min-height: 57px;
   margin-top: 17px;
   padding: 11px 15px;
-  border: 1px solid #f86612;
+  border: 1px solid #171e49;
   border-radius: 14px;
-  background: linear-gradient(105deg, #ff771b, #ff650c) !important;
+  background: linear-gradient(112deg, #171e49 0%, #1c2558 62%, #171e49 100%) !important;
   color: #fff !important;
-  box-shadow: 0 8px 17px rgba(239,101,18,.22), inset 0 1px rgba(255,255,255,.18) !important;
+  box-shadow: 0 8px 18px rgba(23,30,73,.22), inset 0 1px rgba(255,255,255,.14) !important;
   font-size: 12px !important;
   font-weight: 850 !important;
   letter-spacing: .025em;
   line-height: 1.25 !important;
-  transition: transform .18s ease, box-shadow .18s ease;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
 }
-.create-order-cta:hover { transform: translateY(-2px); box-shadow: 0 11px 23px rgba(239,101,18,.3) !important; }
+.create-order-cta:hover { transform: translateY(-2px); background: linear-gradient(112deg, #1c2558 0%, #24306e 62%, #1c2558 100%) !important; box-shadow: 0 11px 23px rgba(23,30,73,.3) !important; }
 .cta-icon { display: grid; place-items: center; width: 31px; height: 31px; border: 1px solid rgba(255,255,255,.35); border-radius: 9px; background: rgba(255,255,255,.11); }
 .cta-icon svg { width: 19px; height: 19px; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .cta-arrow { display: grid; place-items: center; width: 22px; height: 22px; margin-left: 2px; }
