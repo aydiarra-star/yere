@@ -544,3 +544,81 @@ body.yere-dialog-open { overflow: hidden !important; }
 .yere-app :is(.history-empty, .privacy-note, .empty-state, .empty-state b, .empty-state p, .cash-summary small, .footer, .footer span) { color: #5d6b8a !important; }
 .app-shell.yere-app .new-client-form p { color: #5d6b8a !important; }
 .app-shell.yere-app :is(.marketplace-listing-heading > div > p, .marketplace-empty > p, .marketplace-local-note) { color: #5d6b8a !important; }
+
+
+/* YÉRÉ refinement — quieter status labels, monochrome artwork, fast measurement lookup. */
+.app-shell.yere-app .priority-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-top: 10px;
+}
+.app-shell.yere-app .priority-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 0;
+  padding: 0 9px 0 0;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  color: #5d6b8a !important;
+  font-size: 10px !important;
+  font-weight: 650;
+  line-height: 1.35 !important;
+  white-space: nowrap;
+}
+.app-shell.yere-app .priority-badge + .priority-badge::before {
+  content: "·";
+  margin-right: 9px;
+  color: #a8b0c8;
+  font-weight: 800;
+}
+.app-shell.yere-app .priority-badge--2,
+.app-shell.yere-app .priority-badge--3 { background: transparent !important; color: #5d6b8a !important; }
+.priority-art {
+  filter: grayscale(1) sepia(1) saturate(2.2) hue-rotate(198deg) contrast(.96) brightness(1.04) drop-shadow(0 6px 5px rgba(23,30,73,.07));
+  mix-blend-mode: multiply;
+  opacity: .88;
+}
+.priority-art-halo { background: radial-gradient(circle, #eaeefa 0%, #f7f8fc 49%, transparent 72%); }
+.app-shell.yere-app .measurements-quick-access {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  max-width: 100%;
+  margin-top: 13px;
+  padding: 8px 12px;
+  border: 1px solid #e2e6f1;
+  border-radius: 11px;
+  background: #fff !important;
+  color: #171e49 !important;
+  font-size: 12px !important;
+  font-weight: 750;
+  text-align: left;
+  box-shadow: 0 3px 10px rgba(23,30,73,.035);
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+.app-shell.yere-app .measurements-quick-access:hover {
+  border-color: #c5cde6;
+  background: #f7f8fc !important;
+  transform: translateY(-1px);
+}
+.measurements-quick-access > svg {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  stroke: #171e49;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.measurements-quick-arrow { margin-left: 2px; color: #5d6b8a; font-size: 14px; }
+@media (max-width: 760px) {
+  .app-shell.yere-app .priority-badges { margin-top: 7px; }
+  .app-shell.yere-app .priority-badge { padding-right: 7px; font-size: 10px !important; }
+  .app-shell.yere-app .priority-badge + .priority-badge::before { margin-right: 7px; }
+  .app-shell.yere-app .measurements-quick-access { margin-top: 10px; min-height: 37px; font-size: 11px !important; }
+  .home-greeting { padding-bottom: 17px; }
+}

@@ -54,4 +54,42 @@ describe("preserveRejectedStorageValue", () => {
 
     expect(preserveRejectedStorageValue(storage, "yere-clients", "bad data")).toBe(false);
   });
+
+  it("reuses a later recovery slot when the rejected value already exists there", () => {
+    const raw = '{"snapshot":"kept"}';
+    const storage = createStorage({
+      "yere-clients.recovery": '{"older":"snapshot"}',
+      "yere-clients.recovery-2": raw
+    });
+
+    expect(preserveRejectedStorageValue(storage, "yere-clients", raw)).toBe(true);
+    expect(storage.values.size).toBe(2);
+    expect(storage.values.get("yere-clients.recovery-2")).toBe(raw);
+  });
+
+  it("does not claim success when storage silently fails to retain a recovery copy", () => {
+    const storage = {
+      getItem() {
+        return null;
+      },
+      setItem() {
+        // Simulate browser storage accepting a call but not retaining the value.
+      }
+    };
+
+    expect(preserveRejectedStorageValue(storage, "yere-clients", "damaged data")).toBe(false);
+  });
+
+  it("fails safely when all recovery slots are occupied", () => {
+    const initial: Record<string, string> = {};
+    for (let index = 1; index <= 100; index += 1) {
+      const key = index === 1 ? "yere-clients.recovery" : `yere-clients.recovery-${index}`;
+      initial[key] = `existing snapshot ${index}`;
+    }
+    const storage = createStorage(initial);
+
+    expect(preserveRejectedStorageValue(storage, "yere-clients", "new damaged data")).toBe(false);
+    expect(storage.values.size).toBe(100);
+    expect(storage.values.get("yere-clients.recovery")).toBe("existing snapshot 1");
+  });
 });
