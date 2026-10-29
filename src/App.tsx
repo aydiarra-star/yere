@@ -676,7 +676,30 @@ function App() {
                   <p className="tailor-card-description">Total : {formatXof(outstanding)}</p>
                   <div className="tailor-badges"><span className="tailor-badge badge-red">À régler</span><span className="tailor-badge badge-green">Paiement reçu</span></div>
                 </div>
-                <div className="tailor-card-art payment-art" aria-hidden="true"><span className="art-terminal">▣</span><span className="art-money">₣</span><span className="art-card">▰</span></div>
+                <div className="tailor-card-art payment-art payment-illustration" aria-hidden="true">
+                  <svg viewBox="0 0 160 120" role="img" aria-label="Caisse enregistreuse, reçu et pièces FCFA" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="12" y="19" width="87" height="83" rx="13" fill="#DDF3E4"/>
+                    <path d="M27 44h54l-5-13H32z" fill="#F8FFFA" stroke="#217A50" strokeWidth="2.5" strokeLinejoin="round"/>
+                    <rect x="24" y="44" width="62" height="38" rx="7" fill="#23865A"/>
+                    <rect x="31" y="50" width="48" height="14" rx="3" fill="#C7F4D8"/>
+                    <text x="55" y="60" textAnchor="middle" fontSize="8" fontWeight="800" fill="#14532D">ENCAISSEMENT</text>
+                    <g fill="#F5FFF8"><circle cx="35" cy="72" r="2.3"/><circle cx="45" cy="72" r="2.3"/><circle cx="55" cy="72" r="2.3"/><circle cx="65" cy="72" r="2.3"/><circle cx="75" cy="72" r="2.3"/></g>
+                    <rect x="34" y="84" width="42" height="9" rx="3" fill="#14532D"/>
+                    <path d="M48 93v5m15-5v5" stroke="#217A50" strokeWidth="3" strokeLinecap="round"/>
+                    <path d="M100 15h24l5 7v49h-29z" fill="#FFFDF5" stroke="#718096" strokeWidth="1.7"/>
+                    <path d="M106 30h15m-15 7h15m-15 7h11m-11 7h15" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M100 15v8h7" fill="none" stroke="#718096" strokeWidth="1.7"/>
+                    <g stroke="#A86B19" strokeWidth="1.5">
+                      <ellipse cx="122" cy="86" rx="17" ry="7" fill="#F7C95C"/>
+                      <path d="M105 86v7c0 4 8 7 17 7s17-3 17-7v-7" fill="#E9AC35"/>
+                      <ellipse cx="122" cy="86" rx="17" ry="7" fill="#FFDA78"/>
+                    </g>
+                    <text x="122" y="89" textAnchor="middle" fontSize="9" fontWeight="900" fill="#805313">F</text>
+                    <circle cx="143" cy="61" r="11" fill="#FFF1C7" stroke="#D49A26" strokeWidth="1.5"/>
+                    <text x="143" y="64.5" textAnchor="middle" fontSize="7" fontWeight="900" fill="#805313">FCFA</text>
+                    <path d="M109 106h36" stroke="#23865A" strokeWidth="3" strokeLinecap="round" opacity=".5"/>
+                  </svg>
+                </div>
               </article>
               <article className="tailor-priority-card production-card">
                 <div className="tailor-card-copy">
@@ -685,7 +708,35 @@ function App() {
                   <p className="tailor-card-description">{orders.some((order) => order.status === "En confection") ? "Des pièces sont actuellement en confection" : "Suivez chaque pièce jusqu’à la finition"}</p>
                   <div className="tailor-badges"><span className="tailor-badge badge-blue">Conception</span><span className="tailor-badge badge-pink">Couture</span><span className="tailor-badge badge-ochre">Finition</span></div>
                 </div>
-                <div className="tailor-card-art machine-art" aria-hidden="true"><span className="art-machine">⌁</span><span className="art-ruler">〰</span><span className="art-needle">╱</span></div>
+                <div className="tailor-card-art machine-art production-illustration" aria-hidden="true">
+                  <svg viewBox="0 0 160 120" role="img" aria-label="Machine à coudre et suivi numérique de production" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="8" y="12" width="74" height="57" rx="8" fill="#E4EAFE" stroke="#8EA5F5" strokeWidth="1.5"/>
+                    <rect x="15" y="19" width="60" height="42" rx="4" fill="#FFF" stroke="#B9C8FB"/>
+                    <text x="45" y="28" textAnchor="middle" fontSize="5.5" fontWeight="800" fill="#243B80">PRODUCTION</text>
+                    <g stroke="#4D65B8" strokeWidth="1.4" fill="none"><path d="M28 39h12v8h-12zM49 39h12v8H49zM28 51h12v5H28zM49 51h12v5H49z"/><path d="M40 43h9m-15 4v4m21-4v4"/></g>
+                    <path d="M19 75h71" stroke="#243B80" strokeWidth="4" strokeLinecap="round"/>
+                    <path d="M24 72V50q0-8 8-8h17q8 0 8 8v8" fill="#FFFFFF" stroke="#253B85" strokeWidth="3" strokeLinejoin="round"/>
+                    <path d="M33 42V33h17l7 8" fill="#CBD5FF" stroke="#253B85" strokeWidth="3" strokeLinejoin="round"/>
+                    <circle cx="43" cy="32" r="7" fill="#FFF" stroke="#253B85" strokeWidth="2.5"/>
+                    <circle cx="43" cy="32" r="2" fill="#253B85"/>
+                    <path d="M56 49h11v14H56M63 63v9" fill="none" stroke="#253B85" strokeWidth="2.5" strokeLinecap="round"/>
+                    <path d="M61 72h11" stroke="#253B85" strokeWidth="3" strokeLinecap="round"/>
+                    <path d="M16 80h72" stroke="#7C8CC8" strokeWidth="3" strokeLinecap="round"/>
+                    <path d="M26 80v7m48-7v7" stroke="#253B85" strokeWidth="3" strokeLinecap="round"/>
+                    <path d="M43 24V17q0-5 5-5h4" fill="none" stroke="#D977A8" strokeWidth="1.7" strokeLinecap="round"/>
+                    <path d="M50 12h5" stroke="#D977A8" strokeWidth="2.5" strokeLinecap="round"/>
+                    <path d="M82 37h9v13h8" stroke="#7486D7" strokeWidth="2" fill="none" strokeDasharray="3 3"/>
+                    <g transform="translate(91 18)">
+                      <ellipse cx="24" cy="64" rx="26" ry="7" fill="#D7C6F6"/>
+                      <path d="M5 28h37v37H5z" fill="#B18BDB" stroke="#8057B3" strokeWidth="2"/>
+                      <ellipse cx="23.5" cy="28" rx="18.5" ry="8" fill="#E6D7FA" stroke="#8057B3" strokeWidth="2"/>
+                      <ellipse cx="23.5" cy="65" rx="18.5" ry="8" fill="#C7A9EA" stroke="#8057B3" strokeWidth="2"/>
+                      <path d="M14 28v37m9-37v37m9-37v37" stroke="#8B63BC" strokeWidth="1.2" opacity=".7"/>
+                    </g>
+                    <path d="M101 93h39" stroke="#253B85" strokeWidth="2" strokeLinecap="round" opacity=".45"/>
+                    <circle cx="141" cy="93" r="3" fill="#253B85"/>
+                  </svg>
+                </div>
               </article>
             </section>
             <button className="primary-button welcome-action overview-create-order" onClick={() => { setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); setShowOrderForm(true); setView("orders"); }}><span>✂</span> CRÉER NOUVELLE COMMANDE</button>
