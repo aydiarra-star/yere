@@ -617,11 +617,11 @@ function App() {
     { id: "reminders", label: "Relances clients", icon: "bell-ring" }
   ];
   const mobileNavItems: { id: View | "more"; label: string; icon: string }[] = [
-    { id: "overview", label: "Accueil", icon: "house" },
-    { id: "clients", label: "Clients", icon: "users" },
-    { id: "orders", label: "Commandes", icon: "clipboard-list" },
-    { id: "cash", label: "Caisse", icon: "wallet" },
-    { id: "more", label: "Plus", icon: "more-horizontal" }
+    { id: "overview", label: "Accueil", icon: "thread-spool" },
+    { id: "clients", label: "Clients", icon: "address-book" },
+    { id: "orders", label: "Commandes", icon: "dress-form" },
+    { id: "cash", label: "Caisse", icon: "payment-terminal" },
+    { id: "more", label: "Plus", icon: "tailor-scissors" }
   ];
 
   if (!onboardingComplete) {
@@ -879,7 +879,12 @@ function NavIcon({ name }: { name: string }) {
     "bell-ring": <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /><path d="M19 3l2 2M5 3 3 5" /></>,
     package: <><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="M3 8v9l9 5 9-5V8" /><path d="M12 13v9" /></>,
     "more-horizontal": <><circle cx="5" cy="12" r="1.4" /><circle cx="12" cy="12" r="1.4" /><circle cx="19" cy="12" r="1.4" /></>,
-    "map-pin": <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></>
+    "map-pin": <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></>,
+    "thread-spool": <><path d="M8 3.5h8v17H8z" /><path d="M7 3.5h10M7 20.5h10" /><path d="M8 7h8M8 10h8M8 13h8M8 16h8" /><path d="M10 2h4v1.5h-4zM10 20.5h4V22h-4z" /></>,
+    "address-book": <><rect x="6" y="3" width="15" height="18" rx="2" /><path d="M3 7h3M3 12h3M3 17h3" /><circle cx="11" cy="9" r="2" /><path d="M8.5 15a2.5 2.5 0 0 1 5 0M16 8h2M16 12h2M16 16h2" /></>,
+    "dress-form": <><path d="M12 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" /><path d="M10 7 8 10l2 3-2 3h8l-2-3 2-3-2-3" /><path d="M12 16v5M8 21h8M12 7v2" /></>,
+    "payment-terminal": <><rect x="5" y="2.5" width="14" height="19" rx="2" /><path d="M8 6h8v4H8zM8 13h2M12 13h2M16 13h.01M8 16h2M12 16h2M16 16h.01M10 19h4" /></>,
+    "tailor-scissors": <><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="m8.2 7.8 12 12M8.2 16.2l12-12M11 10l-3 2M11 14l-3-2" /></>
   };
   return <svg {...common}>{paths[name] ?? paths.store}</svg>;
 }
