@@ -351,11 +351,22 @@ body, .main-content { color: #1F2937; }
 /* Indigo identity and detailed dashboard illustrations. */
 :root { --yere-home-navy: #101E42; --yere-indigo: #101E42; }
 .topbar, .mobile-bottom-nav, .sidebar, .sidebar-nav, .desktop-sidebar { background-color: var(--yere-indigo) !important; }
-.payment-illustration, .production-illustration { flex: 0 0 132px !important; width: 132px !important; height: 100px !important; border-radius: 14px !important; overflow: hidden; }
+.tailor-priority-card .payment-illustration, .tailor-priority-card .production-illustration {
+  position: relative !important;
+  inset: auto !important;
+  display: block !important;
+  flex: 0 0 132px !important;
+  width: 132px !important;
+  min-width: 132px !important;
+  height: 100px !important;
+  align-self: center;
+  border-radius: 14px !important;
+  overflow: hidden;
+}
 .payment-illustration { background: #E8F6ED !important; }
 .production-illustration { background: #EEF2FF !important; }
-.payment-illustration svg, .production-illustration svg { display: block; width: 100%; height: 100%; }
+ .tailor-priority-card .payment-illustration svg, .tailor-priority-card .production-illustration svg { display: block; width: 100%; height: 100%; max-width: none; }
 @media (max-width: 760px) {
-  .payment-illustration, .production-illustration { flex-basis: 116px !important; width: 116px !important; height: 88px !important; }
+   .tailor-priority-card .payment-illustration, .tailor-priority-card .production-illustration { flex: 0 0 116px !important; width: 116px !important; min-width: 116px !important; height: 88px !important; }
   .tailor-priority-card { padding-inline: 13px !important; }
 }
