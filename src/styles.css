@@ -2329,3 +2329,69 @@ html, body, #root {
     background: #fff !important;
   }
 }
+
+
+/* YÉRÉ Atelier — harmonisation UX premium 2026 (sans refonte d'architecture) */
+:root {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  color: #243247;
+  background: #f6f8fc;
+  font-size: 14px;
+  --yere-blue: #2563eb;
+  --yere-blue-dark: #1d4ed8;
+  --yere-ink: #14213d;
+  --yere-muted: #596579;
+  --yere-border: #e2e8f0;
+  --yere-surface: #ffffff;
+}
+body { background: #f6f8fc; color: #243247; }
+button, input, select, textarea { font: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
+  outline: 3px solid #93c5fd !important; outline-offset: 2px !important;
+}
+/* Text remains compact, but never shrinks to unreadable microcopy. */
+.nav-caption, .eyebrow { font-size: 11px; letter-spacing: .7px; }
+.nav-item { font-size: 13px; }
+.atelier-switch b, .profile b, .quick-actions b, .client-main b { font-size: 13px; }
+.atelier-switch small, .profile small, .quick-actions small, .client-main small,
+.page-subtitle, .section-heading p, .stat-top, .stat-card > small,
+.new-client-form p, .new-client-form label, .new-client-form input,
+.measure-field > span, .measure-field small, .measure-note, .privacy-note,
+.empty-state p, .table-secondary { font-size: 11px; }
+.table-wrap th { font-size: 10px; letter-spacing: .35px; }
+.table-wrap td, .order-id, .table-client, .status-select { font-size: 12px; }
+.primary-button, .secondary-button, .text-button { font-size: 12px; }
+.stat-card, .content-card { border-color: var(--yere-border); box-shadow: 0 3px 12px rgba(15, 23, 42, .035); }
+.primary-button { background: var(--yere-blue); border-color: var(--yere-blue); border-radius: 10px; min-height: 42px; }
+.primary-button:hover { background: var(--yere-blue-dark); }
+.nav-item.active { background: #eaf1ff; color: var(--yere-blue-dark); }
+.search-box:focus-within, .new-client-form input:focus, .measure-field input:focus {
+  border-color: #93b7ff; box-shadow: 0 0 0 3px rgba(37, 99, 235, .1);
+}
+/* Single-line headings where possible: truncate safely rather than overflow. */
+.welcome-row h1, .section-heading h2, .new-client-form h3 {
+  min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+@media (max-width: 760px) {
+  .page-wrap { padding: 20px 12px 26px; }
+  .welcome-row { gap: 12px; }
+  .welcome-row h1 { font-size: clamp(19px, 5vw, 23px); letter-spacing: -.35px; }
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .stat-card { min-width: 0; padding: 12px; }
+  .stat-top { align-items: flex-start; font-size: 11px; }
+  .stat-card > strong { font-size: clamp(18px, 5vw, 23px); overflow-wrap: anywhere; }
+  .stat-card > strong.money-stat { font-size: clamp(15px, 3.8vw, 19px); white-space: normal; }
+  .content-card { padding: 15px 12px 0; border-radius: 12px; }
+  .section-heading { gap: 9px; margin-bottom: 14px; }
+  .section-heading h2 { font-size: 14px; }
+  .search-box { min-width: 0; width: 100%; }
+  .measurement-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .measure-field { padding: 10px; }
+  .measure-field > span { line-height: 1.35; }
+  .mobile-bottom-nav { box-shadow: 0 -8px 24px rgba(15, 23, 42, .12); }
+}
+@media (max-width: 380px) {
+  .stats-grid { grid-template-columns: minmax(0, 1fr); }
+  .welcome-row h1 { font-size: 19px; }
+  .page-wrap { padding-left: 10px; padding-right: 10px; }
+}
