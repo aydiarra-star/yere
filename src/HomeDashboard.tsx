@@ -15,6 +15,7 @@ type HomeDashboardProps = {
   onOpenPayments: () => void;
   onOpenProduction: () => void;
   onCreateOrder: () => void;
+  onOpenMeasurements: () => void;
   onOpenTools: () => void;
   onConfigure: () => void;
 };
@@ -87,6 +88,7 @@ export default function HomeDashboard({ atelierName, isExample, today, deliveryC
           <div className="home-eyebrow"><span className="eyebrow-star" aria-hidden="true">✦</span><span>VOTRE ESPACE ATELIER</span><span className="eyebrow-separator" aria-hidden="true" /><time dateTime={`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`}>{date}</time></div>
           <h1 id="home-title">Bienvenue dans votre atelier{atelierName ? <>,<br /><span>{atelierName}.</span></> : <> de couture.</>}</h1>
           <p>Votre savoir-faire mérite ce qu’il y a de mieux.</p>
+          <button type="button" className="measurements-quick-access" onClick={onOpenMeasurements}><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.6" /><path d="m16 16 4.5 4.5M8 8.5h5.5M8 11h3.5M8 13.5h2" /></svg><span>Retrouver les mensurations d’un client</span><span className="measurements-quick-arrow" aria-hidden="true">↗</span></button>
           <svg className="greeting-sparkle" viewBox="0 0 42 42" fill="none" aria-hidden="true"><path d="M21 3c1.5 9.7 6.3 14.5 16 16-9.7 1.5-14.5 6.3-16 16-1.5-9.7-6.3-14.5-16-16C14.7 17.5 19.5 12.7 21 3Z"/><path d="M35 28c.5 3.3 2.2 5 5.5 5.5-3.3.5-5 2.2-5.5 5.5-.5-3.3-2.2-5-5.5-5.5 3.3-.5 5-2.2 5.5-5.5ZM5 1v7M1.5 4.5h7"/></svg>
         </section>
 
