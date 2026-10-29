@@ -1,0 +1,24 @@
+# Blueprint optionnel pour un site statique YÉRÉ. Voir README.md avant de
+# connecter un service existant : une synchronisation peut modifier ce service.
+services:
+  - type: web
+    name: yere-atelier
+    runtime: static
+    buildCommand: npm ci --include=dev && npm test && npm run build
+    staticPublishPath: ./dist
+    headers:
+      - path: /
+        name: Cache-Control
+        value: no-store
+      - path: /index.html
+        name: Cache-Control
+        value: no-store
+      - path: /sw.js
+        name: Cache-Control
+        value: no-store
+      - path: /manifest.webmanifest
+        name: Cache-Control
+        value: no-store
+      - path: /images/*
+        name: Cache-Control
+        value: no-store

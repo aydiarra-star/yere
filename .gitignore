@@ -5,3 +5,8 @@ coverage/
 .env.*
 !.env.example
 .DS_Store
+*.tsbuildinfo
+
+# Local tooling and scratch files
+.venv/
+.arena/
