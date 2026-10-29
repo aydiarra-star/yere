@@ -5,6 +5,8 @@ import "./jotcolis-interface.css";
 import "./readable-type.css";
 // Load the canonical app stylesheet last so premium component rules win the cascade.
 import "./styles.css";
+// Final, scoped homepage styling overrides: visual only, no business logic changes.
+import "./home-priority-design.css";
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
