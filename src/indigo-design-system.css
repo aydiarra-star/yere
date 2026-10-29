@@ -1,0 +1,181 @@
+/* YÉRÉ — système visuel unifié inspiré de la clarté typographique de JotColis.
+   Indigo strict : palette, navigation, actions, formulaires et états sur toutes les vues.
+   Aucun changement aux données ou à la logique métier. */
+:root {
+  --yere-indigo: #101E42;
+  --yere-indigo-strong: #172554;
+  --yere-indigo-mid: #293F70;
+  --yere-indigo-soft: #E9EEFA;
+  --yere-indigo-pale: #F5F7FC;
+  --yere-indigo-line: #DCE3F2;
+  --yere-ink: #17233D;
+  --yere-muted: #62708A;
+  --yere-white: #FFFFFF;
+  --yere-home-navy: #101E42;
+  --jc-orange: #101E42;
+  --jc-orange-dark: #101E42;
+  --jc-ink: #17233D;
+  --jc-muted: #62708A;
+  --jc-paper: #F5F7FC;
+  --jc-peach: #E9EEFA;
+  --jc-line: #DCE3F2;
+  --jc-shadow: 0 8px 28px rgba(16,30,66,.07);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 14px !important;
+  color: var(--yere-ink);
+  background: var(--yere-indigo-pale);
+}
+html, body, #root {
+  min-width: 320px;
+  background: var(--yere-indigo-pale) !important;
+  color: var(--yere-ink) !important;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+body, button, input, select, textarea {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+.app-shell, .main-content, .page-wrap, .onboarding-shell {
+  background: var(--yere-indigo-pale) !important;
+  color: var(--yere-ink) !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+.app-shell :is(p, label, input, select, textarea, button, a, small, li, td, th, span) {
+  font-family: inherit;
+}
+.app-shell :is(p, label, input, select, textarea, .nav-item, .primary-button, .secondary-button, .text-button, .notice p, .table-wrap td, .table-wrap th, .client-main, .quick-actions, .empty-state p) {
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+.app-shell :is(small, .eyebrow, .tailor-card-kicker, .tailor-badge, .nav-count, .mobile-nav-item small, .order-status-chip, .table-secondary, .footer) {
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+}
+.app-shell :is(h1, .page-banner-title, .welcome-row h1) {
+  color: var(--yere-indigo) !important;
+  font-size: clamp(23px, 3vw, 30px) !important;
+  line-height: 1.25 !important;
+  font-weight: 750 !important;
+  letter-spacing: -.025em !important;
+}
+.app-shell :is(h2, .section-heading h2, .tailor-priority-card h2) {
+  color: var(--yere-indigo) !important;
+  font-size: 18px !important;
+  line-height: 1.35 !important;
+  font-weight: 700 !important;
+  letter-spacing: -.01em !important;
+}
+.app-shell :is(h3, .new-client-form h3, .onboarding-copy h2) {
+  color: var(--yere-indigo) !important;
+  font-size: 16px !important;
+  line-height: 1.4 !important;
+  font-weight: 700 !important;
+}
+.app-shell :is(.page-subtitle, .section-heading p, .tailor-card-description, .tip-card p, .client-main small, .stat-top, .stat-card > small) {
+  color: var(--yere-muted) !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+.sidebar, .topbar, .mobile-bottom-nav, .desktop-sidebar, .sidebar-nav {
+  background: var(--yere-indigo) !important;
+  border-color: var(--yere-indigo) !important;
+  color: #fff !important;
+}
+.brand, .brand strong, .brand small, .topbar :is(.breadcrumb, span, b), .sidebar :is(.nav-item, .nav-icon), .mobile-nav-item, .mobile-nav-item span {
+  color: #fff !important;
+}
+.brand-mark, .atelier-avatar, .profile-avatar, .header-profile-button {
+  background: var(--yere-indigo-mid) !important;
+  border-color: rgba(255,255,255,.22) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+.sidebar .nav-item, .mobile-nav-item {
+  border-color: transparent !important;
+}
+.sidebar .nav-item:hover, .sidebar .nav-item.active,
+.mobile-nav-item:hover, .mobile-nav-item.active {
+  background: rgba(255,255,255,.14) !important;
+  border-color: rgba(255,255,255,.22) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+.mobile-nav-item.active small { color: #fff !important; }
+.app-shell :is(.primary-button, .secondary-button, .welcome-action, .onboarding-primary, .text-button, .order-view-button) {
+  border-color: var(--yere-indigo) !important;
+  background: var(--yere-indigo) !important;
+  color: #fff !important;
+  box-shadow: 0 3px 8px rgba(16,30,66,.13) !important;
+  font-size: 14px !important;
+  font-weight: 650 !important;
+}
+.app-shell :is(.primary-button, .secondary-button, .welcome-action, .onboarding-primary):hover {
+  background: var(--yere-indigo-strong) !important;
+  border-color: var(--yere-indigo-strong) !important;
+}
+.app-shell .text-button, .app-shell .order-view-button { color: var(--yere-indigo) !important; }
+.app-shell :is(.stat-card, .content-card, .tailor-priority-card, .order-card, .onboarding-copy, .help-card, .tip-card) {
+  border-color: var(--yere-indigo-line) !important;
+  box-shadow: 0 5px 18px rgba(16,30,66,.055) !important;
+}
+.app-shell :is(.tailor-card-art, .payment-art, .machine-art, .fabric-art, .stat-icon, .quick-icon, .snapshot-icon, .client-avatar, .measure-field, .measure-note, .profile-profession) {
+  background: var(--yere-indigo-soft) !important;
+  color: var(--yere-indigo) !important;
+  border-color: var(--yere-indigo-line) !important;
+}
+.app-shell :is(.badge-green, .badge-orange, .badge-red, .badge-gold, .badge-ochre, .badge-blue, .badge-pink) {
+  background: var(--yere-indigo-soft) !important;
+  color: var(--yere-indigo) !important;
+  border-color: var(--yere-indigo-line) !important;
+}
+.app-shell :is(.status-todo, .status-progress, .status-ready, .status-delivered, .nav-count, .order-status-chip) {
+  background: var(--yere-indigo-soft) !important;
+  color: var(--yere-indigo) !important;
+  border-color: var(--yere-indigo-line) !important;
+}
+.app-shell :is(.notice, .new-client-form, .marketplace-photo-manager, .onboarding-shell) {
+  background: var(--yere-indigo-pale) !important;
+  border-color: var(--yere-indigo-line) !important;
+  color: var(--yere-indigo) !important;
+}
+.app-shell :is(input, select, textarea, .search-box, .measure-field input, .measure-notes-field textarea) {
+  color: var(--yere-ink) !important;
+  background-color: #fff !important;
+  border-color: var(--yere-indigo-line) !important;
+  border-radius: 10px !important;
+  font-size: 14px !important;
+}
+.app-shell :is(input, select, textarea):focus,
+.app-shell :is(input, select, textarea):focus-visible,
+.app-shell button:focus-visible,
+.app-shell a:focus-visible {
+  outline: 3px solid #A9B9DF !important;
+  outline-offset: 2px !important;
+  border-color: var(--yere-indigo) !important;
+  box-shadow: 0 0 0 3px rgba(16,30,66,.10) !important;
+}
+.app-shell :is(.table-wrap th, .table-wrap td) { border-color: var(--yere-indigo-line) !important; }
+.app-shell .table-wrap th { background: var(--yere-indigo-soft) !important; color: var(--yere-indigo) !important; }
+.app-shell :is(.paid, .green-dot, .tip-spark, .tip-card .eyebrow) { color: var(--yere-indigo) !important; }
+.app-shell .green-dot { background: var(--yere-indigo) !important; }
+.app-shell .tip-card { background: var(--yere-indigo-soft) !important; }
+.app-shell .tip-card h2 { color: var(--yere-indigo) !important; }
+.app-shell .overview-welcome .page-subtitle { color: var(--yere-muted) !important; }
+.app-shell .overview-welcome + .welcome-action,
+.app-shell .primary-button.welcome-action {
+  background: var(--yere-indigo) !important;
+  border-color: var(--yere-indigo) !important;
+  color: #fff !important;
+}
+@media (max-width: 760px) {
+  .app-shell, .page-wrap { font-size: 14px !important; }
+  .app-shell :is(p, label, input, select, textarea, button, a, td, th, .nav-item, .primary-button, .secondary-button, .text-button) {
+    font-size: 14px !important;
+  }
+  .app-shell :is(small, .mobile-nav-item small, .tailor-badge, .nav-count) { font-size: 12px !important; }
+  .app-shell :is(h1, .page-banner-title, .welcome-row h1) { font-size: 23px !important; }
+  .app-shell :is(h2, .section-heading h2, .tailor-priority-card h2) { font-size: 18px !important; }
+  .sidebar { background: var(--yere-indigo) !important; }
+}
