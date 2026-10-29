@@ -3061,3 +3061,86 @@ body,.app-shell,.main-content{background:var(--yere-ivory-premium)!important;col
   .mobile-nav-item{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;min-width:0;border:0;border-radius:10px;background:transparent;padding:6px 2px}
 }
 @media(min-width:761px){.mobile-bottom-nav{display:none}}
+
+
+/* Correctif urgent accueil YÉRÉ : supprimer tout fond coloré derrière le titre. */
+html,body,#root,.app-shell,.main-content,.page-wrap{
+  background:#F8F9FA!important;
+}
+main.main-content .page-wrap > .welcome-row.overview-welcome,
+main.main-content .page-wrap > .welcome-row.overview-welcome .welcome-copy{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  color:#202638!important;
+  overflow:visible!important;
+}
+main.main-content .page-wrap > .welcome-row.overview-welcome .page-banner-title{
+  display:block!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  color:#202638!important;
+}
+main.main-content .page-wrap > .welcome-row.overview-welcome .page-subtitle{
+  padding:0!important;
+  background:transparent!important;
+  color:#596273!important;
+}
+main.main-content .page-wrap > .welcome-row.overview-welcome .today-snapshot{
+  display:none!important;
+}
+main.main-content .page-wrap > .welcome-row.overview-welcome + .welcome-action{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:10px!important;
+  width:100%!important;
+  min-height:56px!important;
+  margin:22px 0 24px!important;
+  padding:14px 18px!important;
+  border:0!important;
+  border-radius:13px!important;
+  background:#FF6B00!important;
+  background-image:none!important;
+  color:#fff!important;
+  box-shadow:0 7px 18px #ff6b002b!important;
+  font-weight:900!important;
+  letter-spacing:.025em!important;
+}
+main.main-content .page-wrap > .welcome-row.overview-welcome + .welcome-action span{
+  color:#fff!important;
+  font-size:22px!important;
+}
+main.main-content .page-wrap > .tailor-priority-grid{
+  margin-top:0!important;
+  background:transparent!important;
+}
+main.main-content .page-wrap .tailor-priority-card{
+  background:#fff!important;
+  background-image:none!important;
+  border:1px solid #e3e5e8!important;
+  box-shadow:0 5px 18px rgba(24,34,59,.075)!important;
+  color:#202638!important;
+}
+main.main-content .page-wrap .tailor-priority-card .tailor-card-copy,
+main.main-content .page-wrap .tailor-priority-card h2,
+main.main-content .page-wrap .tailor-priority-card .tailor-card-description{
+  background:transparent!important;
+}
+main.main-content .page-wrap .tailor-priority-card .tailor-card-art{
+  box-shadow:none!important;
+}
+@media(max-width:760px){
+  main.main-content .page-wrap > .welcome-row.overview-welcome{margin-bottom:0!important}
+  main.main-content .page-wrap > .welcome-row.overview-welcome + .welcome-action{margin-top:18px!important;margin-bottom:22px!important}
+}
