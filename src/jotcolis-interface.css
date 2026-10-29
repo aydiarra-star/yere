@@ -579,3 +579,159 @@ html, body, #root, .app-shell, .main-content {
 .account-form .profile-profession{display:grid;gap:5px;width:100%;padding:14px;border-radius:12px;background:#eff6ff;}
 .account-form .profile-profession span,.account-form .profile-profession strong,.account-form .profile-profession small{display:block;min-width:0;max-width:100%;overflow-wrap:anywhere;white-space:normal;}
 @media(max-width:760px){.account-page{width:100%;padding-left:13px;padding-right:13px;}.account-section-heading{align-items:stretch;flex-direction:column;text-align:center;}.account-section-heading h2,.account-section-heading p{width:100%;text-align:center;}.account-form{gap:14px;}.account-form>label{font-size:12px;}.account-form>.primary-button{justify-self:stretch;width:100%;}}
+
+
+/* Règle stricte de cadrage : aucun texte de profil ou de fournisseur ne doit être coupé. */
+.account-page,
+.account-page *,
+.supplier-page,
+.supplier-page *,
+.stock-page,
+.stock-page *,
+.content-card,
+.content-card * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+.account-page,
+.supplier-page,
+.stock-page,
+.content-card {
+  width: 100%;
+  max-width: 100%;
+}
+.account-page :is(h1,h2,h3,p,label,span,b,strong,small,div),
+.supplier-page :is(h1,h2,h3,p,label,span,b,strong,small,div),
+.stock-page :is(h1,h2,h3,p,label,span,b,strong,small,div),
+.content-card :is(h1,h2,h3,p,label,small,b,strong) {
+  max-width: 100%;
+  white-space: normal !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal;
+  height: auto;
+  max-height: none;
+  -webkit-line-clamp: unset !important;
+  line-clamp: unset !important;
+}
+.account-page .section-heading,
+.supplier-page .section-heading,
+.stock-page .section-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  max-width: 100%;
+}
+.account-page .section-heading > div,
+.supplier-page .section-heading > div,
+.stock-page .section-heading > div {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+.account-page .account-form,
+.supplier-page .supplier-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 14px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+.account-page .account-form > label,
+.supplier-page .supplier-form > label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 7px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  line-height: 1.5;
+}
+.account-page .account-form input,
+.account-page .account-form select,
+.account-page .account-form textarea,
+.supplier-page .supplier-form input,
+.supplier-page .supplier-form select,
+.supplier-page .supplier-form textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+}
+.account-page .profile-profession,
+.account-page .profile-profession * {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere !important;
+  line-height: 1.5;
+}
+.account-page .account-form > .primary-button,
+.supplier-page .supplier-form > .primary-button {
+  justify-self: stretch;
+  width: 100%;
+  max-width: 100%;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+.stock-page .table-wrap {
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+.stock-page .table-wrap table {
+  min-width: 580px;
+}
+.stock-page .table-wrap th,
+.stock-page .table-wrap td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.stock-page .new-order-form,
+.stock-page .new-order-form > label,
+.stock-page .new-order-form .form-actions {
+  min-width: 0;
+  max-width: 100%;
+}
+.stock-page .new-order-form > label {
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.5;
+}
+@media (max-width: 760px) {
+  .account-page,
+  .supplier-page,
+  .stock-page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .account-page .section-heading h2,
+  .account-page .section-heading p,
+  .supplier-page .section-heading h2,
+  .supplier-page .section-heading p,
+  .stock-page .section-heading h2,
+  .stock-page .section-heading p {
+    width: 100%;
+    text-align: center;
+    overflow-wrap: anywhere !important;
+  }
+  .account-page .profile-profession {
+    padding: 12px;
+  }
+  .supplier-page .supplier-shop-access,
+  .supplier-page .supplier-shop-access > div {
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+  }
+}
