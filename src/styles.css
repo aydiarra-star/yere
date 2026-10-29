@@ -2503,3 +2503,253 @@ input,select,textarea{color:var(--yere-text);border-color:var(--yere-border)}
 .primary-button,.welcome-action,.production-link,.production-stage,.overdue-strip>button,.nav-item{transition:background-color .16s ease,border-color .16s ease,color .16s ease}
 @media(max-width:900px){.topbar{padding-inline:20px}.page-wrap{padding-inline:20px}.main-content{min-width:0}}
 @media(max-width:600px){.topbar{padding-inline:13px}.page-wrap{padding-inline:13px}.content-card{padding-inline:13px}.table-wrap{max-width:calc(100% + 26px)}}
+
+
+/* Correctif durable — accueil mobile complet, défilement vertical et cartes contenues. */
+html, body, #root {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow-x: clip !important;
+}
+body {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+.app-shell {
+  height: auto !important;
+  min-height: 100dvh !important;
+  overflow-x: clip !important;
+  overflow-y: visible !important;
+}
+.main-content {
+  height: auto !important;
+  min-height: 100dvh !important;
+  overflow-x: clip !important;
+  overflow-y: visible !important;
+}
+.page-wrap {
+  width: 100%;
+  min-width: 0;
+  padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+}
+.overview-welcome,
+.overview-welcome .welcome-copy,
+.production-overview,
+.production-overview-head,
+.production-stage-grid,
+.overdue-strip,
+.today-snapshot,
+.snapshot-item {
+  min-width: 0;
+  max-width: 100%;
+}
+.overview-welcome .page-banner-title {
+  color: #fff !important;
+  overflow-wrap: break-word;
+}
+.overview-welcome .page-subtitle {
+  color: #eaf2ff !important;
+  overflow-wrap: break-word;
+}
+.production-overview,
+.daily-assistant,
+.stat-card,
+.content-card,
+.overdue-strip,
+.production-stage {
+  background-clip: padding-box;
+}
+@media (max-width: 760px) {
+  .main-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .page-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 18px 12px calc(116px + env(safe-area-inset-bottom, 0px)) !important;
+    margin: 0 auto !important;
+  }
+  .overview-welcome {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 14px !important;
+    width: 100% !important;
+    padding: 18px 15px !important;
+    margin-bottom: 14px !important;
+    border-radius: 15px !important;
+  }
+  .overview-welcome .welcome-copy {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .overview-welcome .page-banner-title {
+    max-width: 100% !important;
+    font-size: clamp(22px, 6vw, 27px) !important;
+    line-height: 1.2 !important;
+    letter-spacing: -.4px !important;
+  }
+  .overview-welcome .page-subtitle {
+    max-width: 100% !important;
+    font-size: 15px !important;
+    line-height: 1.45 !important;
+  }
+  .overview-welcome .welcome-action {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 48px !important;
+    margin: 0 !important;
+    white-space: normal !important;
+    line-height: 1.3 !important;
+    align-self: stretch !important;
+  }
+  .today-snapshot {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+    gap: 8px !important;
+    margin-top: 14px !important;
+  }
+  .snapshot-item {
+    display: flex !important;
+    width: 100% !important;
+    padding: 10px 11px !important;
+    gap: 10px !important;
+    border: 1px solid rgba(255,255,255,.25) !important;
+    background: rgba(255,255,255,.09) !important;
+    border-radius: 10px !important;
+  }
+  .snapshot-item > span:last-child {
+    min-width: 0 !important;
+    overflow-wrap: anywhere !important;
+  }
+  .snapshot-item b {
+    font-size: 15px !important;
+    line-height: 1.3 !important;
+    overflow-wrap: anywhere !important;
+  }
+  .snapshot-item small {
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+  }
+  .production-overview {
+    width: 100% !important;
+    padding: 15px 12px !important;
+    margin-bottom: 14px !important;
+  }
+  .production-overview-head {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+  .production-overview-head > div {
+    flex: 1 1 180px;
+    min-width: 0 !important;
+  }
+  .production-overview-head h2 {
+    font-size: 17px !important;
+    line-height: 1.3 !important;
+    overflow-wrap: break-word;
+  }
+  .production-link {
+    flex: 0 0 auto;
+    max-width: 100%;
+  }
+  .production-stage-grid {
+    width: 100% !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .production-stage {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .overdue-strip {
+    display: grid !important;
+    grid-template-columns: 28px minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    width: 100% !important;
+  }
+  .overdue-strip > div {
+    min-width: 0 !important;
+    overflow-wrap: anywhere !important;
+  }
+  .overdue-strip > button {
+    max-width: 42px !important;
+  }
+  .stats-grid,
+  .bottom-grid {
+    width: 100% !important;
+    min-width: 0 !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .stat-card,
+  .content-card,
+  .daily-assistant,
+  .quick-card,
+  .tip-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .section-heading {
+    min-width: 0 !important;
+    flex-wrap: wrap !important;
+  }
+  .section-heading h2,
+  .section-heading p,
+  .daily-task-copy,
+  .daily-task-copy b,
+  .daily-task-copy small {
+    min-width: 0 !important;
+    overflow-wrap: anywhere !important;
+  }
+  .mobile-bottom-nav {
+    width: 100% !important;
+    max-width: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 100 !important;
+    padding-bottom: calc(7px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .onboarding-shell {
+    min-height: 100dvh !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .onboarding-layout {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+  .onboarding-copy {
+    min-width: 0 !important;
+  }
+  .onboarding-primary {
+    width: 100% !important;
+    min-height: 48px !important;
+    white-space: normal !important;
+  }
+}
+@media (max-width: 390px) {
+  .page-wrap {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  .overview-welcome {
+    padding: 16px 12px !important;
+  }
+  .overview-welcome .page-banner-title {
+    font-size: 22px !important;
+  }
+  .overdue-strip {
+    grid-template-columns: 24px minmax(0, 1fr) 28px !important;
+    gap: 7px !important;
+  }
+}
