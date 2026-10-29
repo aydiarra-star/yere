@@ -683,7 +683,7 @@ function App() {
               </div>
               <div className="production-stage-grid">
                 <button type="button" className="production-stage stage-new" onClick={() => { setOrderDeliveryFilter("all"); setView("orders"); }}>
-                  <span className="stage-number">{orders.filter((order) => order.status === "À faire").length.toString().padStart(2, "0")}</span><span className="stage-label">À démarrer</span><span className="stage-note">Commandes à préparer</span>
+                  <span className="stage-number">{orders.filter((order) => order.status === "À préparer").length.toString().padStart(2, "0")}</span><span className="stage-label">À démarrer</span><span className="stage-note">Commandes à préparer</span>
                 </button>
                 <button type="button" className="production-stage stage-progress" onClick={() => { setOrderDeliveryFilter("all"); setView("orders"); }}>
                   <span className="stage-number">{orders.filter((order) => order.status === "En confection").length.toString().padStart(2, "0")}</span><span className="stage-label">En confection</span><span className="stage-note">Pièces en cours de travail</span>
