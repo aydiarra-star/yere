@@ -11,6 +11,7 @@ export type MarketplaceListing = {
   sellerName: string;
   city: string;
   imageUrl: string;
+  imageUrls?: string[];
 };
 
 /** Validate marketplace listings restored from local storage or a backup file. */
@@ -24,6 +25,7 @@ export function isMarketplaceListingListValid(value: unknown): value is Marketpl
     if (listing.sellerType !== "tailor" && listing.sellerType !== "supplier") return false;
     if (listing.sellerActivity !== undefined && !atelierActivities.some((activity) => activity.value === listing.sellerActivity)) return false;
     if (!["title", "category", "price", "description", "sellerName", "city", "imageUrl"].every((key) => typeof listing[key] === "string")) return false;
+    if (listing.imageUrls !== undefined && (!Array.isArray(listing.imageUrls) || listing.imageUrls.length > 4 || !listing.imageUrls.every((photo) => typeof photo === "string" && photo.startsWith("data:image/")))) return false;
     if (typeof listing.title !== "string" || listing.title.trim().length === 0) return false;
     ids.add(listing.id);
   }
