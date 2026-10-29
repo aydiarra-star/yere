@@ -1,0 +1,546 @@
+/* YÉRÉ Atelier — a single, mobile-first indigo visual language. */
+:root {
+  --atelier-ink: #1c2449;
+  --atelier-indigo: #1a204e;
+  --atelier-indigo-deep: #131a42;
+  --atelier-indigo-mid: #455182;
+  --atelier-muted: #6e7892;
+  --atelier-line: #e5e8f1;
+  --atelier-canvas: #f7f8fc;
+  --atelier-orange: #ff6b13;
+}
+html, body, #root {
+  background: var(--atelier-canvas) !important;
+  color: var(--atelier-ink) !important;
+  font-family: "Manrope Variable", Manrope, system-ui, sans-serif !important;
+}
+body { padding: 0 !important; }
+body, button, input, select, textarea {
+  font-family: "Manrope Variable", Manrope, system-ui, sans-serif !important;
+}
+.yere-app, .yere-app .main-content, .yere-app .page-wrap {
+  background: var(--atelier-canvas) !important;
+  color: var(--atelier-ink) !important;
+}
+.yere-app .main-content {
+  display: block;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: calc(100dvh - 76px) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+.yere-app .page-wrap {
+  width: 100% !important;
+  max-width: 1216px !important;
+  margin: 0 auto !important;
+  padding: 38px 28px 72px !important;
+}
+.yere-app button, .yere-app a { -webkit-tap-highlight-color: transparent; }
+.yere-app button:focus-visible, .yere-app a:focus-visible {
+  outline: 3px solid #8c99d4 !important;
+  outline-offset: 3px !important;
+}
+
+/* The same chrome serves the desktop and mobile experiences. */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  min-height: 76px;
+  background: linear-gradient(112deg, #171e49 0%, #1c2558 62%, #171e49 100%);
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  box-shadow: 0 7px 26px rgba(18,24,60,.12);
+}
+.app-header::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(195,203,239,.32), transparent);
+}
+.app-header-inner {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 1216px;
+  min-height: 76px;
+  margin: 0 auto;
+  padding: 0 28px;
+}
+.yere-wordmark {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 9px;
+  color: #fff;
+  text-decoration: none;
+}
+.wordmark-star {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  color: #cbd3f4;
+  border: 1px solid rgba(218,224,255,.42);
+  border-radius: 50%;
+  font-size: 19px;
+  line-height: 1;
+}
+.wordmark-copy { display: flex; flex-direction: column; align-items: center; }
+.wordmark-copy strong {
+  color: #fff;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 31px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  line-height: .8;
+}
+.app-shell .wordmark-copy small {
+  margin-top: 6px;
+  padding-left: 2px;
+  color: #c8cfeb;
+  font-size: 8px !important;
+  font-weight: 800;
+  letter-spacing: .27em;
+  line-height: 1 !important;
+}
+.header-workspace {
+  display: grid;
+  gap: 2px;
+  margin-left: 27px;
+  padding-left: 22px;
+  border-left: 1px solid rgba(222,227,255,.19);
+  color: #fff;
+}
+.header-workspace span { color: #aeb8df; font-size: 9px; font-weight: 800; letter-spacing: .13em; }
+.header-workspace b { font-size: 12px; font-weight: 650; }
+.desktop-nav { display: flex; align-items: center; gap: 3px; margin: 0 auto; padding: 0 18px; }
+.app-shell .desktop-nav-item {
+  min-height: 39px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #c5cce5;
+  font-size: 12px !important;
+  font-weight: 700;
+  transition: background .18s ease, color .18s ease;
+}
+.app-shell .desktop-nav-item:hover, .app-shell .desktop-nav-item.is-active { background: rgba(255,255,255,.11); color: #fff; }
+.app-profile {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 9px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+}
+.app-profile > span:first-child {
+  display: grid;
+  place-items: center;
+  width: 39px;
+  height: 39px;
+  border: 1px solid #f2f4fc;
+  border-radius: 50%;
+  background: #f2f4fc;
+  color: #1a204e;
+}
+.app-profile svg { width: 20px; height: 20px; }
+.app-profile .profile-label { font-size: 12px; font-weight: 700; }
+.app-profile .profile-chevron { margin-left: 1px; color: #c5cce5; font-size: 15px; }
+.app-profile:hover > span:first-child { background: #fff; }
+
+/* Welcome and priorities */
+.home-dashboard { width: 100%; }
+.home-layout { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(290px, .85fr); align-items: start; gap: 32px; }
+.home-main { min-width: 0; }
+.home-greeting { position: relative; padding: 2px 0 26px; }
+.home-eyebrow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: #69759a; font-size: 10px; font-weight: 800; letter-spacing: .11em; }
+.eyebrow-star { color: #59679f; font-size: 13px; line-height: 1; }
+.eyebrow-separator { width: 3px; height: 3px; border-radius: 50%; background: #a5aec8; }
+.home-eyebrow time { color: #8490ab; font-size: 10px; text-transform: uppercase; }
+.app-shell.yere-app .home-greeting h1 {
+  margin: 12px 0 7px;
+  color: #1c2449 !important;
+  font-size: clamp(28px, 3vw, 37px) !important;
+  line-height: 1.2 !important;
+  font-weight: 750 !important;
+  letter-spacing: -.045em !important;
+}
+.home-greeting h1 span { color: #46568f; }
+.app-shell.yere-app .home-greeting > p {
+  margin: 0;
+  color: #6f7891 !important;
+  font-size: 13px !important;
+  font-weight: 500;
+  line-height: 1.5 !important;
+}
+.greeting-sparkle { position: absolute; right: 12px; top: 37px; width: 42px; height: 42px; stroke: #c0c7df; stroke-width: 1.1; }
+.priorities-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 9px; }
+.priorities-heading > div { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.section-marker { display: block; width: 3px; height: 20px; border-radius: 3px; background: #4b5b99; }
+.app-shell.yere-app .priorities-heading h2 { margin: 0; color: #1e274e !important; font-size: 17px !important; font-weight: 800 !important; letter-spacing: -.025em !important; line-height: 1.2 !important; }
+.priorities-today { margin-left: 2px; color: #929cb5; font-size: 9px; font-weight: 800; letter-spacing: .1em; white-space: nowrap; }
+.example-indicator { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; padding: 5px 8px; border: 1px solid #e0e4f0; border-radius: 999px; background: #f1f3fa; color: #596790; font-size: 9px; font-weight: 800; }
+.example-indicator span { width: 5px; height: 5px; border-radius: 50%; background: #7c8bbd; }
+.app-shell.yere-app .example-note { margin: 0 0 12px 13px; color: #7b859d !important; font-size: 10.5px !important; line-height: 1.45 !important; }
+.app-shell.yere-app .example-note button { padding: 0; border: 0; background: none; color: #43548c; font-size: 10.5px !important; font-weight: 800; text-decoration: underline; text-underline-offset: 2px; }
+.priority-list { display: grid; gap: 12px; }
+.priority-card {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  min-height: 163px;
+  overflow: hidden;
+  padding: 15px 17px 14px;
+  border: 1px solid #e4e7f0;
+  border-radius: 18px;
+  background: linear-gradient(110deg, #fff 48%, #fcfcff 100%);
+  box-shadow: 0 8px 22px rgba(35,42,84,.055), 0 2px 5px rgba(35,42,84,.025);
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.priority-card:hover { transform: translateY(-2px); border-color: #cdd4e9; box-shadow: 0 12px 28px rgba(35,42,84,.1); }
+.priority-card-top { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.priority-symbol { display: grid; place-items: center; flex: 0 0 31px; width: 31px; height: 31px; border: 1px solid #e4e7f4; border-radius: 10px; background: #f2f3fa; color: #55649a; }
+.priority-symbol svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.app-shell.yere-app .priority-card h3 { min-width: 0; margin: 0; color: #252e54 !important; font-size: 12px !important; line-height: 1.2 !important; font-weight: 850 !important; letter-spacing: .015em !important; text-transform: uppercase; }
+.priority-index { margin-left: auto; margin-right: 36px; color: #b5bdd1; font-size: 10px; font-weight: 800; letter-spacing: .06em; }
+.priority-card-info { position: relative; z-index: 2; min-width: 0; }
+.priority-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+.app-shell.yere-app .priority-badge { display: inline-flex; align-items: center; min-height: 20px; padding: 3px 8px; border: 1px solid #e3e6f3; border-radius: 6px; background: #f0f2fa; color: #52618f; font-size: 10px !important; font-weight: 750; line-height: 1.2 !important; white-space: nowrap; }
+.app-shell.yere-app .priority-badge--2 { border-color: #e6e9f1; background: #f7f8fb; color: #697590; }
+.app-shell.yere-app .priority-badge--3 { border-color: #e2e4f2; background: #eeeff8; color: #626a96; }
+.priority-metric { display: flex; align-items: center; gap: 9px; max-width: calc(100% - 180px); margin-top: 10px; color: #263053; }
+.priority-metric strong { color: #202a52; font-size: 29px; font-weight: 800; letter-spacing: -.06em; line-height: .95; }
+.priority-metric > span { color: #3f4967; font-size: 12px; font-weight: 750; line-height: 1.3; }
+.app-shell.yere-app .priority-detail { display: -webkit-box; max-width: calc(100% - 180px); margin: 7px 0 0; overflow: hidden; color: #7a849c !important; font-size: 11px !important; font-weight: 500; line-height: 1.35 !important; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.priority-detail b { color: #414b6c; font-weight: 800; white-space: nowrap; }
+.priority-art-halo { position: absolute; right: 8px; bottom: -38px; z-index: 0; width: 160px; height: 160px; border-radius: 50%; background: radial-gradient(circle, #f0f2fa 0%, #f8f9fd 49%, transparent 72%); }
+.priority-art { position: absolute; z-index: 1; right: 20px; bottom: 8px; width: 130px; height: 112px; object-fit: contain; object-position: center bottom; filter: drop-shadow(0 6px 5px rgba(29,35,70,.08)); pointer-events: none; }
+/* Reference artwork: reserve a clear column beside the priority text. */
+.priority-card--delivery .priority-art { right: 20px; width: 151px; height: 122px; }
+.priority-card--payment .priority-art { right: 18px; bottom: 13px; width: 170px; height: 100px; }
+.priority-card--production .priority-art { right: 18px; width: 155px; height: 110px; }
+.priority-open { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; padding: 0; border: 0; border-radius: inherit; background: transparent; }
+.priority-open > span { position: absolute; top: 14px; right: 15px; display: grid; place-items: center; width: 29px; height: 29px; border: 1px solid #e9ebf3; border-radius: 9px; background: #fafbfe; color: #65739e; transition: background .2s ease, color .2s ease; }
+.priority-open:hover > span { background: #e9edfa; color: #26376f; }
+.priority-open svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+/* The only vivid accent is reserved for the primary action. */
+.app-shell.yere-app .create-order-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 57px;
+  margin-top: 17px;
+  padding: 11px 15px;
+  border: 1px solid #f86612;
+  border-radius: 14px;
+  background: linear-gradient(105deg, #ff771b, #ff650c) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 17px rgba(239,101,18,.22), inset 0 1px rgba(255,255,255,.18) !important;
+  font-size: 12px !important;
+  font-weight: 850 !important;
+  letter-spacing: .025em;
+  line-height: 1.25 !important;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.create-order-cta:hover { transform: translateY(-2px); box-shadow: 0 11px 23px rgba(239,101,18,.3) !important; }
+.cta-icon { display: grid; place-items: center; width: 31px; height: 31px; border: 1px solid rgba(255,255,255,.35); border-radius: 9px; background: rgba(255,255,255,.11); }
+.cta-icon svg { width: 19px; height: 19px; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.cta-arrow { display: grid; place-items: center; width: 22px; height: 22px; margin-left: 2px; }
+.cta-arrow svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.app-shell.yere-app .home-signature { margin: 15px 0 0; color: #8a93a8 !important; font-size: 10px !important; font-weight: 650; text-align: center; line-height: 1.4 !important; }
+.home-signature span { margin-right: 5px; color: #7180ae; font-size: 15px; vertical-align: -1px; }
+
+/* Editorial aside enriches wide screens without changing the mobile reading order. */
+.home-editorial { min-width: 0; padding-top: 2px; }
+.editorial-visual { position: relative; height: 502px; overflow: hidden; border: 1px solid rgba(29,36,71,.08); border-radius: 22px; background: #222946; box-shadow: 0 15px 35px rgba(29,36,71,.11); }
+.editorial-visual::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(15,20,42,.35), transparent 33%, rgba(14,21,46,.15) 50%, rgba(14,21,46,.91) 100%); }
+.editorial-visual > img { width: 100%; height: 100%; object-fit: cover; object-position: center 52%; }
+.editorial-top { position: absolute; z-index: 1; top: 21px; left: 21px; right: 21px; display: flex; justify-content: space-between; gap: 10px; color: rgba(255,255,255,.8); font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.editorial-top span:last-child { color: rgba(255,255,255,.56); }
+.editorial-copy { position: absolute; z-index: 1; right: 26px; bottom: 28px; left: 26px; color: #fff; }
+.editorial-kicker { display: inline-flex; align-items: center; gap: 8px; color: #d9def1; font-size: 9px; font-weight: 800; letter-spacing: .14em; }
+.editorial-kicker::before { content: ""; width: 19px; height: 1px; background: #bdc8ee; }
+.app-shell.yere-app .editorial-copy h2 { margin: 13px 0 10px; color: #fff !important; font-size: clamp(22px, 2.3vw, 29px) !important; font-weight: 700 !important; letter-spacing: -.045em !important; line-height: 1.22 !important; }
+.editorial-copy h2 em { color: #dbe1f7; font-style: normal; }
+.app-shell.yere-app .editorial-copy p { max-width: 260px; margin: 0; color: #d8def1 !important; font-size: 12px !important; line-height: 1.65 !important; }
+.editorial-note { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 17px; border: 1px solid #e5e8f1; border-radius: 17px; background: #fff; box-shadow: 0 8px 20px rgba(35,42,84,.04); }
+.editorial-note-icon { display: grid; place-items: center; flex: 0 0 42px; width: 42px; height: 42px; border-radius: 13px; background: #eef0fa; color: #5968a0; }
+.editorial-note-icon svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.editorial-note > div { flex: 1; min-width: 0; }
+.editorial-note strong { color: #293456; font-size: 12px; }
+.app-shell.yere-app .editorial-note p { margin: 4px 0 0; color: #818ba1 !important; font-size: 10px !important; line-height: 1.4 !important; }
+.editorial-note > button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 9px; background: #f5f6fa; color: #65739e; }
+.editorial-note > button svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.editorial-caption { display: flex; justify-content: space-between; gap: 10px; margin: 17px 3px 0; color: #a0a9bd; font-size: 8px; font-weight: 800; letter-spacing: .1em; }
+
+/* Secondary screens retain the existing working forms and data. */
+.yere-app .secondary-welcome { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin: 0 0 24px; padding: 0 0 22px; border: 0; border-bottom: 1px solid #e4e8f1; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; }
+.yere-app .secondary-welcome .welcome-copy { min-width: 0; }
+.app-shell.yere-app .secondary-welcome .secondary-eyebrow { margin: 0 0 8px; color: #7180aa !important; font-size: 10px !important; font-weight: 800; letter-spacing: .12em; }
+.app-shell.yere-app .secondary-welcome h1 { margin: 0; color: #20294e !important; font-size: 29px !important; font-weight: 800 !important; line-height: 1.2 !important; letter-spacing: -.04em !important; overflow: visible; white-space: normal; }
+.app-shell.yere-app .secondary-welcome .page-subtitle { margin: 8px 0 0; color: #707b95 !important; font-size: 13px !important; }
+.yere-app .secondary-welcome .welcome-action { width: auto; margin: 0; }
+.yere-app .content-card { border-radius: 18px; }
+.yere-app .secondary-button { background: #fff !important; color: #344474 !important; border-color: #d9dfed !important; box-shadow: none !important; }
+.yere-app .text-button, .yere-app .order-view-button { background: transparent !important; color: #43548c !important; border-color: transparent !important; box-shadow: none !important; }
+.order-needs-client { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.order-needs-client .history-empty { margin: 0; }
+
+/* More tools sheet */
+.more-backdrop { position: fixed; inset: 0; z-index: 120; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(14,20,46,.48); backdrop-filter: blur(3px); }
+.more-sheet { width: min(100%, 480px); max-height: min(85dvh, 680px); overflow: auto; padding: 26px; border: 1px solid #e2e6f1; border-radius: 22px; background: #fff; box-shadow: 0 24px 70px rgba(18,24,55,.22); }
+.more-handle { display: none; }
+.more-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; margin-bottom: 18px; }
+.more-heading > div > span { color: #8490aa; font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.app-shell.yere-app .more-heading h2 { margin: 5px 0 0; color: #20294e !important; font-size: 22px !important; font-weight: 800 !important; letter-spacing: -.04em !important; }
+.more-heading > button { display: grid; place-items: center; flex: 0 0 36px; width: 36px; height: 36px; border: 0; border-radius: 11px; background: #f2f4f9; color: #586485; font-size: 24px !important; line-height: 1; }
+.more-grid { display: grid; gap: 8px; }
+.more-item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 62px; padding: 10px; border: 1px solid #edf0f6; border-radius: 13px; background: #fff; color: #273254; text-align: left; }
+.more-item:hover, .more-item.is-active { border-color: #dce2f2; background: #f7f8fd; }
+.more-item-icon { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border-radius: 11px; background: #eef0f9; color: #5a69a0; }
+.more-item-icon svg { width: 19px; height: 19px; }
+.more-item > span:nth-child(2) { display: grid; gap: 3px; flex: 1; }
+.more-item b { font-size: 12px; font-weight: 800; }
+.app-shell.yere-app .more-item small { color: #8390a8; font-size: 10px !important; }
+.more-item-arrow { color: #9aa6c1; font-size: 17px; }
+.app-dock { display: none; }
+
+/* Setup is optional and can always be closed to return to the preview. */
+.onboarding-shell { background: #f6f7fb !important; }
+.onboarding-brand { display: flex; align-items: center; gap: 10px; }
+.onboarding-back { margin-left: auto; padding: 10px 12px; border: 1px solid #dfe3ef; border-radius: 10px; background: #fff; color: #41517f; font-size: 12px; font-weight: 750; }
+.onboarding-copy { border-color: #e2e6f1 !important; box-shadow: 0 12px 40px rgba(35,42,84,.07) !important; }
+
+@media (max-width: 980px) {
+  .header-workspace { display: none; }
+  .home-layout { grid-template-columns: minmax(0, 1.5fr) minmax(260px, .8fr); gap: 22px; }
+  .desktop-nav { margin-left: auto; margin-right: 15px; }
+  .app-shell .desktop-nav-item { padding-inline: 10px; }
+}
+@media (max-width: 760px) {
+  .yere-app .main-content { min-height: calc(100dvh - 68px) !important; }
+  .yere-app .page-wrap { max-width: 600px !important; padding: 23px 16px calc(105px + env(safe-area-inset-bottom, 0px)) !important; }
+  .app-header, .app-header-inner { min-height: 68px; }
+  .app-header-inner { padding: 0 19px; }
+  .wordmark-star { width: 29px; height: 29px; font-size: 18px; }
+  .wordmark-copy strong { font-size: 29px; }
+  .desktop-nav, .header-workspace, .app-profile .profile-label, .app-profile .profile-chevron { display: none; }
+  .app-profile { margin-left: auto; }
+  .app-profile > span:first-child { width: 39px; height: 39px; }
+  .home-layout { display: block; }
+  .home-editorial { display: none; }
+  .home-greeting { padding: 0 1px 22px; }
+  .home-eyebrow { gap: 7px; font-size: 9px; letter-spacing: .1em; }
+  .home-eyebrow time { font-size: 9px; }
+  .app-shell.yere-app .home-greeting h1 { margin: 10px 0 5px; font-size: 26px !important; line-height: 1.2 !important; }
+  .app-shell.yere-app .home-greeting > p { font-size: 12px !important; }
+  .greeting-sparkle { top: 31px; right: 5px; width: 34px; height: 34px; }
+  .app-shell.yere-app .priorities-heading h2 { font-size: 16px !important; }
+  .priorities-heading { margin-bottom: 8px; }
+  .app-shell.yere-app .example-note { margin-bottom: 10px; }
+  .priority-list { gap: 10px; }
+  .priority-card { min-height: 159px; padding: 14px 15px 13px; border-radius: 16px; }
+  .priority-symbol { flex-basis: 30px; width: 30px; height: 30px; }
+  .app-shell.yere-app .priority-card h3 { font-size: 11.5px !important; }
+  .priority-index { margin-right: 33px; }
+  .priority-badges { margin-top: 8px; }
+  .priority-metric { max-width: calc(100% - 129px); margin-top: 9px; }
+  .priority-metric strong { font-size: 27px; }
+  .priority-metric > span { font-size: 11.5px; }
+  .app-shell.yere-app .priority-detail { max-width: calc(100% - 129px); margin-top: 6px; font-size: 10.5px !important; }
+  .priority-art-halo { right: -2px; width: 135px; height: 135px; }
+  .priority-card--delivery .priority-art { right: 11px; bottom: 9px; width: 120px; height: 100px; }
+  .priority-card--payment .priority-art { right: 10px; bottom: 14px; width: 127px; height: 86px; }
+  .priority-card--production .priority-art { right: 9px; bottom: 10px; width: 120px; height: 90px; }
+  .priority-open > span { top: 13px; right: 14px; }
+  .app-shell.yere-app .create-order-cta { min-height: 55px; margin-top: 14px; font-size: 11.5px !important; }
+  .app-shell.yere-app .home-signature { margin-top: 12px; }
+  .yere-app .secondary-welcome { align-items: stretch; flex-direction: column; gap: 14px; }
+  .app-shell.yere-app .secondary-welcome h1 { font-size: 25px !important; }
+  .yere-app .secondary-welcome .welcome-action { width: 100%; }
+  .app-dock { position: fixed; z-index: 100; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; width: 100%; padding: 7px 8px calc(8px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid rgba(255,255,255,.11); background: #171e49; box-shadow: 0 -9px 28px rgba(17,24,57,.14); }
+  .app-shell.yere-app .dock-item { position: relative; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 3px; min-width: 0; min-height: 56px; padding: 4px 0 3px; border: 0; border-radius: 12px; background: transparent; color: #b7c0df; }
+  .app-shell.yere-app .dock-item.is-active { background: rgba(255,255,255,.1); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+  .dock-item.is-active::before { content: ""; position: absolute; top: 0; width: 22px; height: 2px; border-radius: 0 0 3px 3px; background: #d8e0ff; }
+  .dock-icon { display: grid; place-items: center; height: 27px; }
+  .dock-icon svg { width: 26px; height: 26px; stroke-width: 1.45; }
+  .app-shell.yere-app .dock-item small { max-width: 100%; overflow: hidden; color: inherit; font-size: 9.5px !important; font-weight: 650; line-height: 1.2 !important; text-overflow: ellipsis; white-space: nowrap; }
+  .app-shell.yere-app .dock-item.is-active small { font-weight: 800; }
+  .more-backdrop { align-items: flex-end; padding: 0; }
+  .more-sheet { width: 100%; max-height: 86dvh; padding: 12px 20px calc(23px + env(safe-area-inset-bottom, 0px)); border-radius: 24px 24px 0 0; }
+  .more-handle { display: block; width: 38px; height: 4px; margin: 0 auto 19px; border-radius: 4px; background: #d7dce9; }
+}
+@media (max-width: 360px) {
+  .yere-app .page-wrap { padding-right: 12px !important; padding-left: 12px !important; }
+  .home-eyebrow time { font-size: 8px; }
+  .app-shell.yere-app .home-greeting h1 { font-size: 23px !important; }
+  .priorities-today { display: none; }
+  .priority-card { padding-right: 13px; padding-left: 13px; }
+  .app-shell.yere-app .priority-card h3 { font-size: 10.5px !important; }
+  .app-shell.yere-app .priority-badge { padding-inline: 6px; font-size: 9.5px !important; }
+  .priority-metric { max-width: calc(100% - 112px); }
+  .app-shell.yere-app .priority-detail { max-width: calc(100% - 112px); }
+  .priority-card--delivery .priority-art { right: 7px; width: 106px; height: 91px; }
+  .priority-card--payment .priority-art { right: 6px; width: 111px; height: 79px; }
+  .priority-card--production .priority-art { right: 6px; width: 108px; height: 83px; }
+  .app-shell.yere-app .dock-item small { font-size: 9px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .yere-app *, .yere-app *::before, .yere-app *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+
+/* Older screens use explicit typeface declarations; bring them into the same family. */
+.yere-app :is(h1, h2, h3, h4, p, label, small, strong, b, em, a, li, th, td, button, input, select, textarea),
+.onboarding-shell :is(h1, h2, h3, p, label, small, strong, b, button, input, select) {
+  font-family: "Manrope Variable", Manrope, system-ui, sans-serif !important;
+}
+.yere-app .wordmark-copy strong { font-family: "Cormorant Garamond", Georgia, serif !important; }
+.yere-app .home-greeting h1 { white-space: normal !important; overflow: visible; text-overflow: clip; }
+.yere-app .priority-card h3 { white-space: normal; overflow: visible; text-overflow: clip; }
+.priority-index { flex: 0 0 auto; }
+
+/* Readable priority content and a compact first screen on phones. */
+.app-shell.yere-app .example-indicator {
+  cursor: pointer;
+  font-size: 10px !important;
+  line-height: 1.2 !important;
+}
+.example-indicator b { margin-left: 3px; color: #384b85; font-size: 10px; font-weight: 800; }
+.app-shell.yere-app .priority-card h3 { font-size: 13px !important; }
+.app-shell.yere-app .priority-badge { font-size: 11px !important; }
+.priority-metric > span { font-size: 13px; }
+.app-shell.yere-app .priority-detail { font-size: 12px !important; }
+@media (max-width: 760px) {
+  .app-header, .app-header-inner { min-height: 64px; }
+  .yere-app .page-wrap { padding-top: 17px !important; }
+  .home-greeting { padding-bottom: 16px; }
+  .app-shell.yere-app .home-greeting h1 { font-size: 25px !important; }
+  .greeting-sparkle { top: 0; }
+  .priorities-heading { margin-bottom: 10px; }
+  .priority-list { gap: 8px; }
+  .priority-card { min-height: 149px; padding-top: 12px; padding-bottom: 11px; }
+  .priority-symbol { flex-basis: 28px; width: 28px; height: 28px; }
+  .app-shell.yere-app .priority-card h3 { font-size: 12px !important; }
+  .app-shell.yere-app .priority-badge { font-size: 10.5px !important; }
+  .priority-badges { margin-top: 7px; }
+  .priority-metric { margin-top: 8px; }
+  .priority-metric strong { font-size: 28px; }
+  .priority-metric > span { font-size: 12px; }
+  .app-shell.yere-app .priority-detail { font-size: 11.5px !important; }
+  .app-shell.yere-app .create-order-cta { margin-top: 10px; font-size: 12px !important; }
+  .app-shell.yere-app .dock-item small { font-size: 10px !important; }
+}
+@media (max-width: 360px) {
+  .app-shell.yere-app .home-greeting h1 { font-size: 23px !important; }
+  .app-shell.yere-app .priority-card h3 { font-size: 10.5px !important; }
+  .app-shell.yere-app .priority-badge { font-size: 10px !important; }
+  .app-shell.yere-app .dock-item small { font-size: 9.5px !important; }
+}
+
+@media (max-width: 760px) {
+  .priorities-today { display: none; }
+  .priorities-heading > div { flex: 0 0 auto; }
+  .app-shell.yere-app .priorities-heading h2 { white-space: nowrap; }
+  .app-shell.yere-app .priority-badge { font-size: 11px !important; }
+  .priority-metric > span { font-size: 12.5px; }
+  .app-shell.yere-app .priority-detail { color: #65718b !important; font-size: 12px !important; }
+}
+@media (max-width: 360px) {
+  .app-shell.yere-app .priority-badge { font-size: 10px !important; }
+  .priority-metric > span { font-size: 12px; }
+  .app-shell.yere-app .priority-detail { font-size: 11.5px !important; }
+}
+
+/* Neutralize the legacy blue title banner on secondary screens. */
+.app-shell.yere-app .secondary-welcome {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-bottom: 1px solid #e4e8f1 !important;
+  box-shadow: none !important;
+  text-align: left !important;
+}
+.app-shell.yere-app .secondary-welcome .welcome-copy { flex: 1 1 auto !important; text-align: left !important; }
+.app-shell.yere-app .secondary-welcome .page-banner-title {
+  display: block !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  text-align: left !important;
+}
+.app-shell.yere-app .secondary-welcome .page-subtitle { margin: 8px 0 0 !important; text-align: left !important; }
+.yere-app :is(.new-order-form, .new-client-form, .account-form, .supplier-form, .measurement-form, .marketplace-listing-form) label { color: #4d5b7b !important; }
+.yere-app :is(.new-order-form, .new-client-form) { background: #f7f8fc !important; border-color: #e2e7f1 !important; }
+.yere-app :is(.history-empty, .privacy-note, .empty-state, .cash-summary small) { color: #6f7b94 !important; }
+
+/* The optional setup shares the same palette, type scale and touch targets. */
+.onboarding-shell { min-height: 100dvh; padding: 26px 20px 40px; color: #20294e; }
+.onboarding-brand { max-width: 960px; margin: 0 auto 22px; }
+.onboarding-brand .brand-mark { width: 42px; height: 42px; border-radius: 13px; background: #202958 !important; color: #fff; box-shadow: none; }
+.onboarding-brand > span:nth-child(2) strong { color: #20294e; font-size: 20px !important; font-weight: 850; letter-spacing: .08em; }
+.onboarding-brand > span:nth-child(2) small { color: #8791aa; font-size: 9px !important; font-weight: 800; letter-spacing: .18em; }
+.onboarding-layout { max-width: 960px; margin: 0 auto; }
+.onboarding-copy { padding: clamp(25px, 5vw, 46px); border: 1px solid #e2e6f1; border-radius: 22px; background: #fff; }
+.onboarding-copy .eyebrow { margin-bottom: 12px; color: #697ab0; font-size: 10px !important; font-weight: 850; letter-spacing: .12em; }
+.onboarding-copy h1 { max-width: 650px; margin: 0; color: #20294e !important; font-size: clamp(27px, 4vw, 40px) !important; font-weight: 800; line-height: 1.15 !important; letter-spacing: -.045em; }
+.onboarding-copy h2 { margin: 14px 0 0; color: #59698f !important; font-size: 16px !important; font-weight: 750; line-height: 1.4 !important; }
+.onboarding-copy .onboarding-body { max-width: 620px; margin: 13px 0 0; color: #707c95 !important; font-size: 13px !important; line-height: 1.65 !important; }
+.onboarding-form { gap: 15px; margin-top: 24px; }
+.onboarding-form .profile-profession { display: grid; gap: 3px; grid-column: 1 / -1; padding: 14px 16px; border: 1px solid #e1e5f1; border-radius: 13px; background: #f5f6fb; }
+.onboarding-form .profile-profession span { color: #7582a0; font-size: 11px; font-weight: 700; }
+.onboarding-form .profile-profession strong { color: #27345f; font-size: 14px; font-weight: 800; }
+.onboarding-form .profile-profession small { color: #78849b; font-size: 11px !important; line-height: 1.45; }
+.onboarding-form label { color: #4e5c7e; font-size: 12px !important; font-weight: 750; }
+.onboarding-form input, .onboarding-form select { min-height: 47px; border: 1px solid #dce2ef; border-radius: 10px; background: #fff; color: #273253; font-size: 14px; }
+.onboarding-form input:focus, .onboarding-form select:focus { outline: 3px solid #d8def3; outline-offset: 1px; border-color: #697bb4; }
+.onboarding-form .onboarding-primary { min-height: 49px; border: 1px solid #1a204e; border-radius: 11px; background: #1a204e !important; color: #fff !important; box-shadow: 0 8px 18px rgba(26,32,78,.16); font-size: 13px; font-weight: 800; }
+.onboarding-copy .onboarding-privacy { color: #77839a; font-size: 11px; line-height: 1.6; }
+@media (max-width: 760px) {
+  .onboarding-shell { padding: 17px 14px 30px; }
+  .onboarding-copy { padding: 25px 21px; }
+  .onboarding-form .onboarding-primary { width: 100%; }
+}
+body.yere-dialog-open { overflow: hidden !important; }
+.onboarding-form .onboarding-primary { border-color: #1a204e !important; }
+.yere-app .home-greeting h1 { overflow-wrap: anywhere; }
+.app-profile > span:first-child { width: 44px; height: 44px; }
+.example-indicator { position: relative; }
+.example-indicator::before { content: ""; position: absolute; inset: -10px -3px; }
+.onboarding-brand > span:nth-child(2) strong { font-family: "Cormorant Garamond", Georgia, serif !important; font-size: 27px !important; line-height: .9; }
+
+/* Contrast is maintained even for secondary labels on light surfaces. */
+.home-eyebrow { color: #596887; }
+.home-eyebrow time { color: #5f6d8c; }
+.app-shell.yere-app .home-greeting > p { color: #606c83 !important; }
+.app-shell.yere-app .home-signature { color: #5d6b8a !important; }
+.more-heading > div > span { color: #5d6b8a; }
+.app-shell.yere-app .more-item small { color: #5d6b8a; }
+.onboarding-brand > span:nth-child(2) small { color: #5d6b8a; }
+.onboarding-copy .eyebrow { color: #5c6d9d; }
+.onboarding-copy .onboarding-body { color: #5d6b8a !important; }
+.onboarding-form .profile-profession span,
+.onboarding-form .profile-profession small { color: #5d6b8a; }
+.onboarding-copy .onboarding-privacy { color: #5d6b8a; }
+.priorities-today, .editorial-caption { color: #5d6b8a; }
+.app-shell.yere-app .editorial-note p { color: #5d6b8a !important; }
+.app-shell.yere-app .secondary-welcome .secondary-eyebrow,
+.app-shell.yere-app .secondary-welcome .page-subtitle,
+.yere-app :is(.history-empty, .privacy-note, .empty-state, .empty-state b, .empty-state p, .cash-summary small, .footer, .footer span) { color: #5d6b8a !important; }
+.app-shell.yere-app .new-client-form p { color: #5d6b8a !important; }
+.app-shell.yere-app :is(.marketplace-listing-heading > div > p, .marketplace-empty > p, .marketplace-local-note) { color: #5d6b8a !important; }

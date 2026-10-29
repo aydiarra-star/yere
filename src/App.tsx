@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import HomeDashboard from "./HomeDashboard";
 import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, filterOrdersByDelivery, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, retouchStages, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderDeliveryFilter, type OrderStatus, type RetouchStage, type StockItem, type StockMovement } from "./domain";
-import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, workModes, getActivityExperience, type AtelierProfile, type WorkMode } from "./atelierProfile";
+import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, workModes, type AtelierProfile, type WorkMode } from "./atelierProfile";
 import { normalizeBackupOnboardingState, normalizeBackupMarketplaceListings } from "./localBackup";
 import { isMarketplaceListingListValid, type MarketplaceListing } from "./marketplace";
 import { usePersistentState } from "./usePersistentState";
@@ -55,6 +56,7 @@ function App() {
   const [onboardingComplete, setOnboardingComplete] = usePersistentState<boolean>("yere-demo-onboarding-complete-v1", false, isBooleanValue);
   const [onboardingStartedAt, setOnboardingStartedAt] = usePersistentState<number | null>("yere-demo-onboarding-started-at-v1", null, isNullableTimestamp);
   const [view, setView] = useState<View>("overview");
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -109,7 +111,6 @@ function App() {
   const visibleClients = useMemo(() => clients.filter((client) => matchesClient(client, query)), [clients, query]);
   const outstanding = orders.reduce((sum, order) => sum + balanceDue(order), 0);
   const outstandingOrderCount = orders.filter((order) => balanceDue(order) > 0).length;
-  const activityExperience = getActivityExperience("tailleur");
   const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.voidedAt ? 0 : expense.amount), 0);
   const totalSupplierPayments = supplierPurchasesPaidTotal(supplierPurchases);
   const totalCashOutflows = totalExpenses + totalSupplierPayments;
@@ -123,6 +124,48 @@ function App() {
   const today = new Date();
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const filteredOrders = useMemo(() => filterOrdersByDelivery(orders, todayKey, orderDeliveryFilter), [orders, todayKey, orderDeliveryFilter]);
+  const atelierDisplayName = atelier.name.trim();
+  const hasProfileDetails = [atelierDisplayName, atelier.phone, atelier.city, supplier.businessName, supplier.contactName,
+    supplier.phone, supplier.city, supplier.category, supplier.shopName, supplier.description].some((value) => value.trim() !== "");
+  const isExample = !onboardingComplete && !hasProfileDetails && clients.length === 0 && orders.length === 0
+    && expenses.length === 0 && stockItems.length === 0 && stockMovements.length === 0
+    && supplierPurchases.length === 0 && marketplaceListings.length === 0;
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [view]);
+
+  useEffect(() => {
+    if (!mobileMoreOpen) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const sheet = document.querySelector<HTMLElement>(".more-sheet");
+    document.body.classList.add("yere-dialog-open");
+    sheet?.querySelector<HTMLButtonElement>(".more-heading button")?.focus({ preventScroll: true });
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileMoreOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !sheet) return;
+      const controls = Array.from(sheet.querySelectorAll<HTMLButtonElement>("button:not([disabled])"));
+      if (controls.length === 0) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.classList.remove("yere-dialog-open");
+      previousFocus?.focus({ preventScroll: true });
+    };
+  }, [mobileMoreOpen]);
 
   useEffect(() => {
     const client = clients.find((item) => item.id === selectedClient);
@@ -607,148 +650,88 @@ function App() {
     setNotice(`Mensurations de ${selected.name} enregistrées localement. Troisième étape : créez maintenant une commande.`);
   }
 
-  const navItems: { id: View; label: string; icon: string }[] = [
-    { id: "overview", label: "Accueil", icon: "house" },
-    { id: "clients", label: "Clients", icon: "users" },
-    { id: "orders", label: "Commandes", icon: "clipboard-list" },
-    { id: "stock", label: "Stock", icon: "package" },
-    { id: "cash", label: "Caisse", icon: "wallet" },
-    { id: "account", label: "Compte", icon: "user-round" },
-    { id: "reminders", label: "Relances clients", icon: "bell-ring" }
-  ];
   const mobileNavItems: { id: View | "more"; label: string; icon: string }[] = [
     { id: "overview", label: "Accueil", icon: "thread-spool" },
     { id: "clients", label: "Clients", icon: "address-book" },
     { id: "orders", label: "Commandes", icon: "dress-form" },
-    { id: "cash", label: "Caisse", icon: "payment-terminal" },
+    { id: "cash", label: "Caisse", icon: "cash-notes" },
     { id: "more", label: "Plus", icon: "tailor-scissors" }
   ];
 
-  if (!onboardingComplete) {
+  function openAccount() {
+    setMobileMoreOpen(false);
+    if (!onboardingComplete && !atelierDisplayName) setOnboardingOpen(true);
+    else setView("account");
+  }
+
+  function createOrder() {
+    setNewOrderClientId(selectedClient ?? clients[0]?.id ?? "");
+    setShowOrderForm(true);
+    setView("orders");
+    setMobileMoreOpen(false);
+  }
+
+  if (onboardingOpen) {
     return <Onboarding
       atelier={atelier}
       onAtelierChange={setAtelier}
+      onCancel={() => setOnboardingOpen(false)}
       onFinish={() => {
         setOnboardingComplete(true);
-        setView("clients");
-        setShowForm(true);
-        setNotice("Espace atelier configuré sur cet appareil. Créez votre premier client pour continuer.");
+        setOnboardingOpen(false);
+        setView("overview");
+        setNotice("");
       }}
     />;
   }
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <a className="brand" href="#" onClick={(event) => { event.preventDefault(); setView("overview"); }}>
-          <span className="brand-wordmark"><strong>YÉRÉ</strong><small>Tailleur</small></span>
-        </a>
-        <button type="button" className="atelier-switch" onClick={() => setView("account")} aria-label="Ouvrir le profil de l’atelier"><span className="atelier-avatar">A</span><span><b>{atelier.name || "Mon atelier"}</b><small>{atelier.city || "Configurer mon espace"}</small></span><span className="chevron">⌄</span></button>
-        <p className="nav-caption">ESPACE ATELIER</p>
-        <nav aria-label="Navigation principale">
-          {navItems.map((item) => <button key={item.id} className={view === item.id ? "nav-item active" : "nav-item"} onClick={() => setView(item.id)}><span className="nav-icon"><NavIcon name={item.icon} /></span>{item.label}{item.id === "clients" && <span className="nav-count">{clients.length}</span>}{item.id === "reminders" && reminderSuggestions.length > 0 && <span className="nav-count">{reminderSuggestions.length}</span>}</button>)}
-        </nav>
-        <button type="button" className="header-profile-button" aria-label="Ouvrir le profil de l’atelier" onClick={() => setView("account")}><NavIcon name="user-round" /></button>
-        <div className="sidebar-bottom"><div className="help-card"><span className="help-icon">✳</span><b>Un atelier mieux organisé.</b><p>Vos clients, leurs mesures et vos commandes au même endroit.</p></div><button type="button" className="profile profile-button" onClick={() => setView("account")} aria-label="Gérer le compte de l’atelier"><span className="profile-avatar">Y</span><span><b>{atelier.name || "Mon atelier"}</b><small>Gérer mon espace</small></span><span className="dots">→</span></button></div>
-      </aside>
+    <div className="app-shell yere-app">
+      <header className="app-header">
+        <div className="app-header-inner">
+          <a className="yere-wordmark" href="#accueil" onClick={(event) => { event.preventDefault(); setView("overview"); setMobileMoreOpen(false); }} aria-label="YÉRÉ Tailleur, retour à l’accueil">
+            <span className="wordmark-star" aria-hidden="true">✳</span>
+            <span className="wordmark-copy"><strong>YÉRÉ</strong><small>TAILLEUR</small></span>
+          </a>
+          <div className="header-workspace"><span>VOTRE ESPACE</span><b>Atelier de couture</b></div>
+          <nav className="desktop-nav" aria-label="Navigation principale">
+            {mobileNavItems.map((item) => <button key={item.id} type="button" className={(item.id === "more" ? (mobileMoreOpen || ["stock", "account", "reminders", "suppliers", "marketplace"].includes(view)) : view === item.id) ? "desktop-nav-item is-active" : "desktop-nav-item"} onClick={() => { if (item.id === "more") setMobileMoreOpen((open) => !open); else { setView(item.id); setMobileMoreOpen(false); } }} aria-current={item.id !== "more" && view === item.id ? "page" : undefined} aria-expanded={item.id === "more" ? mobileMoreOpen : undefined}>{item.label}</button>)}
+          </nav>
+          <button type="button" className="app-profile" onClick={openAccount} aria-label="Mon atelier : ouvrir le profil de l’atelier"><span><NavIcon name="user-filled" /></span><span className="profile-label">Mon atelier</span><span className="profile-chevron" aria-hidden="true">⌄</span></button>
+        </div>
+      </header>
 
       <main className="main-content">
-        <header className="topbar"><div className="breadcrumb" aria-label="Fil d’Ariane"><span className="breadcrumb-brand">YÉRÉ</span><span>Atelier</span><b>{navItems.find((item) => item.id === view)?.label}</b></div><div className="topbar-right"><button className="avatar-button" aria-label="Ouvrir le compte de l’atelier" onClick={() => setView("account")}><NavIcon name="user-round" /></button></div></header>
         <div className="page-wrap">
-          <div className={view === "overview" ? "welcome-row overview-welcome" : "welcome-row"}><div className="welcome-copy"><h1 className="page-banner-title">{view === "overview" ? ("Bienvenue dans Votre Atelier de Couture, " + (atelier.name || "DiarraTaïleur")) : view === "clients" ? "Vos clients & mensurations" : view === "orders" ? "Suivi des commandes" : view === "cash" ? "La caisse de votre atelier" : view === "account" ? (atelier.name || "Votre compte atelier") : view === "marketplace" ? "La marketplace YÉRÉ" : view === "suppliers" ? "Espace fournisseurs" : "Faites revenir vos clients."}</h1><p className="page-subtitle">{view === "overview" ? "VOS PRIORITÉS POUR AUJOURD’HUI :" : view === "clients" ? "Retrouvez les fiches clients et leurs dernières mesures." : view === "orders" ? "Suivez chaque pièce, de la préparation à la livraison." : view === "cash" ? "Suivez les acomptes et les montants à récupérer." : view === "account" ? "Votre profil d’atelier." : view === "marketplace" ? "Tailleurs et fournisseurs : présentez vos produits et vos créations dans la vitrine YÉRÉ." : view === "suppliers" ? "Gérez votre profil fournisseur et préparez votre boutique YÉRÉ." : "Des occasions concrètes de reprendre contact avec vos clients."}</p>{view === "overview" && <div className="today-snapshot" aria-label="Résumé de la journée"><div className="snapshot-item"><span className="snapshot-icon">✓</span><span><b>{orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length === 0 ? "Aucune livraison" : `${orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length} livraison${orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length === 1 ? "" : "s"}`}</b><small>{orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length === 0 ? "prévue aujourd’hui" : "prévue aujourd’hui"}</small></span></div><div className="snapshot-item"><span className="snapshot-icon money">₣</span><span><b>{formatXof(outstanding)}</b><small>à encaisser</small></span></div><div className="snapshot-item"><span className="snapshot-icon orders">▣</span><span><b>{orders.filter((order) => order.status !== "Livré").length} commande{orders.filter((order) => order.status !== "Livré").length === 1 ? "" : "s"}</b><small>en cours</small></span></div></div>}</div>{["clients", "orders", "suppliers", "marketplace"].includes(view) && <button className="primary-button welcome-action" onClick={() => { if (view === "overview" || view === "orders") { setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); setShowOrderForm(true); setView("orders"); } else if (view === "suppliers") { setView("marketplace"); } else if (view === "marketplace") { setListingDraft({ ...emptyListing, sellerType: "tailor", sellerActivity: atelier.activity ?? "tailleur", category: "Vêtements prêts à vendre", sellerName: atelier.name, city: atelier.city }); setListingFormOpen(true); setNotice(""); } else { setShowForm(true); setView("clients"); } }}><span>✂</span> {view === "overview" || view === "orders" ? "CRÉER NOUVELLE COMMANDE" : view === "suppliers" ? "Créer ma boutique" : view === "marketplace" ? "Créer ma vitrine" : "Nouveau client"}</button>}</div>
+          {view !== "overview" && <div className="welcome-row secondary-welcome">
+            <div className="welcome-copy">
+              <p className="secondary-eyebrow">VOTRE ESPACE ATELIER</p>
+              <h1 className="page-banner-title">{view === "clients" ? "Vos clients & mensurations" : view === "orders" ? "Suivi des commandes" : view === "cash" ? "La caisse de votre atelier" : view === "stock" ? "Gestion du stock" : view === "account" ? (atelier.name || "Votre compte atelier") : view === "marketplace" ? "La marketplace YÉRÉ" : view === "suppliers" ? "Espace fournisseurs" : "Faites revenir vos clients."}</h1>
+              <p className="page-subtitle">{view === "clients" ? "Retrouvez les fiches clients et leurs dernières mesures." : view === "orders" ? "Suivez chaque pièce, de la préparation à la livraison." : view === "cash" ? "Suivez les acomptes et les montants à récupérer." : view === "stock" ? "Gardez un œil sur les fournitures de l’atelier." : view === "account" ? "Votre profil d’atelier." : view === "marketplace" ? "Tailleurs et fournisseurs : présentez vos produits et vos créations dans la vitrine YÉRÉ." : view === "suppliers" ? "Gérez votre profil fournisseur et préparez votre boutique YÉRÉ." : "Des occasions concrètes de reprendre contact avec vos clients."}</p>
+            </div>
+            {["clients", "orders", "suppliers", "marketplace"].includes(view) && <button className="primary-button welcome-action" onClick={() => { if (view === "orders") createOrder(); else if (view === "suppliers") setView("marketplace"); else if (view === "marketplace") { setListingDraft({ ...emptyListing, sellerType: "tailor", sellerActivity: atelier.activity ?? "tailleur", category: "Vêtements prêts à vendre", sellerName: atelier.name, city: atelier.city }); setListingFormOpen(true); setNotice(""); } else { setShowForm(true); setView("clients"); } }}><span>✂</span> {view === "orders" ? "Créer une commande" : view === "suppliers" ? "Créer ma boutique" : view === "marketplace" ? "Créer ma vitrine" : "Nouveau client"}</button>}
+          </div>}
           {notice && view !== "overview" && <div className="notice" role="status"><span aria-hidden="true">ⓘ</span><p>{notice}</p><button aria-label="Fermer le message" onClick={() => setNotice("")}>×</button></div>}
 
-          {view === "overview" && <>
-            <section className="tailor-priority-grid" aria-label="Priorités de l’atelier">
-              <article className="tailor-priority-card delivery-card">
-                <div className="tailor-card-copy">
-                  <p className="tailor-card-kicker">LIVRAISONS &amp; ÉTAT</p>
-                  <h2>{orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length} livraison{orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length === 1 ? "" : "s"} prévue{orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length === 1 ? "" : "s"} aujourd’hui</h2>
-                  <p className="tailor-card-description">{orders.some((order) => order.status === "En confection") ? "Confection en cours dans votre atelier" : "Préparez les pièces et vérifiez les échéances"}</p>
-                  <div className="tailor-badges"><span className="tailor-badge badge-orange">En cours</span><span className="tailor-badge badge-green">Livré</span><span className="tailor-badge badge-gold">Tissu de luxe</span></div>
-                </div>
-                <div className="tailor-card-art fabric-art" aria-hidden="true"><span className="art-fabric">▥</span><span className="art-scissors">✂</span><span className="art-thread">◉</span></div>
-              </article>
-              <article className="tailor-priority-card payment-card">
-                <div className="tailor-card-copy">
-                  <p className="tailor-card-kicker">ENCAISSEMENT &amp; PAIEMENTS</p>
-                  <h2>{outstandingOrderCount} facture{outstandingOrderCount === 1 ? "" : "s"} à encaisser</h2>
-                  <p className="tailor-card-description">Total : {formatXof(outstanding)}</p>
-                  <div className="tailor-badges"><span className="tailor-badge badge-red">À régler</span><span className="tailor-badge badge-green">Paiement reçu</span></div>
-                </div>
-                <div className="tailor-card-art payment-art payment-illustration" aria-hidden="true">
-                  <svg viewBox="0 0 160 120" role="img" aria-label="Caisse enregistreuse, reçu et pièces FCFA" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="12" y="19" width="87" height="83" rx="13" fill="#DDF3E4"/>
-                    <path d="M27 44h54l-5-13H32z" fill="#F8FFFA" stroke="#217A50" strokeWidth="2.5" strokeLinejoin="round"/>
-                    <rect x="24" y="44" width="62" height="38" rx="7" fill="#23865A"/>
-                    <rect x="31" y="50" width="48" height="14" rx="3" fill="#C7F4D8"/>
-                    <text x="55" y="60" textAnchor="middle" fontSize="8" fontWeight="800" fill="#14532D">ENCAISSEMENT</text>
-                    <g fill="#F5FFF8"><circle cx="35" cy="72" r="2.3"/><circle cx="45" cy="72" r="2.3"/><circle cx="55" cy="72" r="2.3"/><circle cx="65" cy="72" r="2.3"/><circle cx="75" cy="72" r="2.3"/></g>
-                    <rect x="34" y="84" width="42" height="9" rx="3" fill="#14532D"/>
-                    <path d="M48 93v5m15-5v5" stroke="#217A50" strokeWidth="3" strokeLinecap="round"/>
-                    <path d="M100 15h24l5 7v49h-29z" fill="#FFFDF5" stroke="#718096" strokeWidth="1.7"/>
-                    <path d="M106 30h15m-15 7h15m-15 7h11m-11 7h15" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M100 15v8h7" fill="none" stroke="#718096" strokeWidth="1.7"/>
-                    <g stroke="#A86B19" strokeWidth="1.5">
-                      <ellipse cx="122" cy="86" rx="17" ry="7" fill="#F7C95C"/>
-                      <path d="M105 86v7c0 4 8 7 17 7s17-3 17-7v-7" fill="#E9AC35"/>
-                      <ellipse cx="122" cy="86" rx="17" ry="7" fill="#FFDA78"/>
-                    </g>
-                    <text x="122" y="89" textAnchor="middle" fontSize="9" fontWeight="900" fill="#805313">F</text>
-                    <circle cx="143" cy="61" r="11" fill="#FFF1C7" stroke="#D49A26" strokeWidth="1.5"/>
-                    <text x="143" y="64.5" textAnchor="middle" fontSize="7" fontWeight="900" fill="#805313">FCFA</text>
-                    <path d="M109 106h36" stroke="#23865A" strokeWidth="3" strokeLinecap="round" opacity=".5"/>
-                  </svg>
-                </div>
-              </article>
-              <article className="tailor-priority-card production-card">
-                <div className="tailor-card-copy">
-                  <p className="tailor-card-kicker">COMMANDES EN PRODUCTION</p>
-                  <h2>{orders.filter((order) => order.status !== "Livré").length} commande{orders.filter((order) => order.status !== "Livré").length === 1 ? "" : "s"} active{orders.filter((order) => order.status !== "Livré").length === 1 ? "" : "s"}</h2>
-                  <p className="tailor-card-description">{orders.some((order) => order.status === "En confection") ? "Des pièces sont actuellement en confection" : "Suivez chaque pièce jusqu’à la finition"}</p>
-                  <div className="tailor-badges"><span className="tailor-badge badge-blue">Conception</span><span className="tailor-badge badge-pink">Couture</span><span className="tailor-badge badge-ochre">Finition</span></div>
-                </div>
-                <div className="tailor-card-art machine-art production-illustration" aria-hidden="true">
-                  <svg viewBox="0 0 160 120" role="img" aria-label="Machine à coudre et suivi numérique de production" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="8" y="12" width="74" height="57" rx="8" fill="#E4EAFE" stroke="#8EA5F5" strokeWidth="1.5"/>
-                    <rect x="15" y="19" width="60" height="42" rx="4" fill="#FFF" stroke="#B9C8FB"/>
-                    <text x="45" y="28" textAnchor="middle" fontSize="5.5" fontWeight="800" fill="#243B80">PRODUCTION</text>
-                    <g stroke="#4D65B8" strokeWidth="1.4" fill="none"><path d="M28 39h12v8h-12zM49 39h12v8H49zM28 51h12v5H28zM49 51h12v5H49z"/><path d="M40 43h9m-15 4v4m21-4v4"/></g>
-                    <path d="M19 75h71" stroke="#243B80" strokeWidth="4" strokeLinecap="round"/>
-                    <path d="M24 72V50q0-8 8-8h17q8 0 8 8v8" fill="#FFFFFF" stroke="#253B85" strokeWidth="3" strokeLinejoin="round"/>
-                    <path d="M33 42V33h17l7 8" fill="#CBD5FF" stroke="#253B85" strokeWidth="3" strokeLinejoin="round"/>
-                    <circle cx="43" cy="32" r="7" fill="#FFF" stroke="#253B85" strokeWidth="2.5"/>
-                    <circle cx="43" cy="32" r="2" fill="#253B85"/>
-                    <path d="M56 49h11v14H56M63 63v9" fill="none" stroke="#253B85" strokeWidth="2.5" strokeLinecap="round"/>
-                    <path d="M61 72h11" stroke="#253B85" strokeWidth="3" strokeLinecap="round"/>
-                    <path d="M16 80h72" stroke="#7C8CC8" strokeWidth="3" strokeLinecap="round"/>
-                    <path d="M26 80v7m48-7v7" stroke="#253B85" strokeWidth="3" strokeLinecap="round"/>
-                    <path d="M43 24V17q0-5 5-5h4" fill="none" stroke="#D977A8" strokeWidth="1.7" strokeLinecap="round"/>
-                    <path d="M50 12h5" stroke="#D977A8" strokeWidth="2.5" strokeLinecap="round"/>
-                    <path d="M82 37h9v13h8" stroke="#7486D7" strokeWidth="2" fill="none" strokeDasharray="3 3"/>
-                    <g transform="translate(91 18)">
-                      <ellipse cx="24" cy="64" rx="26" ry="7" fill="#D7C6F6"/>
-                      <path d="M5 28h37v37H5z" fill="#B18BDB" stroke="#8057B3" strokeWidth="2"/>
-                      <ellipse cx="23.5" cy="28" rx="18.5" ry="8" fill="#E6D7FA" stroke="#8057B3" strokeWidth="2"/>
-                      <ellipse cx="23.5" cy="65" rx="18.5" ry="8" fill="#C7A9EA" stroke="#8057B3" strokeWidth="2"/>
-                      <path d="M14 28v37m9-37v37m9-37v37" stroke="#8B63BC" strokeWidth="1.2" opacity=".7"/>
-                    </g>
-                    <path d="M101 93h39" stroke="#253B85" strokeWidth="2" strokeLinecap="round" opacity=".45"/>
-                    <circle cx="141" cy="93" r="3" fill="#253B85"/>
-                  </svg>
-                </div>
-              </article>
-            </section>
-            <button className="primary-button welcome-action overview-create-order" onClick={() => { setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); setShowOrderForm(true); setView("orders"); }}><span className="cta-scissors-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="6" r="3" stroke="currentColor" strokeWidth="2"/><circle cx="6" cy="18" r="3" stroke="currentColor" strokeWidth="2"/><path d="m8.2 7.8 11.3 11.3M8.2 16.2 19.5 4.9M14 10l-2 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></span> CRÉER NOUVELLE COMMANDE</button>
-            <section className="content-card">
-              <div className="section-heading"><div><h2>Commandes à suivre</h2><p>Les dernières pièces de votre atelier</p></div><button className="text-button" onClick={() => setView("orders")}>Toutes les commandes <span>→</span></button></div>
-              <OrderTable orders={orders.slice(0, 3)} clients={clients} onStatusChange={updateStatus} onRetouchStageChange={updateRetouchStage} onView={() => setView("orders")} />
-            </section>
-            <section className="bottom-grid"><div className="content-card quick-card"><div className="section-heading"><div><h2>Accès rapide</h2><p>Raccourcis pensés pour les tailleurs.</p></div></div><div className="quick-actions">{activityExperience.shortcuts.map((shortcut, index) => <button key={shortcut.action} onClick={() => { if (shortcut.action === "new-client") { setShowForm(true); setView("clients"); } else if (shortcut.action === "measurements") { setView("clients"); } else if (shortcut.action === "new-order") { setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); setShowOrderForm(true); setView("orders"); } else if (shortcut.action === "stock") { setView("stock"); } else { setView("marketplace"); } }}><span className={"quick-icon " + (index === 0 ? "green" : "purple")}>{index === 0 ? "＋" : "↗"}</span><span><b>{shortcut.title}</b><small>{shortcut.description}</small></span><span className="quick-arrow">→</span></button>)}</div></div><div className="tip-card"><span className="tip-spark">✳</span><p className="eyebrow">LE CONSEIL YÉRÉ · {activityExperience.label.toUpperCase()}</p><h2>{activityExperience.tipTitle}</h2><p>{activityExperience.tipDescription}</p></div></section>
-          </>}
+          {view === "overview" && <HomeDashboard
+            atelierName={atelierDisplayName || (isExample ? "Diarra Tailleur" : "")}
+            isExample={isExample}
+            today={today}
+            deliveryCount={orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length}
+            outstandingOrderCount={outstandingOrderCount}
+            outstanding={outstanding}
+            activeOrderCount={orders.filter((order) => order.status !== "Livré").length}
+            inProductionOrder={orders.find((order) => order.status === "En confection")}
+            onOpenDeliveries={() => { setOrderDeliveryFilter("all"); setView("orders"); }}
+            onOpenPayments={() => setView("cash")}
+            onOpenProduction={() => { setOrderDeliveryFilter("all"); setView("orders"); }}
+            onCreateOrder={createOrder}
+            onOpenTools={() => setMobileMoreOpen(true)}
+            onConfigure={() => setOnboardingOpen(true)}
+          />}
 
           {view === "clients" && <section className="content-card clients-card"><div className="section-heading"><div><h2>Répertoire clients</h2><p>{clients.length} fiche{clients.length > 1 ? "s" : ""} dans cet atelier</p></div><label className="search-box"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher par nom ou téléphone" aria-label="Rechercher un client" /></label></div>
-            {showForm && <form className="new-client-form" onSubmit={addClient}><div><h3>Créer une fiche client</h3><p>Les mensurations pourront être complétées ensuite.</p></div><label>Nom complet<input required autoFocus value={clientName} onChange={(event) => setClientName(event.target.value)} placeholder="Ex. Mariama Diallo" /></label><label>Téléphone<input value={clientPhone} onChange={(event) => setClientPhone(event.target.value)} placeholder="+221 77 000 00 00" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>Annuler</button><button type="submit" className="primary-button">Enregistrer le client</button></div></form>}
+            {showForm && <form className="new-client-form" onSubmit={addClient}><div><h3>Créer une fiche client</h3><p>Les mensurations pourront être complétées ensuite. Prototype local : n’utilisez pas encore de données clients réelles.</p></div><label>Nom complet<input required autoFocus value={clientName} onChange={(event) => setClientName(event.target.value)} placeholder="Ex. Mariama Diallo" /></label><label>Téléphone<input value={clientPhone} onChange={(event) => setClientPhone(event.target.value)} placeholder="+221 77 000 00 00" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>Annuler</button><button type="submit" className="primary-button">Enregistrer le client</button></div></form>}
             <div className="client-list">{visibleClients.map((client, index) => <button key={client.id} className={selectedClient === client.id ? "client-row selected" : "client-row"} onClick={() => setSelectedClient(selectedClient === client.id ? null : client.id)}><span className={`client-avatar avatar-${index % 4}`}>{client.name.split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</span><span className="client-main"><b>{client.name}</b><small>{client.phone || "Pas de téléphone renseigné"}</small></span><span className="client-measurements"><b>{[client.measurement.bust, client.measurement.waist, client.measurement.hips, client.measurement.shoulder, client.measurement.sleeve, client.measurement.length, client.measurement.arm, client.measurement.neck, client.measurement.thigh, client.measurement.legLength].filter(Boolean).length}/10</b><small>mesures saisies</small></span><span className="row-chevron">›</span></button>)}
               {visibleClients.length === 0 && <div className="empty-state"><span>⌕</span><b>Aucun client trouvé</b><p>Essayez un autre nom ou numéro.</p></div>}
             </div>
@@ -765,7 +748,7 @@ function App() {
               <label>Prix convenu (FCFA)<input required type="number" min="1" step="1" value={newOrderPrice} onChange={(event) => setNewOrderPrice(event.target.value)} placeholder="25000" /></label>
               <label>Acompte reçu (FCFA)<input required type="number" min="0" step="1" value={newOrderDeposit} onChange={(event) => setNewOrderDeposit(event.target.value)} /></label>
               <div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowOrderForm(false)}>Annuler</button><button type="submit" className="primary-button" disabled={clients.length === 0}>Enregistrer la commande</button></div>
-              {clients.length === 0 && <p className="history-empty">Créez d'abord un client pour lui associer une commande.</p>}
+              {clients.length === 0 && <div className="order-needs-client"><p className="history-empty">Créez d’abord un client pour lui associer une commande.</p><button type="button" className="secondary-button" onClick={() => { setShowForm(true); setView("clients"); }}>Ajouter un client</button></div>}
             </form>}
             <div className="order-filter-row">
               <label>Afficher les commandes
@@ -908,11 +891,17 @@ function App() {
             {reminderSuggestions.length === 0 ? <div className="content-card empty-reminders"><h2>Pas de relance suggérée pour le moment</h2><p>Dès que vous enregistrerez des commandes avec une date, YÉRÉ pourra repérer les clients qui n’ont pas commandé récemment et les anciennes commandes liées à une occasion.</p></div> : <div className="reminder-list">{reminderSuggestions.map((item, index) => <article className="content-card reminder-card" key={item.clientId + "-" + item.kind + "-" + index}><div className="reminder-card-top"><span className={item.kind === "inactive" ? "reminder-kind inactive" : "reminder-kind occasion"}>{item.kind === "inactive" ? "À réactiver" : "Occasion à anticiper"}</span><span className="reminder-age">{item.daysSinceOrder} jours</span></div><h2>{item.title}</h2><p className="reminder-client-name">{item.clientName}</p><p className="reminder-detail">{item.detail}</p><div className="reminder-contact">{item.phone ? <span>☎ {item.phone}</span> : <span className="missing-phone">Téléphone non renseigné</span>}<span>Dernière commande : {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(item.lastOrderAt + "T12:00:00"))}</span></div><div className="message-preview"><span>MESSAGE PROPOSÉ</span><p>{item.suggestedMessage}</p></div><button className="primary-button reminder-copy" disabled={!item.phone} onClick={() => { if (!navigator.clipboard?.writeText) { setNotice("La copie automatique n'est pas disponible dans ce navigateur. Vous pouvez sélectionner le texte du message."); return; } void navigator.clipboard.writeText(item.suggestedMessage).then(() => setNotice("Message copié. Relisez-le et personnalisez-le avant de l'envoyer vous-même.")).catch(() => setNotice("Impossible de copier le message automatiquement. Sélectionnez le texte pour le copier manuellement.")); }}>Copier le message</button></article>)}</div>}
             <p className="privacy-note">Les suggestions sont calculées dans ce navigateur à partir des clients et commandes enregistrés ici. Aucun SMS, WhatsApp ou rappel programmé n’est envoyé.</p>
           </section>}
-          <footer className="footer"><span>YÉRÉ Atelier <span>·</span> La couture, mieux organisée.</span></footer>
+          {view !== "overview" && <footer className="footer"><span>YÉRÉ Atelier <span>·</span> La couture, mieux organisée.</span></footer>}
         </div>
       </main>
-      {mobileMoreOpen && <div className="mobile-more-backdrop" role="presentation" onClick={() => setMobileMoreOpen(false)}><section className="mobile-more-menu" role="dialog" aria-label="Plus de fonctionnalités" onClick={(event) => event.stopPropagation()}><div className="mobile-more-heading"><b>Plus d’outils</b><button type="button" aria-label="Fermer le menu" onClick={() => setMobileMoreOpen(false)}>×</button></div><div className="mobile-more-grid">{([{ id: "stock", label: "Stock", icon: "package" }, { id: "account", label: "Mon atelier", icon: "user-round" }, { id: "reminders", label: "Relances clients", icon: "bell-ring" }, { id: "suppliers", label: "Fournisseurs", icon: "truck" }, { id: "marketplace", label: "Marketplace", icon: "store" }] as { id: View; label: string; icon: string }[]).map((item) => <button type="button" key={item.id} className={view === item.id ? "mobile-more-item active" : "mobile-more-item"} onClick={() => { setView(item.id); setMobileMoreOpen(false); }}><NavIcon name={item.icon} /><span>{item.label}</span></button>)}</div></section></div>}
-      <nav className="mobile-bottom-nav" aria-label="Navigation mobile">{mobileNavItems.map((item) => <button key={item.id} type="button" className={(item.id === "more" ? (mobileMoreOpen || ["stock", "account", "reminders", "suppliers", "marketplace"].includes(view)) : view === item.id) ? "mobile-nav-item active" : "mobile-nav-item"} onClick={() => { if (item.id === "more") setMobileMoreOpen((open) => !open); else { setView(item.id); setMobileMoreOpen(false); } }} aria-current={item.id !== "more" && view === item.id ? "page" : undefined} aria-expanded={item.id === "more" ? mobileMoreOpen : undefined}><span><NavIcon name={item.icon} /></span><small>{item.label}</small></button>)}</nav>
+      {mobileMoreOpen && <div className="more-backdrop" role="presentation" onClick={() => setMobileMoreOpen(false)}>
+        <section className="more-sheet" role="dialog" aria-modal="true" aria-labelledby="more-title" onClick={(event) => event.stopPropagation()}>
+          <span className="more-handle" aria-hidden="true" />
+          <div className="more-heading"><div><span>VOTRE ESPACE ATELIER</span><h2 id="more-title">Encore plus d’outils</h2></div><button type="button" aria-label="Fermer le menu" onClick={() => setMobileMoreOpen(false)}>×</button></div>
+          <div className="more-grid">{([{ id: "stock", label: "Stock", description: "Tissus et fournitures", icon: "package" }, { id: "account", label: "Mon atelier", description: "Profil et sauvegarde", icon: "user-round" }, { id: "reminders", label: "Relances clients", description: "Gardez le contact", icon: "bell-ring" }, { id: "suppliers", label: "Fournisseurs", description: "Votre réseau professionnel", icon: "truck" }, { id: "marketplace", label: "Marketplace", description: "Votre vitrine YÉRÉ", icon: "store" }] as { id: View; label: string; description: string; icon: string }[]).map((item) => <button type="button" key={item.id} className={view === item.id ? "more-item is-active" : "more-item"} onClick={() => { if (item.id === "account") openAccount(); else { setView(item.id); setMobileMoreOpen(false); } }}><span className="more-item-icon"><NavIcon name={item.icon} /></span><span><b>{item.label}</b><small>{item.description}</small></span><span className="more-item-arrow" aria-hidden="true">↗</span></button>)}</div>
+        </section>
+      </div>}
+      <nav className="app-dock" aria-label="Navigation mobile">{mobileNavItems.map((item) => <button key={item.id} type="button" className={(item.id === "more" ? (mobileMoreOpen || ["stock", "account", "reminders", "suppliers", "marketplace"].includes(view)) : view === item.id) ? "dock-item is-active" : "dock-item"} onClick={() => { if (item.id === "more") setMobileMoreOpen((open) => !open); else { setView(item.id); setMobileMoreOpen(false); } }} aria-current={item.id !== "more" && view === item.id ? "page" : undefined} aria-expanded={item.id === "more" ? mobileMoreOpen : undefined}><span className="dock-icon"><NavIcon name={item.icon} /></span><small>{item.label}</small></button>)}</nav>
     </div>
   );
 }
@@ -928,22 +917,24 @@ function NavIcon({ name }: { name: string }) {
     store: <><path d="M3 10v10h18V10" /><path d="m2 10 2-7h16l2 7" /><path d="M2 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0 2 2 0 0 0 2 0" /><path d="M9 20v-6h6v6" /></>,
     wallet: <><rect x="3" y="5" width="18" height="15" rx="2" /><path d="M3 8h18" /><path d="M16 14h2" /></>,
     "user-round": <><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></>,
+    "user-filled": <><circle cx="12" cy="8" r="3.5" fill="currentColor" stroke="none" /><path d="M5.3 19.5a6.7 6.7 0 0 1 13.4 0c0 .8-.6 1.4-1.4 1.4H6.7c-.8 0-1.4-.6-1.4-1.4Z" fill="currentColor" stroke="none" /></>,
     "bell-ring": <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /><path d="M19 3l2 2M5 3 3 5" /></>,
     package: <><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="M3 8v9l9 5 9-5V8" /><path d="M12 13v9" /></>,
     "more-horizontal": <><circle cx="5" cy="12" r="1.4" /><circle cx="12" cy="12" r="1.4" /><circle cx="19" cy="12" r="1.4" /></>,
     "map-pin": <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></>,
-    "thread-spool": <><path d="M8 3.5h8v17H8z" /><path d="M7 3.5h10M7 20.5h10" /><path d="M8 7h8M8 10h8M8 13h8M8 16h8" /><path d="M10 2h4v1.5h-4zM10 20.5h4V22h-4z" /></>,
-    "address-book": <><rect x="6" y="3" width="15" height="18" rx="2" /><path d="M3 7h3M3 12h3M3 17h3" /><circle cx="11" cy="9" r="2" /><path d="M8.5 15a2.5 2.5 0 0 1 5 0M16 8h2M16 12h2M16 16h2" /></>,
-    "dress-form": <><path d="M12 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" /><path d="M10 7 8 10l2 3-2 3h8l-2-3 2-3-2-3" /><path d="M12 16v5M8 21h8M12 7v2" /></>,
-    "payment-terminal": <><rect x="5" y="2.5" width="14" height="19" rx="2" /><path d="M8 6h8v4H8zM8 13h2M12 13h2M16 13h.01M8 16h2M12 16h2M16 16h.01M10 19h4" /></>,
-    "tailor-scissors": <><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="m8.2 7.8 12 12M8.2 16.2l12-12M11 10l-3 2M11 14l-3-2" /></>
+    "thread-spool": <><ellipse cx="11.2" cy="3.7" rx="6.2" ry="2" /><path d="M6.1 4.8v13.6M16.3 4.8v13.6M6.1 18.4c-1.3.4-2 1-2 1.6 0 1.2 3.2 2.1 7.1 2.1s7.1-.9 7.1-2.1c0-.6-.7-1.2-2-1.6" /><path d="m6.3 8 9.9-2M6.3 11l9.9-2.2M6.3 14l9.9-2.2M6.3 17l9.9-2.2M6.5 19.5l9.5-2.1M17 14.8c2.3-.2 2.8 1.1 3 3.1.1 1 .8 1.7 1.7 1.9" /></>,
+    "address-book": <><rect x="3.5" y="2.5" width="15" height="19" rx="1.7" /><path d="M6 2.5v16.2c0 1.2.7 2.3 2 2.3M6 18.7h12.5M20.3 3.4v17.2M20.3 5h1.2M20.3 8h1.2M20.3 11h1.2M20.3 14h1.2M20.3 17h1.2" /><circle cx="12" cy="8.4" r="2.1" /><path d="M8.8 15.3a3.2 3.2 0 0 1 6.4 0" /></>,
+    "dress-form": <><path d="M10.2 3.1c0-.9.8-1.6 1.8-1.6s1.8.7 1.8 1.6v1.1l3 1.5c.8.4 1.1 1.2.8 2l-1.3 3.2c-.5 1.2-.5 2.2 0 3.4l1.2 2.7c.4.9-.2 1.8-1.1 1.8H7.6c-.9 0-1.5-.9-1.1-1.8l1.2-2.7c.5-1.2.5-2.2 0-3.4L6.4 7.7c-.3-.8 0-1.6.8-2l3-1.5V3.1ZM12 18.8v2.7M8.7 22h6.6" /></>,
+    "cash-notes": <><path d="m4 8.5 13.8-3.2c.7-.2 1.4.3 1.5 1l.4 1.7M5.7 6.3l12.5-2.8M4.1 10.3h15.8c.8 0 1.4.6 1.4 1.4v7.2c0 .8-.6 1.4-1.4 1.4H4.1c-.8 0-1.4-.6-1.4-1.4v-7.2c0-.8.6-1.4 1.4-1.4Z" /><path d="M6.2 13.1c0 .9-.5 1.4-1.3 1.5v1.5c.8.1 1.3.6 1.3 1.5h11.6c0-.9.5-1.4 1.3-1.5v-1.5c-.8-.1-1.3-.6-1.3-1.5H6.2Z" /><circle cx="12" cy="15.3" r="1.6" /></>,
+    "tailor-scissors": <><circle cx="5.8" cy="18.2" r="2.7" /><circle cx="17" cy="18.2" r="2.7" /><path d="M7.8 16.2 17.7 3.4c.4-.6 1.2-.5 1.5.1.3.7.1 1.4-.3 2.1L8.5 19M15 16.2 5.1 3.4c-.4-.6-1.2-.5-1.5.1-.3.7-.1 1.4.3 2.1L14.3 19" /><circle cx="11.4" cy="11.7" r=".7" /><path d="M19 10.7h3v4h-3M20.5 10.7v1.2M20.5 13.3v1.4" /></>
   };
   return <svg {...common}>{paths[name] ?? paths.store}</svg>;
 }
 
-function Onboarding({ atelier, onAtelierChange, onFinish }: {
+function Onboarding({ atelier, onAtelierChange, onCancel, onFinish }: {
   atelier: AtelierProfile;
   onAtelierChange: (value: AtelierProfile) => void;
+  onCancel: () => void;
   onFinish: () => void;
 }) {
   const [draft, setDraft] = useState<AtelierProfile>(() => normalizeAtelierProfile(atelier));
@@ -951,7 +942,7 @@ function Onboarding({ atelier, onAtelierChange, onFinish }: {
     setDraft((previous) => ({ ...previous, [field]: value }));
   }
   return <main className="onboarding-shell">
-    <header className="onboarding-brand"><span className="brand-mark">Y</span><span><strong>YÉRÉ</strong><small>ATELIER</small></span></header>
+    <header className="onboarding-brand"><span className="brand-mark">Y</span><span><strong>YÉRÉ</strong><small>ATELIER</small></span><button type="button" className="onboarding-back" onClick={onCancel}>← Retour à l’accueil</button></header>
     <div className="onboarding-layout onboarding-layout-simple">
       <section className="onboarding-copy">
         <p className="eyebrow">CONFIGURATION</p>
@@ -966,12 +957,12 @@ function Onboarding({ atelier, onAtelierChange, onFinish }: {
               {workModes.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}
             </select>
           </label>
-          <label>Nom de l'atelier ou de votre activité<input required autoFocus value={draft.name} onChange={(event) => update("name", event.target.value)} placeholder="Nom de l'atelier ou de l'activité" /></label>
+          <label>Nom de l'atelier ou de votre activité<input required value={draft.name} onChange={(event) => update("name", event.target.value)} placeholder="Nom de l'atelier ou de l'activité" /></label>
           <label>Téléphone<input type="tel" value={draft.phone} onChange={(event) => update("phone", event.target.value)} placeholder="Téléphone" /></label>
           <label>Ville<input value={draft.city} onChange={(event) => update("city", event.target.value)} placeholder="Ville" /></label>
           <button className="primary-button onboarding-primary" type="submit">Créer mon espace YÉRÉ <span>→</span></button>
         </form>
-        <p className="onboarding-privacy">Prototype : les données sont conservées dans ce navigateur. Aucun compte serveur n'est créé.</p>
+        <p className="onboarding-privacy">Prototype : les données sont conservées dans ce navigateur. Aucun compte serveur n'est créé. N’utilisez pas encore de données réelles.</p>
       </section>
     </div>
   </main>;
@@ -1003,7 +994,7 @@ function OrderTable({ orders, clients, onStatusChange, onRetouchStageChange, onV
 
   return <div className="orders-display">
     <div className="table-wrap orders-desktop"><table><thead><tr><th>COMMANDE</th><th>CLIENT</th><th>DATE DE LIVRAISON</th><th>PRIX</th><th>RESTE DÛ</th><th>STATUT</th></tr></thead><tbody>{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <tr key={order.id}><td><b className="order-id">{order.id}</b><small className="table-secondary">{order.kind === "retouche" ? "Retouche · " : ""}{order.garment}</small><small className="table-secondary">{order.measurementSnapshotAt ? "Mesures du " + formatDueDate(order.measurementSnapshotAt) + " · " : ""}{measurementLabel(order)}</small></td><td><span className="table-client">{client?.name ?? "Client supprimé"}</span></td><td>{formatDueDate(order.dueDate)}</td><td>{formatXof(order.price)}</td><td><b className={balanceDue(order) === 0 ? "paid" : ""}>{formatXof(balanceDue(order))}</b></td><td>{statusControl(order)}{retouchStageControl(order)}</td></tr>; })}</tbody></table></div>
-    <div className="order-card-list" aria-label="Commandes sous forme de cartes">{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <article className="order-card" key={order.id}><div className="order-card-heading"><div><b className="order-id">{order.id}</b><strong>{order.kind === "retouche" ? "Retouche · " : ""}{order.garment}</strong></div><span className={"order-status-chip status-" + getStatusClass(order.status)}>{order.status}</span></div><p className="order-card-client"><span>Client</span><b>{client?.name ?? "Client supprimé"}</b></p><p className="order-card-client"><span>Mensurations à la commande</span><b>{measurementLabel(order)}</b></p>{order.kind === "retouche" && <p className="order-card-client"><span>Étape retouche</span><b>{order.retouchStage ?? "À examiner"}</b></p>}{retouchStageControl(order)}<div className="order-card-details"><div><span>Livraison</span><b>{formatDueDate(order.dueDate)}</b></div><div><span>À encaisser</span><b className={balanceDue(order) === 0 ? "paid" : "order-balance"}>{formatXof(balanceDue(order))}</b></div></div>{onView && <button type="button" className="order-view-button" onClick={() => onView(order)}>Voir la commande <span aria-hidden="true">→</span></button>}</article>; })}</div>
+    <div className="order-card-list" role="group" aria-label="Commandes sous forme de cartes">{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <article className="order-card" key={order.id}><div className="order-card-heading"><div><b className="order-id">{order.id}</b><strong>{order.kind === "retouche" ? "Retouche · " : ""}{order.garment}</strong></div><span className={"order-status-chip status-" + getStatusClass(order.status)}>{order.status}</span></div><p className="order-card-client"><span>Client</span><b>{client?.name ?? "Client supprimé"}</b></p><p className="order-card-client"><span>Mensurations à la commande</span><b>{measurementLabel(order)}</b></p>{order.kind === "retouche" && <p className="order-card-client"><span>Étape retouche</span><b>{order.retouchStage ?? "À examiner"}</b></p>}{retouchStageControl(order)}<div className="order-card-details"><div><span>Livraison</span><b>{formatDueDate(order.dueDate)}</b></div><div><span>À encaisser</span><b className={balanceDue(order) === 0 ? "paid" : "order-balance"}>{formatXof(balanceDue(order))}</b></div></div>{onView && <button type="button" className="order-view-button" onClick={() => onView(order)}>Voir la commande <span aria-hidden="true">→</span></button>}</article>; })}</div>
     {orders.length === 0 && <div className="empty-state">Aucune commande pour le moment. Créez votre première commande pour commencer.</div>}
   </div>;
 }

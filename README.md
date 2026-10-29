@@ -6,7 +6,7 @@ YÉRÉ est conçu d’abord et exclusivement pour les tailleurs au Sénégal : c
 
 ## Version applicative en chantier — YÉRÉ Atelier
 
-Le premier socle est une application web React + TypeScript + Vite, conçue mobile-first. Cette version démarre sans données fictives préchargées. Elle permet de parcourir les fonctions disponibles pour l'atelier :
+Le premier socle est une application web React + TypeScript + Vite, conçue mobile-first. Au premier lancement, l’accueil affiche un **aperçu fictif** clairement identifié (aucune de ces valeurs d’exemple n’est enregistrée). Configurez l’atelier ou créez un premier client pour afficher les données réelles, initialement vides. Cette version permet de parcourir les fonctions disponibles pour l'atelier :
 - tableau de bord alimenté par les données saisies dans l'application ;
 - recherche de clients par nom ou téléphone ;
 - création de fiches client conservées dans le stockage local du navigateur ;
@@ -23,6 +23,17 @@ Prérequis : Node.js 20+ et npm.
 npm install
 npm run dev
 ```
+
+### Compiler et publier les illustrations
+
+```bash
+npm ci
+npm run build
+```
+
+Publiez **tout le contenu** du dossier `dist/`, y compris `images/`, `manifest.webmanifest` et `sw.js` ; publier seulement le JavaScript ne suffit pas. Le build utilise des chemins relatifs afin de fonctionner à la racine d’un domaine ou dans un sous-dossier. Les illustrations et la page sont mises en cache lors de l’installation, avec une mise à jour réseau pour éviter de conserver une ancienne version.
+
+La compilation ne met pas elle-même à jour un site déjà hébergé. Ce dépôt ne définit pas de service de déploiement automatique : il faut déployer `dist/` auprès de l’hébergeur utilisé pour YÉRÉ.
 
 ### Vérifications
 
