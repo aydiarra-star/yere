@@ -19,7 +19,7 @@ const measurementFieldsByGarment: Record<string, Array<[string, keyof Measuremen
 
 type View = "overview" | "clients" | "orders" | "cash" | "stock" | "account" | "marketplace" | "reminders" | "suppliers";
 type SupplierProfile = { businessName: string; contactName: string; phone: string; city: string; category: string; shopName: string; description: string };
-const emptyListing: Omit<MarketplaceListing, "id"> = { sellerType: "tailor", title: "", category: "Vêtements prêts à vendre", price: "", description: "", sellerName: "", city: "", imageUrl: "" };
+const emptyListing: Omit<MarketplaceListing, "id"> = { sellerType: "tailor", title: "", category: "Vêtements prêts à vendre", price: "", description: "", sellerName: "", city: "", imageUrl: "", imageUrls: [] };
 const emptySupplier: SupplierProfile = { businessName: "", contactName: "", phone: "", city: "", category: "", shopName: "", description: "" };
 
 function isSupplierProfileValid(value: unknown): value is SupplierProfile {
@@ -51,6 +51,7 @@ function App() {
   const [marketplaceListings, setMarketplaceListings] = usePersistentState<MarketplaceListing[]>("yere-marketplace-listings-v1", [], isMarketplaceListingListValid);
   const [listingDraft, setListingDraft] = useState<Omit<MarketplaceListing, "id">>({ ...emptyListing });
   const [listingFormOpen, setListingFormOpen] = useState(false);
+  const [editingListingId, setEditingListingId] = useState<string | null>(null);
   const [onboardingComplete, setOnboardingComplete] = usePersistentState<boolean>("yere-demo-onboarding-complete-v1", false, isBooleanValue);
   const [onboardingStartedAt, setOnboardingStartedAt] = usePersistentState<number | null>("yere-demo-onboarding-started-at-v1", null, isNullableTimestamp);
   const [view, setView] = useState<View>("overview");
@@ -197,6 +198,86 @@ function App() {
     setNewOrderDeposit("0");
     setShowOrderForm(false);
     setNotice("Commande créée sur cet appareil. Aucune sauvegarde serveur n’est active.");
+  }
+
+  async function compressMarketplacePhoto(file: File): Promise<string> {
+    const bitmap = await createImageBitmap(file);
+    const maxDimension = 900;
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Préparation de la photo impossible.");
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    return canvas.toDataURL("image/jpeg", 0.68);
+  }
+
+  async function addMarketplacePhotos(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const files = Array.from(input.files ?? []).filter((file) => file.type.startsWith("image/"));
+    input.value = "";
+    if (files.length === 0) return;
+    const existing = listingDraft.imageUrls ?? [];
+    const available = Math.max(0, 4 - existing.length);
+    if (available === 0) {
+      setNotice("Quatre photos maximum par annonce. Retirez une photo avant d’en ajouter une autre.");
+      return;
+    }
+    try {
+      const prepared = await Promise.all(files.slice(0, available).map(compressMarketplacePhoto));
+      setListingDraft((current) => ({ ...current, imageUrls: [...(current.imageUrls ?? []), ...prepared] }));
+      setNotice(files.length > available ? "Quatre photos maximum : seules les premières photos sélectionnées ont été ajoutées." : "Photos ajoutées à la fiche. Enregistrez l’annonce pour les conserver.");
+    } catch {
+      setNotice("Une photo n’a pas pu être préparée. Essayez une image JPG, PNG ou WebP.");
+    }
+  }
+
+  function editMarketplaceListing(listing: MarketplaceListing) {
+    setEditingListingId(listing.id);
+    setListingDraft({
+      sellerType: listing.sellerType,
+      sellerActivity: listing.sellerActivity,
+      title: listing.title,
+      category: listing.category,
+      price: listing.price,
+      description: listing.description,
+      sellerName: listing.sellerName,
+      city: listing.city,
+      imageUrl: listing.imageUrl,
+      imageUrls: listing.imageUrls ?? []
+    });
+    setListingFormOpen(true);
+    setNotice("");
+  }
+
+  function saveMarketplaceListing(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!listingDraft.title.trim()) { setNotice("Ajoutez le nom du produit ou de la création avant l’enregistrement."); return; }
+    if (!listingDraft.price.trim()) { setNotice("Ajoutez le prix affiché avant l’enregistrement."); return; }
+    if (!listingDraft.sellerName.trim()) { setNotice("Indiquez votre nom professionnel ou celui de la boutique."); return; }
+    const listing: MarketplaceListing = {
+      ...listingDraft,
+      sellerActivity: listingDraft.sellerType === "tailor" ? (listingDraft.sellerActivity ?? atelier.activity ?? "tailleur") : undefined,
+      id: editingListingId ?? `listing-${Date.now()}`,
+      title: listingDraft.title.trim(),
+      sellerName: listingDraft.sellerName.trim(),
+      description: listingDraft.description.trim(),
+      city: listingDraft.city.trim(),
+      price: listingDraft.price.trim(),
+      imageUrl: listingDraft.imageUrl.trim(),
+      imageUrls: (listingDraft.imageUrls ?? []).slice(0, 4)
+    };
+    setMarketplaceListings((current) => editingListingId
+      ? current.map((item) => item.id === editingListingId ? listing : item)
+      : [listing, ...current]);
+    setListingFormOpen(false);
+    setEditingListingId(null);
+    setListingDraft({ ...emptyListing, imageUrls: [] });
+    setNotice(editingListingId
+      ? "Annonce modifiée et enregistrée dans ce navigateur. Elle n’est pas encore publiée publiquement sur Internet."
+      : "Annonce enregistrée dans ce navigateur. Elle n’est pas encore publiée publiquement sur Internet.");
   }
 
   function exportLocalBackup() {
@@ -727,8 +808,8 @@ function App() {
               <div className="marketplace-hero-copy"><p className="eyebrow">LA VITRINE YÉRÉ</p><h2>La mode rencontre ses clients. Les artisans trouvent leurs matières.</h2><p>Découvrez les créations des professionnels de la couture et les produits des fournisseurs au même endroit.</p></div>
               <div className="marketplace-hero-actions"><button type="button" className="primary-button" onClick={() => { setListingDraft({ ...emptyListing, sellerType: "tailor", sellerActivity: atelier.activity ?? "tailleur", category: "Vêtements prêts à vendre", sellerName: atelier.name, city: atelier.city }); setListingFormOpen(true); setNotice(""); }}>Vendre mes créations <span>→</span></button><button type="button" className="secondary-button" onClick={() => { setListingDraft({ ...emptyListing, sellerType: "supplier", category: "Tissus", sellerName: supplier.businessName, city: supplier.city }); setListingFormOpen(true); setNotice(""); }}>Vendre des fournitures</button></div>
             </div>
-            {listingFormOpen && <form className="marketplace-listing-form content-card" onSubmit={(event) => { event.preventDefault(); if (!listingDraft.title.trim()) { setNotice("Ajoutez le nom du produit ou de la création avant l’enregistrement."); return; } if (!listingDraft.price.trim()) { setNotice("Ajoutez le prix affiché avant l’enregistrement."); return; } if (!listingDraft.sellerName.trim()) { setNotice("Indiquez votre nom professionnel ou celui de la boutique."); return; } const listing: MarketplaceListing = { ...listingDraft, sellerActivity: listingDraft.sellerType === "tailor" ? (listingDraft.sellerActivity ?? atelier.activity ?? "tailleur") : undefined, id: `listing-${Date.now()}`, title: listingDraft.title.trim(), sellerName: listingDraft.sellerName.trim(), description: listingDraft.description.trim(), city: listingDraft.city.trim(), price: listingDraft.price.trim(), imageUrl: listingDraft.imageUrl.trim() }; setMarketplaceListings((current) => [listing, ...current]); setListingFormOpen(false); setListingDraft({ ...emptyListing }); setNotice("Annonce enregistrée dans ce navigateur. Elle n’est pas encore publiée publiquement sur Internet."); }}>
-              <div className="section-heading"><div><p className="eyebrow">NOUVELLE ANNONCE</p><h2>{listingDraft.sellerType === "tailor" ? "Présenter une création à vendre" : "Ajouter un produit de mercerie"}</h2><p>Une fiche claire aide les acheteurs à comprendre votre offre.</p></div><button type="button" className="marketplace-close" onClick={() => setListingFormOpen(false)} aria-label="Fermer le formulaire">×</button></div>
+            {listingFormOpen && <form className="marketplace-listing-form content-card" onSubmit={saveMarketplaceListing}
+              <div className="section-heading"><div><p className="eyebrow">{editingListingId ? "MODIFIER UNE ANNONCE" : "NOUVELLE ANNONCE"}</p><h2>{editingListingId ? "Modifier votre annonce" : listingDraft.sellerType === "tailor" ? "Présenter une création à vendre" : "Ajouter un produit de mercerie"}</h2><p>Ajoutez plusieurs photos et revenez modifier cette fiche quand vous le souhaitez.</p></div><button type="button" className="marketplace-close" onClick={() => { setListingFormOpen(false); setEditingListingId(null); }} aria-label="Fermer le formulaire">×</button></div>
               <div className="marketplace-form-grid">
                 <label>Je propose<select value={listingDraft.sellerType} onChange={(event) => setListingDraft((current) => ({ ...current, sellerType: event.target.value as MarketplaceListing["sellerType"], sellerActivity: event.target.value === "tailor" ? (atelier.activity ?? "tailleur") : undefined, category: event.target.value === "tailor" ? "Vêtements prêts à vendre" : "Tissus" }))}><option value="tailor">Mes vêtements / créations</option><option value="supplier">Des fournitures de couture</option></select></label>
                  
@@ -737,10 +818,12 @@ function App() {
                 <label>Prix affiché<input required value={listingDraft.price} onChange={(event) => setListingDraft((current) => ({ ...current, price: event.target.value }))} placeholder="Ex. 25 000 FCFA" /></label>
                 <label>Ville / zone<input value={listingDraft.city} onChange={(event) => setListingDraft((current) => ({ ...current, city: event.target.value }))} placeholder="Saisir la ville ou la zone desservie, par exemple Dakar ou Thiès" /></label>
                 <label>Nom professionnel / boutique<input required value={listingDraft.sellerName} onChange={(event) => setListingDraft((current) => ({ ...current, sellerName: event.target.value }))} placeholder="Nom professionnel ou boutique" /></label>
-                <label>Adresse de la photo (facultatif)<input type="url" value={listingDraft.imageUrl} onChange={(event) => setListingDraft((current) => ({ ...current, imageUrl: event.target.value }))} placeholder="Saisir l’adresse complète de la photo" /></label>
+                <label className="marketplace-field-wide">Photos du produit ou de la création (4 maximum)<input type="file" accept="image/*" multiple onChange={addMarketplacePhotos} /><small>Choisissez des photos depuis votre téléphone ou votre ordinateur. Elles sont réduites pour limiter l’espace utilisé.</small></label>
+                {(listingDraft.imageUrls ?? []).length > 0 && <div className="marketplace-photo-manager marketplace-field-wide"><strong>Photos enregistrées dans cette fiche</strong><div className="marketplace-photo-grid">{(listingDraft.imageUrls ?? []).map((photo, index) => <div className="marketplace-photo-item" key={`${index}-${photo.slice(0, 24)}`}><img src={photo} alt={`Photo ${index + 1} de l’annonce`} /><button type="button" className="marketplace-remove-photo" onClick={() => setListingDraft((current) => ({ ...current, imageUrls: (current.imageUrls ?? []).filter((_, photoIndex) => photoIndex !== index) }))}>Retirer</button></div>)}</div></div>}
+                <label className="marketplace-field-wide">Adresse d’une photo en ligne (facultatif)<input type="url" value={listingDraft.imageUrl} onChange={(event) => setListingDraft((current) => ({ ...current, imageUrl: event.target.value }))} placeholder="Coller l’adresse complète d’une photo déjà en ligne" /></label>
                 <label className="marketplace-field-wide">Description<textarea rows={3} value={listingDraft.description} onChange={(event) => setListingDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Décrivez la matière, la taille, la couleur, la quantité disponible et le délai" /></label>
               </div>
-              <div className="marketplace-form-footer"><p>Enregistrement local uniquement pour le moment. La publication publique et les commandes nécessitent le service marketplace.</p><div><button type="button" className="secondary-button" onClick={() => setListingFormOpen(false)}>Annuler</button><button className="primary-button" type="submit">Enregistrer l’annonce <span>→</span></button></div></div>
+              <div className="marketplace-form-footer"><p>Enregistrement local uniquement pour le moment. La publication publique et les commandes nécessitent le service marketplace.</p><div><button type="button" className="secondary-button" onClick={() => { setListingFormOpen(false); setEditingListingId(null); }}>Annuler</button><button className="primary-button" type="submit">{editingListingId ? "Enregistrer les modifications" : "Enregistrer l’annonce"} <span>→</span></button></div></div>
             </form>}
             <div className="marketplace-category-grid">
               <button type="button" className="marketplace-category-card fashion-category" onClick={() => { setListingDraft({ ...emptyListing, sellerType: "tailor", sellerActivity: atelier.activity ?? "tailleur", category: "Vêtements prêts à vendre", sellerName: atelier.name, city: atelier.city }); setListingFormOpen(true); setNotice(""); }}>
@@ -751,7 +834,7 @@ function App() {
               </button>
             </div>
             <div className="marketplace-listing-heading"><div><p className="eyebrow">VITRINE</p><h2>Les annonces préparées</h2><p>Les créations et les fournitures, réunies dans un seul espace.</p></div><span className="marketplace-listing-count">{marketplaceListings.length} annonce{marketplaceListings.length === 1 ? "" : "s"}</span></div>
-            {marketplaceListings.length === 0 ? <div className="marketplace-empty content-card"><span className="marketplace-empty-icon"><NavIcon name="store" /></span><h3>Votre vitrine commence ici</h3><p>Aucune annonce pour le moment. Ajoutez un vêtement prêt à vendre, un album de créations ou une fourniture utile aux professionnels de la couture.</p><button className="primary-button" onClick={() => { setListingDraft({ ...emptyListing, sellerName: atelier.name, city: atelier.city }); setListingFormOpen(true); setNotice(""); }}>Créer la première annonce <span>→</span></button></div> : <div className="marketplace-listing-grid">{marketplaceListings.map((listing) => <article className="marketplace-product-card content-card" key={listing.id}>{listing.imageUrl ? <img src={listing.imageUrl} alt={listing.title} loading="lazy" /> : <div className={listing.sellerType === "tailor" ? "marketplace-product-placeholder fashion" : "marketplace-product-placeholder supplies"}><NavIcon name={listing.sellerType === "tailor" ? "shirt" : "package"} /></div>}<div className="marketplace-product-copy"><span className={listing.sellerType === "tailor" ? "marketplace-product-type fashion" : "marketplace-product-type supplies"}>{listing.sellerType === "tailor" ? "MODE & CRÉATIONS" : "TISSUS & FOURNITURES"}</span><h3>{listing.title}</h3><p>{listing.description || listing.category}</p><strong>{listing.price}</strong><div className="marketplace-product-meta"><span>{listing.sellerName}</span><span>{listing.city || "Zone non précisée"}</span></div>{listing.sellerType === "tailor" && listing.sellerActivity && <span className="marketplace-activity-tag">Tailleur</span>}</div><button className="marketplace-remove" type="button" onClick={() => setMarketplaceListings((current) => current.filter((item) => item.id !== listing.id))}>Retirer</button></article>)}</div>}
+            {marketplaceListings.length === 0 ? <div className="marketplace-empty content-card"><span className="marketplace-empty-icon"><NavIcon name="store" /></span><h3>Votre vitrine commence ici</h3><p>Aucune annonce pour le moment. Ajoutez un vêtement prêt à vendre, un album de créations ou une fourniture utile aux professionnels de la couture.</p><button className="primary-button" onClick={() => { setListingDraft({ ...emptyListing, sellerName: atelier.name, city: atelier.city }); setListingFormOpen(true); setNotice(""); }}>Créer la première annonce <span>→</span></button></div> : <div className="marketplace-listing-grid">{marketplaceListings.map((listing) => { const photos = [...(listing.imageUrl ? [listing.imageUrl] : []), ...(listing.imageUrls ?? [])]; return <article className="marketplace-product-card content-card" key={listing.id}><div className="marketplace-card-photos">{photos.length ? photos.map((photo, index) => <img key={`${listing.id}-photo-${index}`} src={photo} alt={`${listing.title}, photo ${index + 1}`} loading="lazy" />) : <div className={listing.sellerType === "tailor" ? "marketplace-product-placeholder fashion" : "marketplace-product-placeholder supplies"}><NavIcon name={listing.sellerType === "tailor" ? "shirt" : "package"} /></div>}</div><div className="marketplace-product-copy"><span className={listing.sellerType === "tailor" ? "marketplace-product-type fashion" : "marketplace-product-type supplies"}>{listing.sellerType === "tailor" ? "MODE & CRÉATIONS" : "TISSUS & FOURNITURES"}</span><h3>{listing.title}</h3><p>{listing.description || listing.category}</p><strong>{listing.price}</strong><div className="marketplace-product-meta"><span>{listing.sellerName}</span><span>{listing.city || "Zone non précisée"}</span></div>{listing.sellerType === "tailor" && listing.sellerActivity && <span className="marketplace-activity-tag">Tailleur</span>}</div><div className="marketplace-card-actions"><button type="button" className="secondary-button" onClick={() => editMarketplaceListing(listing)}>Modifier</button><button className="marketplace-remove" type="button" onClick={() => setMarketplaceListings((current) => current.filter((item) => item.id !== listing.id))}>Retirer</button></div></article>; })}</div>}
             <p className="marketplace-local-note">Les annonces enregistrées ici sont visibles uniquement dans ce navigateur. Les comptes vendeurs, les photos hébergées, la publication publique, les paiements et les commandes en ligne seront raccordés au backend marketplace.</p>
           </section>}
 
