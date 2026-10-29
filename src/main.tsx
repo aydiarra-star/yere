@@ -1,9 +1,10 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
-import "./styles.css";
 import "./jotcolis-interface.css";
 import "./readable-type.css";
+// Load the canonical app stylesheet last so premium component rules win the cascade.
+import "./styles.css";
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
