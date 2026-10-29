@@ -676,6 +676,28 @@ function App() {
               <article className="stat-card"><div className="stat-top"><span>Clients de l’atelier</span><span className="stat-icon purple">♙</span></div><strong>{clients.length.toString().padStart(2, "0")}</strong><small>Vos fiches et mensurations</small></article>
               <article className="stat-card"><div className="stat-top"><span>À encaisser</span><span className="stat-icon amber">₣</span></div><strong className="money-stat">{formatXof(outstanding)}</strong><small>Solde restant sur {outstandingOrderCount} commande{outstandingOrderCount > 1 ? "s" : ""}</small></article>
             </section>
+            <section className="production-overview" aria-labelledby="production-overview-title">
+              <div className="production-overview-head">
+                <div><p className="eyebrow">VUE D’ENSEMBLE</p><h2 id="production-overview-title">Votre atelier en un regard</h2><p>Repérez ce qui avance et ce qui demande votre attention.</p></div>
+                <button type="button" className="production-link" onClick={() => setView("orders")}>Ouvrir les commandes <span>→</span></button>
+              </div>
+              <div className="production-stage-grid">
+                <button type="button" className="production-stage stage-new" onClick={() => { setOrderDeliveryFilter("all"); setView("orders"); }}>
+                  <span className="stage-number">{orders.filter((order) => order.status === "À préparer").length.toString().padStart(2, "0")}</span><span className="stage-label">À démarrer</span><span className="stage-note">Commandes à préparer</span>
+                </button>
+                <button type="button" className="production-stage stage-progress" onClick={() => { setOrderDeliveryFilter("all"); setView("orders"); }}>
+                  <span className="stage-number">{orders.filter((order) => order.status === "En confection").length.toString().padStart(2, "0")}</span><span className="stage-label">En confection</span><span className="stage-note">Pièces en cours de travail</span>
+                </button>
+                <button type="button" className="production-stage stage-ready" onClick={() => { setOrderDeliveryFilter("all"); setView("orders"); }}>
+                  <span className="stage-number">{orders.filter((order) => order.status === "Prêt").length.toString().padStart(2, "0")}</span><span className="stage-label">Prêtes à remettre</span><span className="stage-note">À signaler aux clients</span>
+                </button>
+              </div>
+              <div className={orders.some((order) => order.dueDate < todayKey && order.status !== "Livré") ? "overdue-strip has-overdue" : "overdue-strip"}>
+                <span className="overdue-symbol" aria-hidden="true">{orders.some((order) => order.dueDate < todayKey && order.status !== "Livré") ? "!" : "✓"}</span>
+                <div><strong>{orders.filter((order) => order.dueDate < todayKey && order.status !== "Livré").length === 0 ? "Aucun retard de livraison détecté" : orders.filter((order) => order.dueDate < todayKey && order.status !== "Livré").length + " commande(s) en retard"}</strong><p>{orders.some((order) => order.dueDate < todayKey && order.status !== "Livré") ? "Vérifiez les échéances et prévenez les clients concernés." : "Gardez vos dates de livraison à jour pour anticiper les retards."}</p></div>
+                <button type="button" onClick={() => { setOrderDeliveryFilter("all"); setView("orders"); }}>{orders.some((order) => order.dueDate < todayKey && order.status !== "Livré") ? "Voir les commandes" : "Consulter"} <span>→</span></button>
+              </div>
+            </section>
             <section className="content-card">
               <div className="section-heading"><div><h2>Commandes à suivre</h2><p>Les dernières pièces de votre atelier</p></div><button className="text-button" onClick={() => setView("orders")}>Toutes les commandes <span>→</span></button></div>
               <OrderTable orders={orders.slice(0, 3)} clients={clients} onStatusChange={updateStatus} onRetouchStageChange={updateRetouchStage} onView={() => setView("orders")} />
