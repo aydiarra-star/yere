@@ -235,3 +235,114 @@ body, .main-content { color: #1F2937; }
     align-self: stretch;
   }
 }
+
+/* YÉRÉ — finition ergonomique : navigation mobile, menu Plus, accueil et CTA. */
+@media (max-width: 760px) {
+  .topbar { position: relative; z-index: 10; }
+  .page-wrap { padding: 26px 14px 24px !important; }
+  .page-wrap:has(.overview-welcome) .overview-welcome .page-banner-title {
+    margin-top: 2px !important;
+    margin-bottom: 8px !important;
+    line-height: 1.3 !important;
+  }
+  .page-wrap:has(.overview-welcome) .overview-welcome .page-subtitle {
+    margin-top: 0 !important;
+    margin-bottom: 18px !important;
+    line-height: 1.45 !important;
+  }
+  .tailor-priority-grid {
+    width: 100%;
+    margin-inline: 0 !important;
+    padding: 0 !important;
+    gap: 12px !important;
+  }
+  .tailor-priority-card {
+    width: 100%;
+    min-width: 0;
+    margin-inline: 0 !important;
+    box-sizing: border-box !important;
+  }
+  .primary-button.welcome-action,
+  .primary-button.welcome-action.overview-create-order {
+    width: 100% !important;
+    min-height: 48px !important;
+    margin: 2px 0 20px !important;
+    padding: 13px 16px !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--yere-home-orange) !important;
+    box-shadow: 0 3px 8px rgba(255,107,0,.18) !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+  }
+  .mobile-bottom-nav {
+    z-index: 40 !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    gap: 2px !important;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .mobile-nav-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    align-self: stretch !important;
+    min-width: 0 !important;
+    min-height: 54px !important;
+    gap: 5px !important;
+    padding: 5px 2px !important;
+    border-radius: 10px !important;
+    line-height: 1 !important;
+  }
+  .mobile-nav-item > span {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 22px !important;
+    width: 22px !important;
+    height: 22px !important;
+    margin: 0 !important;
+    line-height: 1 !important;
+  }
+  .mobile-nav-item > span > svg {
+    display: block !important;
+    flex: 0 0 21px !important;
+    width: 21px !important;
+    height: 21px !important;
+    margin: 0 auto !important;
+  }
+  .mobile-nav-item > small {
+    display: block !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 10px !important;
+    font-weight: 650 !important;
+    line-height: 1.15 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    letter-spacing: 0 !important;
+  }
+  .mobile-more-backdrop {
+    z-index: 30 !important;
+    align-items: flex-end !important;
+    padding: 12px 12px calc(82px + env(safe-area-inset-bottom, 0px)) !important;
+    overscroll-behavior: contain;
+  }
+  .mobile-more-menu {
+    width: min(100%, 520px) !important;
+    max-height: min(66dvh, 560px) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    margin: 0 auto !important;
+    border-radius: 18px !important;
+    box-sizing: border-box !important;
+  }
+}
+@media (min-width: 761px) {
+  .primary-button.welcome-action,
+  .primary-button.welcome-action.overview-create-order {
+    border-radius: 10px !important;
+    box-shadow: 0 3px 8px rgba(255,107,0,.18) !important;
+  }
+}
