@@ -75,7 +75,7 @@ function PriorityCard({ index, title, icon, badges, count, countLabel, detail, i
   </article>;
 }
 
-export default function HomeDashboard({ atelierName, isExample, today, deliveryCount, outstandingOrderCount, outstanding, activeOrderCount, inProductionOrder, onOpenDeliveries, onOpenPayments, onOpenProduction, onCreateOrder, onOpenTools, onConfigure }: HomeDashboardProps) {
+export default function HomeDashboard({ atelierName, isExample, today, deliveryCount, outstandingOrderCount, outstanding, activeOrderCount, inProductionOrder, onOpenDeliveries, onOpenPayments, onOpenProduction, onCreateOrder, onOpenMeasurements, onOpenTools, onConfigure }: HomeDashboardProps) {
   const date = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" }).format(today);
   const deliveries = isExample ? 3 : deliveryCount;
   const invoices = isExample ? 2 : outstandingOrderCount;
