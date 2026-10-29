@@ -1,0 +1,52 @@
+/* YÉRÉ — amélioration globale de la lisibilité, sans texte coupé. */
+:root { font-size: 16px; }
+body, .app-shell { font-size: 16px; line-height: 1.55; }
+
+/* Les textes secondaires et les petites légendes ne doivent plus être minuscules. */
+.app-shell :is(
+  .brand small, .nav-count, .eyebrow, .page-subtitle,
+  .snapshot-item b, .snapshot-item small, .stat-top,
+  .stat-card > small, .section-heading p, .text-button,
+  .table-wrap th, .table-wrap td, .order-id, .table-secondary,
+  .status-select, .quick-actions b, .quick-actions small,
+  .tip-card > p:last-child, .footer, .notice p,
+  .mobile-nav-item small, .mobile-more-item, .search-box input,
+  .client-main b, .client-main small, .client-measurements b,
+  .client-measurements small, .measure-field > span,
+  .measure-field small, .measure-note, .privacy-note,
+  .new-client-form label, .new-client-form p,
+  .measure-notes-field, .profile small, .atelier-switch small
+) {
+  font-size: max(13px, 1em) !important;
+  line-height: 1.45;
+}
+
+/* Commandes, boutons, navigation et formulaires plus faciles à lire au toucher. */
+.app-shell :is(button, input, select, textarea, label, .nav-item, .primary-button, .secondary-button, .welcome-action) {
+  font-size: max(14px, 1em);
+}
+.app-shell :is(input, select, textarea) {
+  min-height: 44px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.app-shell textarea { min-height: 96px; }
+.app-shell .nav-item { font-size: 13px; }
+.app-shell .section-heading h2 { font-size: max(18px, 1em); line-height: 1.35; }
+.app-shell .page-banner-title { font-size: clamp(19px, 2.5vw, 28px) !important; line-height: 1.35 !important; }
+.app-shell .welcome-row h1 { line-height: 1.2; }
+.app-shell :is(p, label, .page-subtitle, .section-heading p, .notice p, .quick-actions small, .tip-card p, .empty-state p) {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+/* Sur téléphone, on conserve la navigation sur une ligne et on augmente ses libellés. */
+@media (max-width: 760px) {
+  .app-shell { font-size: 16px; }
+  .app-shell .page-wrap { line-height: 1.55; }
+  .app-shell .mobile-nav-item small { font-size: 10px !important; line-height: 1.2; }
+  .app-shell .nav-item { font-size: 13px; }
+  .app-shell .stat-card > strong { font-size: clamp(22px, 6vw, 28px); }
+  .app-shell .section-heading h2 { font-size: 18px; }
+  .app-shell :is(.primary-button, .secondary-button, .welcome-action, .text-button) { min-height: 44px; }
+}
