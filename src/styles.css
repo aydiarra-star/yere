@@ -2753,3 +2753,227 @@ body {
     gap: 7px !important;
   }
 }
+
+
+/* YÉRÉ Premium 2026 — correction définitive du contraste et des fonds isolés */
+:root {
+  --yere-page: #f3f6fb;
+  --yere-surface: #ffffff;
+  --yere-primary: #2458d3;
+  --yere-primary-dark: #173d9b;
+  --yere-text: #17243b;
+  --yere-muted: #5d6b82;
+  --yere-border: #dce5f1;
+}
+html, body, #root {
+  background: var(--yere-page) !important;
+  color: var(--yere-text) !important;
+}
+body {
+  background-image: none !important;
+}
+.app-shell, .main-content {
+  background: var(--yere-page) !important;
+  background-image: none !important;
+}
+.page-wrap {
+  color: var(--yere-text) !important;
+  isolation: isolate;
+}
+.overview-welcome {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #173d91 !important;
+  background-image: linear-gradient(135deg, #173d91 0%, #2458d3 62%, #3269d7 100%) !important;
+  border: 1px solid #244fae !important;
+  border-radius: 18px !important;
+  box-shadow: 0 12px 26px rgba(23, 61, 145, .14) !important;
+  color: #ffffff !important;
+}
+.overview-welcome::before,
+.overview-welcome::after {
+  content: none !important;
+  display: none !important;
+}
+.overview-welcome .welcome-copy,
+.overview-welcome .page-banner-title,
+.overview-welcome .page-subtitle,
+.overview-welcome .eyebrow {
+  background: transparent !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+.overview-welcome .page-banner-title {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: clamp(23px, 5vw, 30px) !important;
+  font-weight: 750 !important;
+  line-height: 1.2 !important;
+  letter-spacing: -.55px !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere !important;
+}
+.overview-welcome .page-subtitle {
+  margin-top: 9px !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  opacity: 1 !important;
+}
+.overview-welcome .today-snapshot {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  width: 100% !important;
+  margin-top: 20px !important;
+  padding-top: 16px !important;
+  border-top: 1px solid rgba(255,255,255,.22) !important;
+}
+.overview-welcome .snapshot-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  padding: 13px 12px !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  border-radius: 12px !important;
+  background: rgba(255,255,255,.10) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+.overview-welcome .snapshot-item > span:last-child {
+  min-width: 0 !important;
+  overflow-wrap: anywhere !important;
+}
+.overview-welcome .snapshot-item b {
+  display: block !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+}
+.overview-welcome .snapshot-item small {
+  display: block !important;
+  margin-top: 3px !important;
+  color: #e3ecff !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+}
+.overview-welcome .snapshot-icon {
+  display: grid !important;
+  place-items: center !important;
+  flex: 0 0 34px !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 10px !important;
+  background: rgba(255,255,255,.16) !important;
+  color: #ffffff !important;
+}
+.overview-welcome .welcome-action {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  min-height: 48px !important;
+  padding: 12px 18px !important;
+  border: 1px solid #ffffff !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #1e49a7 !important;
+  box-shadow: none !important;
+  font-weight: 750 !important;
+  white-space: normal !important;
+}
+.overview-welcome .welcome-action:hover {
+  background: #edf3ff !important;
+  color: #173d91 !important;
+}
+.daily-assistant.content-card,
+.content-card,
+.stat-card,
+.production-overview {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: var(--yere-text) !important;
+  border: 1px solid var(--yere-border) !important;
+  box-shadow: 0 5px 18px rgba(23, 36, 59, .045) !important;
+  background-clip: padding-box !important;
+}
+.daily-assistant .section-heading h2,
+.daily-assistant .section-heading p:not(.eyebrow),
+.daily-assistant .daily-task-copy b,
+.daily-assistant .daily-task-copy small {
+  color: var(--yere-text) !important;
+}
+.daily-assistant .section-heading p:not(.eyebrow),
+.daily-assistant .daily-task-copy small {
+  color: var(--yere-muted) !important;
+}
+.daily-assistant .eyebrow {
+  color: var(--yere-primary) !important;
+}
+.stats-grid .stat-card {
+  background: #ffffff !important;
+  color: var(--yere-text) !important;
+}
+@media (max-width: 760px) {
+  .overview-welcome {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+    padding: 19px 16px !important;
+    margin-bottom: 16px !important;
+  }
+  .overview-welcome .welcome-copy {
+    width: 100% !important;
+    flex: 1 1 auto !important;
+  }
+  .overview-welcome .page-banner-title {
+    font-size: clamp(22px, 6vw, 27px) !important;
+    line-height: 1.22 !important;
+  }
+  .overview-welcome .page-subtitle {
+    font-size: 14px !important;
+  }
+  .overview-welcome .today-snapshot {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 8px !important;
+    margin-top: 4px !important;
+    padding-top: 12px !important;
+  }
+  .overview-welcome .snapshot-item {
+    width: 100% !important;
+    padding: 11px 12px !important;
+  }
+  .overview-welcome .snapshot-item b {
+    font-size: 14px !important;
+  }
+  .overview-welcome .snapshot-item small {
+    font-size: 12px !important;
+  }
+  .overview-welcome .welcome-action {
+    width: 100% !important;
+    align-self: stretch !important;
+    margin: 0 !important;
+  }
+  .daily-assistant.content-card {
+    margin-top: 0 !important;
+  }
+  .mobile-bottom-nav {
+    background: linear-gradient(110deg, #1749ad, #2873e8) !important;
+    background-image: linear-gradient(110deg, #1749ad, #2873e8) !important;
+    border: 1px solid #4d83df !important;
+    box-shadow: 0 -8px 24px rgba(23, 61, 145, .14) !important;
+  }
+}
