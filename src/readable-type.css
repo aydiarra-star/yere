@@ -56,6 +56,19 @@ body, .app-shell { font-size: 16px; line-height: 1.55; }
    Les glyphes, SVG, positions et actions des icônes ne sont pas remplacés. */
 :root {
   --yere-indigo: #4338ca;
+  --yere-blue: #4338ca;
+  --yere-blue-hover: #3730a3;
+  --yere-navy: #3730a3;
+  --yere-sky: #eef2ff;
+  --yere-sky-strong: #e0e7ff;
+  --jc-orange: #4338ca;
+  --jc-orange-dark: #3730a3;
+  --jc-ink: #3730a3;
+  --jc-muted: #6b7280;
+  --jc-paper: #ffffff;
+  --jc-peach: #eef2ff;
+  --jc-line: #e5e7eb;
+  --jc-shadow: none;
   --yere-indigo-hover: #3730a3;
   --yere-indigo-soft: #eef2ff;
   --yere-indigo-pale: #e0e7ff;
@@ -179,4 +192,25 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   }
   .welcome-row { padding: 20px !important; }
   .welcome-row h1 { font-size: clamp(21px, 6vw, 28px) !important; }
+}
+
+
+/* Neutralisation des accents hérités sur toutes les vues. */
+.snapshot-item {
+  background: var(--yere-white) !important;
+  border-color: var(--yere-border-neutral) !important;
+}
+.snapshot-item b, .table-client, .measurement-history li b {
+  color: var(--yere-text) !important;
+}
+.privacy-note, .empty-state, .empty-state p {
+  color: var(--yere-muted-text) !important;
+}
+.sidebar nav .nav-item, .nav-icon, .nav-icon svg {
+  color: var(--yere-indigo);
+}
+.app-shell :is(.avatar-1, .avatar-2, .avatar-3, .status-todo, .status-progress, .status-ready, .status-delivered) {
+  background-color: var(--yere-indigo-soft) !important;
+  border-color: var(--yere-indigo-pale) !important;
+  color: var(--yere-indigo) !important;
 }
