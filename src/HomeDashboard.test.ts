@@ -16,6 +16,7 @@ const props = {
   onOpenPayments: vi.fn(),
   onOpenProduction: vi.fn(),
   onCreateOrder: vi.fn(),
+  onOpenMeasurements: vi.fn(),
   onOpenTools: vi.fn(),
   onConfigure: vi.fn()
 };
