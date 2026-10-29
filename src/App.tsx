@@ -124,7 +124,6 @@ function App() {
   const today = new Date();
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const dailyTasks = useMemo(() => getDailyTasks(clients, orders, todayKey), [clients, orders, todayKey]);
-  const dailyTaskCount = dailyTasks.length;
   const filteredOrders = useMemo(() => filterOrdersByDelivery(orders, todayKey, orderDeliveryFilter), [orders, todayKey, orderDeliveryFilter]);
 
   useEffect(() => {
