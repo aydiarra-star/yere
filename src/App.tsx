@@ -739,7 +739,7 @@ function App() {
                 </div>
               </article>
             </section>
-            <button className="primary-button welcome-action overview-create-order" onClick={() => { setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); setShowOrderForm(true); setView("orders"); }}><span>✂</span> CRÉER NOUVELLE COMMANDE</button>
+            <button className="primary-button welcome-action overview-create-order" onClick={() => { setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); setShowOrderForm(true); setView("orders"); }}><span className="cta-scissors-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="6" r="3" stroke="currentColor" strokeWidth="2"/><circle cx="6" cy="18" r="3" stroke="currentColor" strokeWidth="2"/><path d="m8.2 7.8 11.3 11.3M8.2 16.2 19.5 4.9M14 10l-2 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></span> CRÉER NOUVELLE COMMANDE</button>
             <section className="content-card">
               <div className="section-heading"><div><h2>Commandes à suivre</h2><p>Les dernières pièces de votre atelier</p></div><button className="text-button" onClick={() => setView("orders")}>Toutes les commandes <span>→</span></button></div>
               <OrderTable orders={orders.slice(0, 3)} clients={clients} onStatusChange={updateStatus} onRetouchStageChange={updateRetouchStage} onView={() => setView("orders")} />
