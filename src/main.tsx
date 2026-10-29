@@ -7,6 +7,8 @@ import "./readable-type.css";
 import "./styles.css";
 // Final, scoped homepage styling overrides: visual only, no business logic changes.
 import "./home-priority-design.css";
+// Final shared design tokens: JotColis-style readable typography and strict indigo identity.
+import "./indigo-design-system.css";
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
