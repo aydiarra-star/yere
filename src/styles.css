@@ -2395,3 +2395,76 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .welcome-row h1 { font-size: 19px; }
   .page-wrap { padding-left: 10px; padding-right: 10px; }
 }
+
+
+/* YÉRÉ Atelier — refonte visible du tableau de bord */
+:root{--yere-blue:#2458d3;--yere-blue-dark:#173d9b;--yere-ink:#17243b;--yere-muted:#65748b;--yere-line:#dfe7f2;--yere-canvas:#f4f7fc}
+body{background:var(--yere-canvas);color:var(--yere-ink)}
+.sidebar{background:#fff;border-right-color:#dce5f1}
+.brand-mark{background:linear-gradient(145deg,#2d68e8,#173f9d);box-shadow:0 6px 16px #2458d326}
+.brand strong{color:#172b52}
+.nav-item{border-radius:11px;transition:background .16s ease,color .16s ease}
+.nav-item.active{background:#eaf0ff;color:#214fc1;box-shadow:inset 3px 0 #2d63dc}
+.primary-button,.welcome-action{background:var(--yere-blue);border-color:var(--yere-blue);box-shadow:0 5px 14px #2458d321}
+.primary-button:hover,.welcome-action:hover{background:var(--yere-blue-dark);border-color:var(--yere-blue-dark)}
+.main-content{background:var(--yere-canvas)}
+.topbar{background:#ffffffed;border-bottom-color:#e0e7f1}
+.page-wrap{max-width:1480px;padding-top:29px}
+.overview-welcome{padding:23px 25px 20px;background:linear-gradient(118deg,#173d91 0%,#2458d3 58%,#4f80e8 100%);border-radius:18px;color:#fff;box-shadow:0 12px 28px #173d911f;margin-bottom:20px;align-items:flex-start}
+.overview-welcome .page-banner-title{color:#fff;max-width:720px}
+.overview-welcome .page-subtitle{color:#e2eaff}
+.overview-welcome .eyebrow{color:#d2e0ff}
+.overview-welcome .today-snapshot{margin-top:18px;border-top-color:#ffffff3d}
+.overview-welcome .snapshot-item{border-right-color:#ffffff3d}
+.overview-welcome .snapshot-item b{color:#fff}
+.overview-welcome .snapshot-item small{color:#dbe6ff}
+.overview-welcome .snapshot-icon{background:#ffffff20;color:#fff}
+.overview-welcome .welcome-action{background:#fff;color:#204bb2;border-color:#fff;box-shadow:none}
+.overview-welcome .welcome-action:hover{background:#edf3ff}
+.stats-grid{gap:14px}
+.stat-card,.content-card{border-color:#e1e8f2;border-radius:15px;box-shadow:0 5px 18px #203b6510}
+.stat-card{padding:19px 20px}
+.stat-card>strong{color:#172b52}
+.stat-icon.green{background:#e5edff;color:#2458d3}
+.stat-icon.purple{background:#eeeaff;color:#7057c7}
+.stat-icon.amber{background:#fff1d8;color:#b77914}
+.daily-assistant{border-color:#dce6f7}
+.daily-assistant .section-heading h2,.section-heading h2{color:#172b52}
+.daily-task{border-radius:10px}
+.daily-task.critical{background:#fff4f1}
+.daily-task.money{background:#fff9eb}
+.production-overview{background:#fff;border:1px solid #dfe7f2;border-radius:16px;padding:22px;margin:0 0 20px;box-shadow:0 5px 18px #203b650a}
+.production-overview-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:17px}
+.production-overview-head h2{font:750 18px/1.25 Manrope,sans-serif;letter-spacing:-.45px;color:#172b52;margin:0}
+.production-overview-head p:not(.eyebrow){font-size:11px;color:#718099;margin:6px 0 0}
+.production-overview-head .eyebrow{color:#426bd0;margin-bottom:7px}
+.production-link{border:1px solid #dbe5f7;background:#f5f8ff;color:#2458c7;border-radius:9px;padding:10px 12px;font-size:10px;font-weight:750;white-space:nowrap}
+.production-link span{margin-left:8px;font-size:15px}
+.production-stage-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.production-stage{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:5px;min-width:0;padding:17px;border:1px solid #e1e8f2;border-radius:13px;background:#f9fbff;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
+.production-stage:hover{transform:translateY(-2px);border-color:#b8caf1;box-shadow:0 8px 20px #2458d311}
+.stage-number{font:800 28px/1 Manrope,sans-serif;letter-spacing:-1px;color:#1d3154}
+.stage-label{font-size:12px;font-weight:750;color:#233755}
+.stage-note{font-size:10px;color:#77869c;line-height:1.4}
+.stage-new .stage-number{color:#697b99}
+.stage-progress{background:#f0f5ff;border-color:#dbe6ff}
+.stage-progress .stage-number{color:#2458d3}
+.stage-ready{background:#effaf5;border-color:#d8f0e4}
+.stage-ready .stage-number{color:#17815b}
+.overdue-strip{display:flex;align-items:center;gap:12px;padding:13px 14px;margin-top:13px;border:1px solid #d9eadf;background:#f1faf4;border-radius:12px}
+.overdue-symbol{display:grid;place-items:center;flex-shrink:0;width:30px;height:30px;border-radius:9px;background:#d8f1e2;color:#17734e;font-weight:800}
+.overdue-strip strong{font-size:11px;color:#1f6348}
+.overdue-strip p{font-size:10px;color:#638170;margin:4px 0 0;line-height:1.45}
+.overdue-strip>div{min-width:0;flex:1}
+.overdue-strip>button{border:0;background:transparent;color:#216b4d;font-size:10px;font-weight:750;white-space:nowrap}
+.overdue-strip>button span{margin-left:6px;font-size:14px}
+.overdue-strip.has-overdue{background:#fff5f2;border-color:#f2d5ce}
+.overdue-strip.has-overdue .overdue-symbol{background:#ffe0d8;color:#b43d2c}
+.overdue-strip.has-overdue strong,.overdue-strip.has-overdue>button{color:#b43d2c}
+.overdue-strip.has-overdue p{color:#94675f}
+.content-card{padding-top:20px}
+.text-button{color:#2458c7}
+.secondary-button{border-color:#cbd9f4;color:#2458c7}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid #8eb1ff;outline-offset:2px}
+@media(max-width:900px){.overview-welcome{padding:20px}.production-overview{padding:17px}.production-stage-grid{gap:8px}.production-stage{padding:13px}.stage-number{font-size:25px}}
+@media(max-width:600px){.page-wrap{padding:16px 13px 90px}.overview-welcome{border-radius:15px;padding:19px 16px}.overview-welcome .welcome-copy{width:100%}.overview-welcome .page-banner-title{font-size:22px;line-height:1.2;letter-spacing:-.4px}.overview-welcome .welcome-action{margin-top:14px}.production-overview{padding:16px 13px;border-radius:14px}.production-overview-head{align-items:flex-start}.production-overview-head h2{font-size:16px}.production-overview-head p:not(.eyebrow){max-width:240px;line-height:1.5}.production-link{font-size:0;padding:9px 10px}.production-link span{font-size:18px;margin:0}.production-stage-grid{grid-template-columns:1fr;gap:8px}.production-stage{display:grid;grid-template-columns:45px 1fr;align-items:center;column-gap:10px;padding:12px 13px}.stage-number{grid-row:span 2;font-size:25px}.stage-label{font-size:11px}.stage-note{font-size:9px}.overdue-strip{align-items:flex-start;padding:11px;gap:9px}.overdue-strip>button{font-size:0;padding-top:6px}.overdue-strip>button span{font-size:18px}.stats-grid{gap:8px}.stat-card{padding:13px 11px}.stat-top{font-size:9px}.stat-card>strong{font-size:23px}.stat-card>strong.money-stat{font-size:14px}.stat-card>small{font-size:8px;line-height:1.4}}
