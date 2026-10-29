@@ -2977,3 +2977,87 @@ body {
     box-shadow: 0 -8px 24px rgba(23, 61, 145, .14) !important;
   }
 }
+
+
+/* YÉRÉ — accueil premium tailleur : bleu nuit, ivoire et détails dorés. */
+:root{
+  --yere-navy-premium:#101b3b;
+  --yere-gold-premium:#c8a85b;
+  --yere-coral-premium:#ff704f;
+  --yere-ivory-premium:#f7f7f4;
+}
+body,.app-shell,.main-content{background:var(--yere-ivory-premium)!important;color:#202638}
+.sidebar{position:sticky;top:0;z-index:40;min-height:72px;height:auto;padding:12px clamp(14px,3vw,38px);background:var(--yere-navy-premium)!important;border:0;border-bottom:1px solid #c8a85b55;box-shadow:0 5px 18px #101b3b15}
+.brand{margin-right:auto;color:#fff!important;gap:0}
+.brand-wordmark{display:flex;flex-direction:column;align-items:flex-start;line-height:1}
+.brand-wordmark strong{font-size:22px;letter-spacing:.12em;font-weight:900;color:#fff!important}
+.brand-wordmark small{margin-top:5px;color:#e7c86f!important;font-family:"Brush Script MT","Segoe Script",cursive;font-size:16px!important;font-style:italic;letter-spacing:.02em}
+.sidebar nav{justify-content:center}
+.sidebar .nav-item{color:#fff!important;background:transparent;border-color:transparent}
+.sidebar .nav-item:hover,.sidebar .nav-item.active{color:#fff!important;background:#ffffff18;border-color:#d9bd70}
+.sidebar .nav-item.active{box-shadow:inset 0 -2px #e4c46e}
+.header-profile-button{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;margin-left:12px;border:1px solid #ffffff40;border-radius:50%;background:#ffffff12;color:#fff}
+.header-profile-button svg{width:21px;height:21px}
+.main-content{min-height:calc(100vh - 72px)}
+.page-wrap{max-width:1120px;padding:28px clamp(14px,3vw,34px) 112px}
+.welcome-row.overview-welcome{display:block;margin:0 0 20px;padding:8px 0 0;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}
+.overview-welcome .welcome-copy{width:100%;max-width:none}
+.overview-welcome .page-banner-title{max-width:850px;color:#202638!important;font-size:clamp(22px,3vw,32px)!important;line-height:1.2!important;letter-spacing:-.035em}
+.overview-welcome .page-subtitle{margin-top:10px;color:#687080!important;font-size:12px!important;font-weight:800;letter-spacing:.09em}
+.overview-welcome .today-snapshot{display:none}
+.overview-welcome .welcome-action{display:flex;width:100%;min-height:54px;margin-top:20px;border:0;border-radius:13px;background:var(--yere-coral-premium)!important;color:#fff!important;box-shadow:0 8px 18px #ff704f30;font-size:14px;font-weight:900;letter-spacing:.035em}
+.overview-welcome .welcome-action:hover{background:#ef5d3d!important}
+.overview-welcome .welcome-action span{font-size:21px}
+.tailor-priority-grid{display:grid;grid-template-columns:1fr;gap:14px;margin:0 0 24px}
+.tailor-priority-card{position:relative;display:flex;align-items:center;justify-content:space-between;gap:14px;min-width:0;min-height:164px;padding:20px 18px;border:1px solid #c8a85b70;border-radius:17px;background:#fff;box-shadow:0 7px 22px #18223b0b;overflow:hidden}
+.tailor-card-copy{position:relative;z-index:1;min-width:0;flex:1}
+.tailor-card-kicker{margin:0 0 9px;color:#8b7135;font-size:11px;font-weight:900;letter-spacing:.075em}
+.tailor-priority-card h2{margin:0;color:#202638;font-size:clamp(17px,2.3vw,21px);line-height:1.25;font-weight:850;overflow-wrap:anywhere}
+.tailor-card-description{margin:8px 0 13px;color:#697080;font-size:13px;line-height:1.45}
+.tailor-badges{display:flex;flex-wrap:wrap;gap:6px}
+.tailor-badge{display:inline-flex;align-items:center;min-height:24px;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:850;white-space:nowrap}
+.badge-orange{background:#fff0df;color:#a95716}.badge-green{background:#e5f6ea;color:#237447}.badge-gold{background:#fbf3d8;color:#8c6b19}
+.badge-red{background:#ffebeb;color:#b42335}.badge-blue{background:#e6efff;color:#2958aa}.badge-pink{background:#fbe8f2;color:#a33872}.badge-ochre{background:#f8eddc;color:#8d6428}
+.tailor-card-art{position:relative;display:grid;place-items:center;flex:0 0 88px;width:88px;height:104px;border-radius:18px;background:linear-gradient(145deg,#faf7ed,#f4ead2);color:#b08c3f}
+.tailor-card-art span{position:absolute;display:grid;place-items:center;font-weight:800}
+.art-fabric{font-size:39px;transform:translate(-9px,-5px);color:#b08c3f}
+.art-scissors{font-size:30px;transform:translate(13px,14px) rotate(-18deg);color:#d1a447}
+.art-thread{font-size:25px;transform:translate(19px,-24px);color:#8e7135}
+.payment-art{background:linear-gradient(145deg,#f2f5fa,#e6ebf5);color:#52668e}
+.art-terminal{font-size:43px;transform:translate(-9px,-7px);color:#425579}
+.art-money{font-size:29px;transform:translate(15px,22px);color:#37845b}
+.art-card{font-size:28px;transform:translate(18px,-25px);color:#c8a85b}
+.machine-art{background:linear-gradient(145deg,#f9f0e9,#f2dfcf);color:#986e53}
+.art-machine{font-size:55px;transform:translate(-4px,-8px);color:#9b6c4d}
+.art-ruler{font-size:40px;transform:translate(11px,25px);color:#d0a45e}
+.art-needle{font-size:31px;transform:translate(22px,-26px);color:#88634e}
+.daily-assistant{display:none!important}
+.stats-grid,.production-overview{display:none!important}
+.mobile-bottom-nav{background:var(--yere-navy-premium)!important;border-top:1px solid #c8a85b75;box-shadow:0 -6px 24px #101b3b1c}
+.mobile-nav-item{color:#fff!important}
+.mobile-nav-item span{color:#fff!important}
+.mobile-nav-item.active{color:#f1d47b!important}
+.mobile-nav-item.active span{background:#ffffff18!important;color:#f1d47b!important}
+.mobile-nav-item.active small{color:#f1d47b!important;font-weight:900}
+@media(min-width:900px){
+  .tailor-priority-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+  .tailor-priority-card{align-items:flex-start;min-height:260px;padding:20px 17px}
+  .tailor-card-art{position:absolute;right:14px;bottom:13px;opacity:.92;transform:scale(.78);transform-origin:bottom right}
+  .tailor-card-copy{padding-bottom:64px}
+}
+@media(max-width:760px){
+  .sidebar{min-height:64px;height:64px;padding:8px 16px}
+  .sidebar nav{display:none!important}
+  .header-profile-button{margin-left:auto}
+  .page-wrap{padding:21px 14px 110px}
+  .overview-welcome .page-banner-title{font-size:23px!important;line-height:1.22!important}
+  .overview-welcome .page-subtitle{font-size:11px!important}
+  .tailor-priority-card{min-height:150px;padding:17px 14px}
+  .tailor-card-art{flex-basis:72px;width:72px;height:88px}
+  .tailor-priority-card h2{font-size:17px}
+  .tailor-card-description{font-size:12px}
+  .tailor-badge{font-size:9px;padding:4px 7px}
+  .mobile-bottom-nav{position:fixed;right:0;bottom:0;left:0;z-index:100;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:7px 4px max(8px,env(safe-area-inset-bottom));}
+  .mobile-nav-item{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;min-width:0;border:0;border-radius:10px;background:transparent;padding:6px 2px}
+}
+@media(min-width:761px){.mobile-bottom-nav{display:none}}
