@@ -576,11 +576,6 @@ body.yere-dialog-open { overflow: hidden !important; }
 }
 .app-shell.yere-app .priority-badge--2,
 .app-shell.yere-app .priority-badge--3 { background: transparent !important; color: #5d6b8a !important; }
-.priority-art {
-  filter: grayscale(1) sepia(1) saturate(2.2) hue-rotate(198deg) contrast(.96) brightness(1.04) drop-shadow(0 6px 5px rgba(23,30,73,.07));
-  mix-blend-mode: multiply;
-  opacity: .88;
-}
 .priority-art-halo { background: radial-gradient(circle, #eaeefa 0%, #f7f8fc 49%, transparent 72%); }
 .app-shell.yere-app .measurements-quick-access {
   display: inline-flex;
