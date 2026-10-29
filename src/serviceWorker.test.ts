@@ -33,7 +33,7 @@ describe("service worker YÉRÉ", () => {
   it("précharge les illustrations depuis le sous-dossier installé", async () => {
     const sw = worker("https://atelier.test/yere/");
     await sw.dispatchWait("install");
-    expect(sw.caches.open).toHaveBeenCalledWith("yere-atelier-shell-%2Fyere%2F-v7");
+    expect(sw.caches.open).toHaveBeenCalledWith("yere-atelier-shell-%2Fyere%2F-v8");
     const requests = sw.cache.addAll.mock.calls[0][0];
     expect(requests.every((request) => request.cache === "no-store")).toBe(true);
     expect(Array.from(requests, (request) => request.url)).toEqual([
@@ -61,19 +61,19 @@ describe("service worker YÉRÉ", () => {
   it("ne supprime pas les caches d’une autre installation sur le même domaine", async () => {
     const sw = worker("https://atelier.test/yere/", [
       "yere-atelier-shell-v6",
-      "yere-atelier-shell-%2F-v7",
-      "yere-atelier-shell-%2Fyere%2F-v6",
+      "yere-atelier-shell-%2F-v8",
       "yere-atelier-shell-%2Fyere%2F-v7",
+      "yere-atelier-shell-%2Fyere%2F-v8",
       "unrelated-cache"
     ]);
     await sw.dispatchWait("activate");
     expect(sw.caches.delete).toHaveBeenCalledTimes(1);
-    expect(sw.caches.delete).toHaveBeenCalledWith("yere-atelier-shell-%2Fyere%2F-v6");
+    expect(sw.caches.delete).toHaveBeenCalledWith("yere-atelier-shell-%2Fyere%2F-v7");
     expect(sw.claim).toHaveBeenCalledOnce();
   });
 
   it("nettoie l’ancien cache non-scopé lors de la mise à jour à la racine", async () => {
-    const sw = worker("https://atelier.test/", ["yere-atelier-shell-v6", "yere-atelier-shell-%2F-v7"]);
+    const sw = worker("https://atelier.test/", ["yere-atelier-shell-v6", "yere-atelier-shell-%2F-v8"]);
     await sw.dispatchWait("activate");
     expect(sw.caches.delete).toHaveBeenCalledWith("yere-atelier-shell-v6");
     expect(sw.caches.delete).toHaveBeenCalledTimes(1);

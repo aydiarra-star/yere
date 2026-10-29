@@ -1,9 +1,9 @@
-/* YÉRÉ — strict home design: light canvas, white priority cards, navy chrome, orange action. */
+/* YÉRÉ — strict home design: light canvas, white priority cards, indigo chrome, indigo action. */
 :root {
-  --yere-home-canvas: #F8F9FA;
-  --yere-home-navy: #101E42;
-  --yere-home-orange: #FF6B00;
-  --yere-home-gold-border: #F0E2B8;
+  --yere-home-canvas: #f7f8fc;
+  --yere-home-navy: #171e49;
+  --yere-home-orange: #171e49;
+  --yere-home-gold-border: #e2e6f1;
 }
 html, body, #root, .app-shell, .main-content, .page-wrap {
   background: var(--yere-home-canvas) !important;
@@ -153,15 +153,15 @@ body, .main-content { color: #1F2937; }
   min-height: 48px;
   margin: 0 0 20px;
   padding: 13px 18px !important;
-  background: var(--yere-home-orange) !important;
-  border: 1px solid var(--yere-home-orange) !important;
+  background: var(--yere-home-navy) !important;
+  border: 1px solid var(--yere-home-navy) !important;
   border-radius: 8px !important;
   box-shadow: none !important;
   color: #fff !important;
   font-size: 13px !important;
   font-weight: 800 !important;
 }
-.primary-button.welcome-action:hover { background: #E85D00 !important; border-color: #E85D00 !important; }
+.primary-button.welcome-action:hover { background: #1c2558 !important; border-color: #1c2558 !important; }
 .primary-button.welcome-action > span { color: #fff !important; font-size: 20px !important; }
 .mobile-bottom-nav {
   background: var(--yere-home-navy) !important;
@@ -269,8 +269,8 @@ body, .main-content { color: #1F2937; }
     margin: 2px 0 20px !important;
     padding: 13px 16px !important;
     border-radius: 10px !important;
-    border: 1px solid var(--yere-home-orange) !important;
-    box-shadow: 0 3px 8px rgba(255,107,0,.18) !important;
+    border: 1px solid var(--yere-home-navy) !important;
+    box-shadow: 0 4px 12px rgba(23,30,73,.18) !important;
     line-height: 1.25 !important;
     white-space: normal !important;
   }
@@ -343,13 +343,13 @@ body, .main-content { color: #1F2937; }
   .primary-button.welcome-action,
   .primary-button.welcome-action.overview-create-order {
     border-radius: 10px !important;
-    box-shadow: 0 3px 8px rgba(255,107,0,.18) !important;
+    box-shadow: 0 4px 12px rgba(23,30,73,.18) !important;
   }
 }
 
 
 /* Indigo identity and detailed dashboard illustrations. */
-:root { --yere-home-navy: #101E42; --yere-indigo: #101E42; }
+:root { --yere-home-navy: #171e49; --yere-indigo: #171e49; }
 .topbar, .mobile-bottom-nav, .sidebar, .sidebar-nav, .desktop-sidebar { background-color: var(--yere-indigo) !important; }
 .tailor-priority-card .payment-illustration, .tailor-priority-card .production-illustration {
   position: relative !important;

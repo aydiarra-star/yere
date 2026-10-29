@@ -2,7 +2,7 @@
 // This also supports hosting YÉRÉ at a subfolder such as /yere/.
 const APP_SCOPE = new URL(self.registration.scope);
 const CACHE_PREFIX = `yere-atelier-shell-${encodeURIComponent(APP_SCOPE.pathname)}-`;
-const CACHE_NAME = `${CACHE_PREFIX}v7`;
+const CACHE_NAME = `${CACHE_PREFIX}v8`;
 const appUrl = (path = "") => new URL(path, APP_SCOPE).href;
 const APP_SHELL = [
   "",

@@ -2961,10 +2961,10 @@ body {
 
 /* YÉRÉ — accueil premium tailleur : bleu nuit, ivoire et détails dorés. */
 :root{
-  --yere-navy-premium:#101b3b;
-  --yere-gold-premium:#c8a85b;
-  --yere-coral-premium:#ff704f;
-  --yere-ivory-premium:#f7f7f4;
+  --yere-navy-premium:#171e49;
+  --yere-gold-premium:#e2e6f1;
+  --yere-coral-premium:#171e49;
+  --yere-ivory-premium:#f7f8fc;
 }
 body,.app-shell,.main-content{background:var(--yere-ivory-premium)!important;color:#202638}
 .sidebar{position:sticky;top:0;z-index:40;min-height:72px;height:auto;padding:12px clamp(14px,3vw,38px);background:var(--yere-navy-premium)!important;border:0;border-bottom:1px solid #c8a85b55;box-shadow:0 5px 18px #101b3b15}
@@ -2985,8 +2985,8 @@ body,.app-shell,.main-content{background:var(--yere-ivory-premium)!important;col
 .overview-welcome .page-banner-title{max-width:850px;color:#202638!important;font-size:clamp(22px,3vw,32px)!important;line-height:1.2!important;letter-spacing:-.035em}
 .overview-welcome .page-subtitle{margin-top:10px;color:#687080!important;font-size:12px!important;font-weight:800;letter-spacing:.09em}
 .overview-welcome .today-snapshot{display:none}
-.overview-welcome .welcome-action{display:flex;width:100%;min-height:54px;margin-top:20px;border:0;border-radius:13px;background:var(--yere-coral-premium)!important;color:#fff!important;box-shadow:0 8px 18px #ff704f30;font-size:14px;font-weight:900;letter-spacing:.035em}
-.overview-welcome .welcome-action:hover{background:#ef5d3d!important}
+.overview-welcome .welcome-action{display:flex;width:100%;min-height:54px;margin-top:20px;border:0;border-radius:13px;background:var(--yere-coral-premium)!important;color:#fff!important;box-shadow:0 8px 18px rgba(23,30,73,.18);font-size:14px;font-weight:900;letter-spacing:.035em}
+.overview-welcome .welcome-action:hover{background:#1c2558!important}
 .overview-welcome .welcome-action span{font-size:21px}
 .tailor-priority-grid{display:grid;grid-template-columns:1fr;gap:14px;margin:0 0 24px}
 .tailor-priority-card{position:relative;display:flex;align-items:center;justify-content:space-between;gap:14px;min-width:0;min-height:164px;padding:20px 18px;border:1px solid #c8a85b70;border-radius:17px;background:#fff;box-shadow:0 7px 22px #18223b0b;overflow:hidden}
@@ -3090,10 +3090,10 @@ main.main-content .page-wrap > .welcome-row.overview-welcome + .welcome-action{
   padding:14px 18px!important;
   border:0!important;
   border-radius:13px!important;
-  background:#FF6B00!important;
+  background:#171e49!important;
   background-image:none!important;
   color:#fff!important;
-  box-shadow:0 7px 18px #ff6b002b!important;
+  box-shadow:0 7px 18px rgba(23,30,73,.18)!important;
   font-weight:900!important;
   letter-spacing:.025em!important;
 }
