@@ -50,3 +50,133 @@ body, .app-shell { font-size: 16px; line-height: 1.55; }
   .app-shell .section-heading h2 { font-size: 18px; }
   .app-shell :is(.primary-button, .secondary-button, .welcome-action, .text-button) { min-height: 44px; }
 }
+
+
+/* YÉRÉ — charte stricte indigo et blanc. Styles de présentation uniquement.
+   Les glyphes, SVG, positions et actions des icônes ne sont pas remplacés. */
+:root {
+  --yere-indigo: #4338ca;
+  --yere-indigo-hover: #3730a3;
+  --yere-indigo-soft: #eef2ff;
+  --yere-indigo-pale: #e0e7ff;
+  --yere-white: #ffffff;
+  --yere-text: #374151;
+  --yere-muted-text: #6b7280;
+  --yere-border-neutral: #e5e7eb;
+  color: var(--yere-text) !important;
+  background: var(--yere-white) !important;
+}
+html, body, #root, .app-shell, .main-content, .page-wrap {
+  background: var(--yere-white) !important;
+  color: var(--yere-text) !important;
+}
+body, .app-shell {
+  font-family: "DM Sans", Inter, ui-sans-serif, system-ui, sans-serif !important;
+  line-height: 1.5;
+}
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline-color: var(--yere-indigo-pale) !important;
+}
+.sidebar, .topbar, .content-card, .stat-card, .atelier-switch,
+.search-box, .new-client-form, .measure-field, .secondary-button {
+  background: var(--yere-white) !important;
+  border-color: var(--yere-border-neutral) !important;
+}
+.brand, .brand strong, .breadcrumb b, .welcome-row h1, .section-heading h2,
+.stat-card > strong, .quick-actions b, .tip-card h2, .new-client-form h3,
+.measure-field > b, .client-main b {
+  color: var(--yere-indigo) !important;
+}
+.brand-mark {
+  background: var(--yere-indigo) !important;
+  color: var(--yere-white) !important;
+  box-shadow: none !important;
+}
+.brand small, .breadcrumb, .page-subtitle, .section-heading p, .stat-top,
+.stat-card > small, .footer, .quick-actions small, .tip-card > p:last-child,
+.table-wrap td, .table-secondary, .search-box, .new-client-form p,
+.new-client-form label, .measure-field > span, .measure-note,
+.client-main small, .client-measurements small, .profile small {
+  color: var(--yere-muted-text) !important;
+}
+.eyebrow, .nav-caption, .text-button, .order-id, .paid,
+.client-measurements b, .tip-spark, .tip-card .eyebrow {
+  color: var(--yere-indigo) !important;
+}
+.primary-button, .welcome-action {
+  background: var(--yere-indigo) !important;
+  border-color: var(--yere-indigo) !important;
+  color: var(--yere-white) !important;
+  box-shadow: none !important;
+}
+.primary-button:hover, .welcome-action:hover {
+  background: var(--yere-indigo-hover) !important;
+  border-color: var(--yere-indigo-hover) !important;
+}
+.secondary-button, .text-button, .nav-item, .quick-arrow, .chevron, .row-chevron {
+  color: var(--yere-indigo) !important;
+}
+.nav-item:hover, .nav-item.active, .client-row:hover, .client-row.selected {
+  background: var(--yere-indigo-soft) !important;
+  border-color: var(--yere-indigo-pale) !important;
+  color: var(--yere-indigo) !important;
+}
+.nav-count, .demo-pill, .stat-icon, .quick-icon, .snapshot-icon,
+.atelier-avatar, .profile-avatar, .help-icon, .client-avatar,
+.client-row .avatar-1, .client-row .avatar-2, .client-row .avatar-3 {
+  background: var(--yere-indigo-soft) !important;
+  color: var(--yere-indigo) !important;
+  border-color: var(--yere-indigo-pale) !important;
+}
+.demo-pill i, .green-dot {
+  background: var(--yere-indigo) !important;
+}
+.welcome-row, .tip-card, .notice, .help-card, .measure-note,
+.table-wrap th, .status-todo, .status-progress, .status-ready,
+.status-delivered, .measurement-history li {
+  background: var(--yere-white) !important;
+  background-image: none !important;
+  border-color: var(--yere-border-neutral) !important;
+  color: var(--yere-text) !important;
+}
+.welcome-row {
+  box-shadow: none !important;
+  border-radius: 16px;
+}
+.notice, .notice button, .tip-card .eyebrow, .tip-spark,
+.status-todo, .status-progress, .status-ready, .status-delivered,
+.status-select, .paid {
+  color: var(--yere-indigo) !important;
+}
+.status-select {
+  background: var(--yere-indigo-soft) !important;
+  border-color: var(--yere-indigo-pale) !important;
+}
+.table-wrap th {
+  color: var(--yere-muted-text) !important;
+}
+.table-wrap td, .quick-actions > button, .measurement-history {
+  border-color: var(--yere-border-neutral) !important;
+}
+.search-box:focus-within, .new-client-form input:focus,
+.measure-field input:focus, .measure-notes-field textarea:focus {
+  border-color: var(--yere-indigo) !important;
+  outline-color: var(--yere-indigo-pale) !important;
+  box-shadow: none !important;
+}
+.new-client-form input, .measure-field input, .measure-notes-field textarea,
+.search-box input {
+  color: var(--yere-text) !important;
+  border-color: var(--yere-border-neutral) !important;
+}
+.measure-field, .measurement-history li {
+  background: var(--yere-white) !important;
+}
+@media (max-width: 760px) {
+  .nav-item.active {
+    background: var(--yere-indigo-soft) !important;
+    color: var(--yere-indigo) !important;
+  }
+  .welcome-row { padding: 20px !important; }
+  .welcome-row h1 { font-size: clamp(21px, 6vw, 28px) !important; }
+}
