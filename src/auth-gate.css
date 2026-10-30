@@ -22,3 +22,5 @@
 .auth-invitation-banner{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:12px 20px;background:#f4f8f5;border-bottom:1px solid rgba(39,94,77,.15)}
 .auth-invitation-banner>div:first-child{display:grid;gap:4px}.auth-invitation-banner span{font-size:.88rem;color:#58675f}
 .auth-invitation-banner>div:last-of-type{display:flex;gap:8px;flex-wrap:wrap}
+
+.auth-session-identity{min-width:0;overflow-wrap:anywhere}.auth-session-workspace{font-weight:700}.auth-workspace-switch{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.78);font-size:10px}.auth-workspace-switch select{max-width:min(42vw,320px);min-height:32px;border:1px solid rgba(255,255,255,.35);border-radius:8px;background:#fff;color:#202f72;padding:5px 9px;font:inherit;font-weight:700}.auth-workspace-switch select:focus-visible{outline:2px solid #fff;outline-offset:2px}@media(max-width:560px){.auth-session-bar{flex-wrap:wrap;align-items:center}.auth-session-identity{flex:1 1 100%}.auth-workspace-switch{flex:1 1 auto}.auth-workspace-switch select{max-width:58vw}}
