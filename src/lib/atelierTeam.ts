@@ -11,6 +11,7 @@ export type AtelierMember = {
 export type AtelierInvitation = {
   id: string;
   atelierId: string;
+  atelierName: string;
   email: string;
   role: "gestionnaire" | "employe";
   expiresAt: string;
@@ -19,7 +20,7 @@ export type AtelierInvitation = {
   createdAt: string;
 };
 type MemberRow = { atelier_id:string; user_id:string; role:string; actif:boolean; created_at:string };
-type InvitationRow = { id:string; atelier_id:string; email:string; role:string; expires_at:string; accepted_at:string|null; cancelled_at:string|null; created_at:string };
+type InvitationRow = { id:string; atelier_id:string; atelier_nom:string; email:string; role:string; expires_at:string; accepted_at:string|null; cancelled_at:string|null; created_at:string };
 
 async function parse(response:Response):Promise<unknown>{
   const body=await response.json().catch(()=>({}));
@@ -32,14 +33,14 @@ export async function listAtelierMembers(session:YereSession,atelierId:string):P
   return (data as MemberRow[]).map(row=>({atelierId:row.atelier_id,userId:row.user_id,role:row.role as AtelierMember["role"],active:row.actif,createdAt:row.created_at}));
 }
 export async function listAtelierInvitations(session:YereSession,atelierId:string):Promise<AtelierInvitation[]>{
-  const response=await authenticatedFetch(session,`rest/v1/invitation_atelier?select=id,atelier_id,email,role,expires_at,accepted_at,cancelled_at,created_at&atelier_id=eq.${encodeURIComponent(atelierId)}&order=created_at.desc`);
+  const response=await authenticatedFetch(session,`rest/v1/invitation_atelier?select=id,atelier_id,atelier_nom,email,role,expires_at,accepted_at,cancelled_at,created_at&atelier_id=eq.${encodeURIComponent(atelierId)}&order=created_at.desc`);
   const data=await parse(response);if(!Array.isArray(data))throw new Error("Réponse des invitations invalide.");
-  return (data as InvitationRow[]).map(row=>({id:row.id,atelierId:row.atelier_id,email:row.email,role:row.role as AtelierInvitation["role"],expiresAt:row.expires_at,acceptedAt:row.accepted_at,cancelledAt:row.cancelled_at,createdAt:row.created_at}));
+  return (data as InvitationRow[]).map(row=>({id:row.id,atelierId:row.atelier_id,atelierName:row.atelier_nom,email:row.email,role:row.role as AtelierInvitation["role"],expiresAt:row.expires_at,acceptedAt:row.accepted_at,cancelledAt:row.cancelled_at,createdAt:row.created_at}));
 }
 export async function listMyAtelierInvitations(session:YereSession):Promise<AtelierInvitation[]>{
   const response=await authenticatedFetch(session,"rest/v1/invitation_atelier?select=id,atelier_id,email,role,expires_at,accepted_at,cancelled_at,created_at&accepted_at=is.null&cancelled_at=is.null&order=created_at.desc");
   const data=await parse(response);if(!Array.isArray(data))throw new Error("Réponse des invitations reçues invalide.");
-  return (data as InvitationRow[]).map(row=>({id:row.id,atelierId:row.atelier_id,email:row.email,role:row.role as AtelierInvitation["role"],expiresAt:row.expires_at,acceptedAt:row.accepted_at,cancelledAt:row.cancelled_at,createdAt:row.created_at}));
+  return (data as InvitationRow[]).map(row=>({id:row.id,atelierId:row.atelier_id,atelierName:row.atelier_nom,email:row.email,role:row.role as AtelierInvitation["role"],expiresAt:row.expires_at,acceptedAt:row.accepted_at,cancelledAt:row.cancelled_at,createdAt:row.created_at}));
 }
 export async function createAtelierInvitation(session:YereSession,atelierId:string,email:string,role:"gestionnaire"|"employe"):Promise<AtelierInvitation>{
   const response=await authenticatedFetch(session,"rest/v1/rpc/create_atelier_invitation",{method:"POST",body:JSON.stringify({p_atelier_id:atelierId,p_email:email.trim().toLowerCase(),p_role:role})});
