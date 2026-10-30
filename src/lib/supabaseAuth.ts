@@ -156,13 +156,22 @@ export async function listMyAteliers(session: YereSession): Promise<Array<{ id: 
 }
 
 export async function createAtelier(session: YereSession, input: { nom: string; telephone: string; ville: string }): Promise<string> {
-  const response = await authenticatedFetch(session, "rest/v1/atelier?select=id", {
+  // Do not ask PostgREST to RETURNING the inserted row: the SELECT policy on
+  // atelier is membership-based, and the owner membership is attached by an
+  // AFTER INSERT trigger. Read the row in a separate request after that trigger
+  // has completed instead.
+  const response = await authenticatedFetch(session, "rest/v1/atelier", {
     method: "POST",
-    headers: { Prefer: "return=representation" },
+    headers: { Prefer: "return=minimal" },
     body: JSON.stringify({ nom: input.nom, telephone: input.telephone || null, ville: input.ville || null })
   });
-  const data = await parseResponse(response);
-  const row = Array.isArray(data) ? data[0] as Record<string, unknown> | undefined : undefined;
-  if (!row || typeof row.id !== "string") throw new Error("La création de l'atelier n'a pas retourné son identifiant.");
-  return row.id;
+  await parseResponse(response);
+  const workspaces = await listMyAteliers(session);
+  const created = workspaces.find((item) =>
+    item.nom === input.nom
+    && item.telephone === (input.telephone || null)
+    && item.ville === (input.ville || null)
+  );
+  if (!created) throw new Error("Atelier créé, mais non visible après son rattachement. Vérifiez les droits du compte avant de poursuivre.");
+  return created.id;
 }
