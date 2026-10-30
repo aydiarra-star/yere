@@ -343,6 +343,7 @@ export type Database = {
         Row: {
           accepted_at: string | null
           atelier_id: string
+          atelier_nom: string
           cancelled_at: string | null
           created_at: string
           email: string
@@ -354,6 +355,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           atelier_id: string
+          atelier_nom?: string
           cancelled_at?: string | null
           created_at?: string
           email: string
@@ -365,6 +367,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           atelier_id?: string
+          atelier_nom?: string
           cancelled_at?: string | null
           created_at?: string
           email?: string
@@ -714,9 +717,14 @@ export type Database = {
         Args: { p_invitation_id: string }
         Returns: string
       }
+      cancel_atelier_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: boolean
+      }
       create_atelier_invitation: {
         Args: { p_atelier_id: string; p_email: string; p_role: string }
         Returns: {
+          atelier_nom: string
           email: string
           expires_at: string
           id: string
