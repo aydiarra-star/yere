@@ -122,11 +122,13 @@ export async function listMyAteliers(session: YereSession): Promise<Array<{ id: 
 }
 
 export async function createAtelier(session: YereSession, input: { nom: string; telephone: string; ville: string }): Promise<string> {
-  const response = await authenticatedFetch(session, "rest/v1/rpc/create_atelier", {
+  const response = await authenticatedFetch(session, "rest/v1/atelier?select=id", {
     method: "POST",
-    body: JSON.stringify({ p_nom: input.nom, p_telephone: input.telephone || null, p_ville: input.ville || null })
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ nom: input.nom, telephone: input.telephone || null, ville: input.ville || null })
   });
-  const id = await parseResponse(response);
-  if (typeof id !== "string") throw new Error("La création de l'atelier n'a pas retourné son identifiant.");
-  return id;
+  const data = await parseResponse(response);
+  const row = Array.isArray(data) ? data[0] as Record<string, unknown> | undefined : undefined;
+  if (!row || typeof row.id !== "string") throw new Error("La création de l'atelier n'a pas retourné son identifiant.");
+  return row.id;
 }
