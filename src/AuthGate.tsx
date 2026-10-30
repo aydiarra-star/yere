@@ -153,7 +153,7 @@ export default function AuthGate({ children }: Props) {
         <span><strong>Connecté</strong> · {session.user.email} · {atelier.nom}</span>
         <button type="button" onClick={() => void handleSignOut()}>Déconnexion</button>
       </div>
-      <div className="auth-local-warning" role="status">La connexion et votre atelier sont enregistrés sur le serveur. Les modules métier sont encore en cours de synchronisation : n'enregistrez pas encore de données réelles dans YÉRÉ.</div>
+      <div className="auth-local-warning" role="status">La connexion, l'atelier, les clients, les mensurations, les commandes et les versements sont synchronisés sur le serveur. La caisse/dépenses, les stocks, les fournisseurs, les membres d'équipe, les sauvegardes et la marketplace restent à synchroniser : n'utilisez pas encore ces modules pour vos données réelles.</div>
       {children}
     </>
   );
