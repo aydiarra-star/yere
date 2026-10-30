@@ -1048,6 +1048,7 @@ function App() {
             </section>
             <section className="content-card">
               <div className="section-heading"><div><h2>Achats fournisseurs</h2><p>Enregistrez une commande fournisseur, puis réceptionnez-la lorsque les fournitures arrivent.</p></div><button type="button" className="primary-button" disabled={stockItems.length === 0} onClick={() => setPurchaseFormOpen((open) => !open)}>{purchaseFormOpen ? "Annuler" : "＋ Nouvel achat"}</button></div>
+              {supplierDirectory.length > 0 && <div className="supplier-directory-summary"><b>Répertoire de l’atelier · {supplierDirectory.length} fournisseur(s)</b><p>{supplierDirectory.map((item) => item.name + (item.city ? " · " + item.city : "")).join("  |  ")}</p></div>}
               {purchaseFormOpen && <form className="new-order-form" onSubmit={addSupplierPurchase}>
                 <label>Fournisseur<input required maxLength={120} value={purchaseSupplierName} onChange={(event) => setPurchaseSupplierName(event.target.value)} placeholder="Ex. Mercerie Ndiaye" /></label>
                 <div className="section-heading"><div><h3>Articles de l’achat</h3><p>Ajoutez chaque tissu ou fourniture avant d’enregistrer la commande.</p></div></div>
