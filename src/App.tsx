@@ -7,6 +7,7 @@ import { isMarketplaceListingListValid, type MarketplaceListing } from "./market
 import { usePersistentState } from "./usePersistentState";
 import { createAtelierClient, createAtelierOrder, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, createAtelierStockMovementsBatch, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
 import { readSession } from "./lib/supabaseAuth";
+import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, type AtelierSupplier } from "./lib/atelierSuppliers";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, receiveSupplierPurchase, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", arm: "", neck: "", thigh: "", legLength: "", garmentType: "Tenue complète", note: "" };
@@ -89,6 +90,7 @@ function App() {
   const [stockMovementQuantity, setStockMovementQuantity] = useState("");
   const [stockMovementNote, setStockMovementNote] = useState("");
   const [supplierPurchases, setSupplierPurchases] = usePersistentState<SupplierPurchase[]>("yere-demo-supplier-purchases-v1", [], isSupplierPurchaseListValid);
+  const [supplierDirectory, setSupplierDirectory] = useState<AtelierSupplier[]>([]);
   const [purchaseFormOpen, setPurchaseFormOpen] = useState(false);
   const [purchaseSupplierName, setPurchaseSupplierName] = useState("");
   const [purchaseStockItemId, setPurchaseStockItemId] = useState("");
@@ -117,9 +119,10 @@ function App() {
     let active = true;
     void Promise.all([
       listAtelierClients(session, atelierId), listAtelierOrders(session, atelierId),
-      listAtelierExpenses(session, atelierId), listAtelierStock(session, atelierId)
+      listAtelierExpenses(session, atelierId), listAtelierStock(session, atelierId),
+      listAtelierSuppliers(session, atelierId), listAtelierSupplierPurchases(session, atelierId)
     ])
-      .then(([serverClients, serverOrders, serverExpenses, serverStock]) => {
+      .then(([serverClients, serverOrders, serverExpenses, serverStock, serverSuppliers, serverPurchases]) => {
         if (!active) return;
         setClients(serverClients);
         setOrders((current) => [...serverOrders, ...current.filter((order) => !order.serverId)]);
@@ -135,6 +138,24 @@ function App() {
           ...serverStock.movements,
           ...current.filter((movement) => movement.id.startsWith("MOV-") && !serverStock.movements.some((serverMovement) => serverMovement.id === movement.id))
         ]);
+        setSupplierDirectory(serverSuppliers);
+        const supplierName = new Map(serverSuppliers.map((item) => [item.id, item.name]));
+        const mappedPurchases: SupplierPurchase[] = serverPurchases.map((purchase) => ({
+          id: purchase.id,
+          supplierName: supplierName.get(purchase.supplierId) ?? "Fournisseur",
+          orderedAt: purchase.orderedAt,
+          lines: purchase.lines,
+          status: purchase.status,
+          ...(purchase.receivedAt ? { receivedAt: purchase.receivedAt } : {}),
+          ...(purchase.cancelledAt ? { cancelledAt: purchase.cancelledAt } : {}),
+          ...(purchase.cancelReason ? { cancelReason: purchase.cancelReason } : {}),
+          ...(purchase.note ? { note: purchase.note } : {}),
+          payments: purchase.payments
+        }));
+        setSupplierPurchases((current) => [
+          ...mappedPurchases,
+          ...current.filter((purchase) => purchase.id.startsWith("ACH-") && !mappedPurchases.some((serverPurchase) => serverPurchase.id === purchase.id))
+        ]);
       })
       .catch((cause) => {
         if (active) setNotice(cause instanceof Error
@@ -142,7 +163,7 @@ function App() {
           : "Impossible de synchroniser les données de l'atelier avec le serveur.");
       });
     return () => { active = false; };
-  }, [setClients, setOrders]);
+  }, [setClients, setOrders, setSupplierPurchases]);
 
   const visibleClients = useMemo(() => clients.filter((client) => matchesClient(client, query)), [clients, query]);
   const outstanding = orders.reduce((sum, order) => sum + balanceDue(order), 0);
@@ -546,34 +567,53 @@ function App() {
     setNotice("Article ajouté à l’achat. Vous pouvez ajouter d’autres articles avant d’enregistrer.");
   }
 
-  function addSupplierPurchase(event: FormEvent<HTMLFormElement>) {
+  async function addSupplierPurchase(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const supplierName = purchaseSupplierName.trim();
     if (!supplierName || purchaseDraftLines.length === 0) {
       setNotice("Indiquez le fournisseur et ajoutez au moins un article à l’achat.");
       return;
     }
-    const purchase: SupplierPurchase = {
-      id: "ACH-" + Date.now(),
-      supplierName,
-      orderedAt: new Date().toISOString().slice(0, 10),
-      status: "À recevoir",
-      lines: purchaseDraftLines.map((line) => ({ ...line })),
-      note: purchaseNote.trim() || undefined
-    };
-    if (!isSupplierPurchaseListValid([...supplierPurchases, purchase])) {
-      setNotice("Achat refusé : vérifiez les informations et l’identifiant de l’achat.");
-      return;
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      let supplierRecord = supplierDirectory.find((item) => item.name.trim().toLocaleLowerCase("fr-FR") === supplierName.toLocaleLowerCase("fr-FR"));
+      if (!supplierRecord) {
+        supplierRecord = await createAtelierSupplier(session, atelierId, {
+          name: supplierName, contact: "", phone: "", city: "", category: "", note: ""
+        });
+        setSupplierDirectory((current) => [...current, supplierRecord!].sort((a, b) => a.name.localeCompare(b.name, "fr")));
+      }
+      const reference = "ACH-" + Date.now();
+      await createAtelierSupplierPurchase(session, atelierId, supplierRecord.id, {
+        reference, orderedAt: new Date().toISOString().slice(0, 10),
+        note: purchaseNote.trim() || undefined, lines: purchaseDraftLines.map((line) => ({ ...line }))
+      });
+      const [serverPurchases, serverSuppliers] = await Promise.all([
+        listAtelierSupplierPurchases(session, atelierId), listAtelierSuppliers(session, atelierId)
+      ]);
+      setSupplierDirectory(serverSuppliers);
+      const names = new Map(serverSuppliers.map((item) => [item.id, item.name]));
+      setSupplierPurchases(serverPurchases.map((purchase) => ({
+        id: purchase.id, supplierName: names.get(purchase.supplierId) ?? supplierName,
+        orderedAt: purchase.orderedAt, lines: purchase.lines, status: purchase.status,
+        ...(purchase.receivedAt ? { receivedAt: purchase.receivedAt } : {}),
+        ...(purchase.cancelledAt ? { cancelledAt: purchase.cancelledAt } : {}),
+        ...(purchase.cancelReason ? { cancelReason: purchase.cancelReason } : {}),
+        ...(purchase.note ? { note: purchase.note } : {}), payments: purchase.payments
+      })).concat(supplierPurchases.filter((purchase) => purchase.id.startsWith("ACH-"))));
+      setPurchaseSupplierName("");
+      setPurchaseStockItemId("");
+      setPurchaseQuantity("");
+      setPurchaseUnitCost("");
+      setPurchaseNote("");
+      setPurchaseDraftLines([]);
+      setPurchaseFormOpen(false);
+      setNotice("Achat fournisseur enregistré sur le serveur. Le stock changera uniquement à la réception.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Achat non enregistré : ${cause.message}` : "Impossible d'enregistrer l'achat fournisseur.");
     }
-    setSupplierPurchases((current) => [purchase, ...current]);
-    setPurchaseSupplierName("");
-    setPurchaseStockItemId("");
-    setPurchaseQuantity("");
-    setPurchaseUnitCost("");
-    setPurchaseNote("");
-    setPurchaseDraftLines([]);
-    setPurchaseFormOpen(false);
-    setNotice("Achat fournisseur enregistré. Le stock ne changera qu’à la réception effective.");
   }
 
   async function receivePurchase(purchaseId: string) {
