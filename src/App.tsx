@@ -7,7 +7,7 @@ import { isMarketplaceListingListValid, type MarketplaceListing } from "./market
 import { usePersistentState } from "./usePersistentState";
 import { createAtelierClient, createAtelierOrder, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, createAtelierStockMovementsBatch, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
 import { readSession } from "./lib/supabaseAuth";
-import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, type AtelierSupplier } from "./lib/atelierSuppliers";
+import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, getAtelierSupplierProfile, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, saveAtelierSupplierProfile, type AtelierSupplier } from "./lib/atelierSuppliers";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, receiveSupplierPurchase, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", arm: "", neck: "", thigh: "", legLength: "", garmentType: "Tenue complète", note: "" };
@@ -120,9 +120,9 @@ function App() {
     void Promise.all([
       listAtelierClients(session, atelierId), listAtelierOrders(session, atelierId),
       listAtelierExpenses(session, atelierId), listAtelierStock(session, atelierId),
-      listAtelierSuppliers(session, atelierId), listAtelierSupplierPurchases(session, atelierId)
+      listAtelierSuppliers(session, atelierId), listAtelierSupplierPurchases(session, atelierId), getAtelierSupplierProfile(session, atelierId)
     ])
-      .then(([serverClients, serverOrders, serverExpenses, serverStock, serverSuppliers, serverPurchases]) => {
+      .then(([serverClients, serverOrders, serverExpenses, serverStock, serverSuppliers, serverPurchases, serverSupplierProfile]) => {
         if (!active) return;
         setClients(serverClients);
         setOrders((current) => [...serverOrders, ...current.filter((order) => !order.serverId)]);
@@ -139,6 +139,7 @@ function App() {
           ...current.filter((movement) => movement.id.startsWith("MOV-") && !serverStock.movements.some((serverMovement) => serverMovement.id === movement.id))
         ]);
         setSupplierDirectory(serverSuppliers);
+        if (serverSupplierProfile) setSupplier(serverSupplierProfile);
         const supplierName = new Map(serverSuppliers.map((item) => [item.id, item.name]));
         const mappedPurchases: SupplierPurchase[] = serverPurchases.map((purchase) => ({
           id: purchase.id,
@@ -565,6 +566,22 @@ function App() {
     setPurchaseQuantity("");
     setPurchaseUnitCost("");
     setNotice("Article ajouté à l’achat. Vous pouvez ajouter d’autres articles avant d’enregistrer.");
+  }
+
+  async function saveSupplierProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const profile = { ...supplier, businessName: supplier.businessName.trim() };
+    if (!profile.businessName) { setNotice("Indiquez le nom de votre entreprise fournisseur."); return; }
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      await saveAtelierSupplierProfile(session, atelierId, profile);
+      setSupplier(profile);
+      setNotice("Profil fournisseur enregistré dans la base sécurisée de votre atelier.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Profil non enregistré : ${cause.message}` : "Impossible d'enregistrer le profil fournisseur.");
+    }
   }
 
   async function addSupplierPurchase(event: FormEvent<HTMLFormElement>) {
@@ -1051,7 +1068,7 @@ function App() {
           </section>}
           {view === "suppliers" && <section className="content-card supplier-page">
             <div className="section-heading"><div><h2>Profil fournisseur</h2><p>Renseignez les informations professionnelles de votre espace fournisseur.</p></div><span className="supplier-symbol"><NavIcon name="truck" /></span></div>
-            <form className="supplier-form" onSubmit={(event) => { event.preventDefault(); setNotice("Profil fournisseur enregistré sur cet appareil. La publication publique nécessite encore l’activation du serveur."); }}>
+            <form className="supplier-form" onSubmit={saveSupplierProfile}>
               <label>Nom de l’entreprise<input required value={supplier.businessName} onChange={(event) => setSupplier((current) => ({ ...current, businessName: event.target.value }))} placeholder="Nom de votre entreprise" /></label>
               <label>Nom du contact<input value={supplier.contactName} onChange={(event) => setSupplier((current) => ({ ...current, contactName: event.target.value }))} placeholder="Nom du responsable" /></label>
               <label>Téléphone professionnel<input type="tel" value={supplier.phone} onChange={(event) => setSupplier((current) => ({ ...current, phone: event.target.value }))} placeholder="Téléphone de contact" /></label>
@@ -1062,7 +1079,7 @@ function App() {
               <button type="submit" className="primary-button">Enregistrer le profil fournisseur</button>
             </form>
             <div className="supplier-shop-access"><div><span className="supplier-symbol"><NavIcon name="store" /></span><div><h3>Création de boutique</h3><p>Préparez votre boutique avec un nom public, une catégorie et une zone de livraison.</p></div></div><button className="secondary-button" onClick={() => { setSupplier((current) => ({ ...current, shopName: current.shopName || current.businessName })); setView("marketplace"); }}>Créer / gérer ma boutique <span>→</span></button></div>
-            <p className="privacy-note">Les informations sont conservées localement sur cet appareil. Les comptes fournisseurs, les permissions réelles, le catalogue public et les commandes marketplace ne sont pas encore activés côté serveur.</p>
+            <p className="privacy-note">Le profil fournisseur et le carnet de fournisseurs sont enregistrés dans la base sécurisée de votre atelier. La publication publique du catalogue et les commandes marketplace restent à activer côté serveur.</p>
           </section>}
           {view === "marketplace" && <section className="marketplace-page">
             <div className="marketplace-hero content-card">
