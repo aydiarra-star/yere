@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { clearSession, createAtelier, listMyAteliers, readSession, refreshSession, signIn, signOut, signUp, supabaseReady, type YereSession } from "./lib/supabaseAuth";
+import { clearSession, consumeAuthCallback, createAtelier, listMyAteliers, readSession, refreshSession, signIn, signOut, signUp, supabaseReady, type YereSession } from "./lib/supabaseAuth";
 import { acceptAtelierInvitation, listMyAtelierInvitations, type AtelierInvitation } from "./lib/atelierTeam";
 import "./auth-gate.css";
 
@@ -68,16 +68,20 @@ export default function AuthGate({ children }: Props) {
     let active = true;
     async function initialize() {
       if (!supabaseReady) { setReady(true); return; }
-      const saved = readSession();
-      if (!saved) { setReady(true); return; }
       try {
+        const callbackSession = await consumeAuthCallback();
+        const saved = callbackSession ?? readSession();
+        if (!saved) { setReady(true); return; }
         const current = saved.expires_at * 1000 <= Date.now() + 60_000 ? await refreshSession(saved) : saved;
         if (!active) return;
         setSession(current);
         await loadWorkspace(current);
-      } catch {
+      } catch (cause) {
         clearSession();
-        if (active) { setSession(null); setAtelier(null); }
+        if (active) {
+          setSession(null); setAtelier(null);
+          setError(cause instanceof Error ? cause.message : "La confirmation du compte a échoué. Demandez un nouveau lien.");
+        }
       } finally {
         if (active) setReady(true);
       }
