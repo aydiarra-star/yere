@@ -5,6 +5,8 @@ import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, workModes
 import { normalizeBackupOnboardingState, normalizeBackupMarketplaceListings } from "./localBackup";
 import { isMarketplaceListingListValid, type MarketplaceListing } from "./marketplace";
 import { usePersistentState } from "./usePersistentState";
+import { createAtelierClient, listAtelierClients, saveAtelierMeasurement } from "./lib/atelierData";
+import { readSession } from "./lib/supabaseAuth";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, receiveSupplierPurchase, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", arm: "", neck: "", thigh: "", legLength: "", garmentType: "Tenue complète", note: "" };
@@ -108,6 +110,21 @@ function App() {
     if (onboardingStartedAt === null) setOnboardingStartedAt(Date.now());
   }, [onboardingStartedAt, setOnboardingStartedAt]);
 
+  useEffect(() => {
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) return;
+    let active = true;
+    void listAtelierClients(session, atelierId)
+      .then((serverClients) => { if (active) setClients(serverClients); })
+      .catch((cause) => {
+        if (active) setNotice(cause instanceof Error
+          ? `Impossible de synchroniser les clients : ${cause.message}`
+          : "Impossible de synchroniser les clients avec le serveur.");
+      });
+    return () => { active = false; };
+  }, [setClients]);
+
   const visibleClients = useMemo(() => clients.filter((client) => matchesClient(client, query)), [clients, query]);
   const outstanding = orders.reduce((sum, order) => sum + balanceDue(order), 0);
   const outstandingOrderCount = orders.filter((order) => balanceDue(order) > 0).length;
@@ -172,17 +189,23 @@ function App() {
     setDraftMeasurement(client ? { ...client.measurement } : { ...emptyMeasurement });
   }, [selectedClient, clients]);
 
-  function addClient(event: FormEvent<HTMLFormElement>) {
+  async function addClient(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const name = clientName.trim();
     if (!name) return;
-    const client: Client = {
-      id: `c-${Date.now()}`,
-      name,
-      phone: clientPhone.trim(),
-      createdAt: new Date().toISOString().slice(0, 10),
-      measurement: { ...emptyMeasurement }
-    };
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) {
+      setNotice("Votre session ou votre atelier n'est plus disponible. Reconnectez-vous.");
+      return;
+    }
+    let client: Client;
+    try {
+      client = await createAtelierClient(session, atelierId, { name, phone: clientPhone.trim() });
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Client non enregistré : ${cause.message}` : "Impossible d'enregistrer ce client sur le serveur.");
+      return;
+    }
     setClients((current) => [client, ...current]);
     setNewOrderClientId(client.id);
     setClientName("");
@@ -195,7 +218,7 @@ function App() {
           ? " Première fiche créée en moins de 3 minutes : parcours de démarrage réussi."
           : " Le premier client a été créé après 3 minutes : le parcours pourra être simplifié.")
       : "";
-    setNotice(`Fiche de ${name} créée sur cet appareil.${firstClientMessage}`);
+    setNotice(`Fiche de ${name} enregistrée dans votre atelier YÉRÉ.${firstClientMessage}`);
   }
 
   function addOrder(event: FormEvent<HTMLFormElement>) {
@@ -632,22 +655,34 @@ function App() {
     setDraftMeasurement((current) => ({ ...current, [field]: value }));
   }
 
-  function saveMeasurements(event: FormEvent<HTMLFormElement>) {
+  async function saveMeasurements(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selected) return;
     if (!isMeasurementValid(draftMeasurement)) {
       setNotice("Chaque mensuration doit être un nombre positif ou nul.");
       return;
     }
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) {
+      setNotice("Votre session ou votre atelier n'est plus disponible. Reconnectez-vous.");
+      return;
+    }
     const measuredAt = new Date().toISOString().slice(0, 10);
     const versionId = `m-${Date.now()}`;
+    try {
+      await saveAtelierMeasurement(session, atelierId, selected.id, draftMeasurement, measuredAt);
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Mensurations non enregistrées : ${cause.message}` : "Impossible d'enregistrer les mensurations sur le serveur.");
+      return;
+    }
     setClients((current) => current.map((client) => client.id === selected.id
       ? saveMeasurementVersion(client, draftMeasurement, measuredAt, versionId)
       : client));
     setNewOrderClientId(selected.id);
     setShowOrderForm(true);
     setView("orders");
-    setNotice(`Mensurations de ${selected.name} enregistrées localement. Troisième étape : créez maintenant une commande.`);
+    setNotice(`Mensurations de ${selected.name} synchronisées sur YÉRÉ. Troisième étape : créez maintenant une commande.`);
   }
 
   const mobileNavItems: { id: View | "more"; label: string; icon: string }[] = [
