@@ -5,7 +5,7 @@ import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, workModes
 import { normalizeBackupOnboardingState, normalizeBackupMarketplaceListings } from "./localBackup";
 import { isMarketplaceListingListValid, type MarketplaceListing } from "./marketplace";
 import { usePersistentState } from "./usePersistentState";
-import { createAtelierClient, createAtelierOrder, listAtelierClients, listAtelierOrders, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment } from "./lib/atelierData";
+import { createAtelierClient, createAtelierOrder, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, createAtelierStockMovementsBatch, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
 import { readSession } from "./lib/supabaseAuth";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, receiveSupplierPurchase, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
@@ -115,14 +115,26 @@ function App() {
     const atelierId = window.sessionStorage.getItem("yere-active-atelier");
     if (!session || !atelierId) return;
     let active = true;
-    void Promise.all([listAtelierClients(session, atelierId), listAtelierOrders(session, atelierId)])
-      .then(([serverClients, serverOrders]) => {
+    void Promise.all([
+      listAtelierClients(session, atelierId), listAtelierOrders(session, atelierId),
+      listAtelierExpenses(session, atelierId), listAtelierStock(session, atelierId)
+    ])
+      .then(([serverClients, serverOrders, serverExpenses, serverStock]) => {
         if (!active) return;
         setClients(serverClients);
-        setOrders((current) => {
-          const legacyLocalOrders = current.filter((order) => !order.serverId);
-          return [...serverOrders, ...legacyLocalOrders];
-        });
+        setOrders((current) => [...serverOrders, ...current.filter((order) => !order.serverId)]);
+        setExpenses((current) => [
+          ...serverExpenses,
+          ...current.filter((expense) => expense.id.startsWith("EXP-") && !serverExpenses.some((item) => item.id === expense.id))
+        ]);
+        setStockItems((current) => [
+          ...serverStock.items,
+          ...current.filter((item) => item.id.startsWith("STK-") && !serverStock.items.some((serverItem) => serverItem.id === item.id))
+        ]);
+        setStockMovements((current) => [
+          ...serverStock.movements,
+          ...current.filter((movement) => movement.id.startsWith("MOV-") && !serverStock.movements.some((serverMovement) => serverMovement.id === movement.id))
+        ]);
       })
       .catch((cause) => {
         if (active) setNotice(cause instanceof Error
@@ -422,7 +434,7 @@ function App() {
     });
   }
 
-  function voidExpense(event: FormEvent<HTMLFormElement>) {
+  async function voidExpense(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const expense = expenses.find((item) => item.id === expenseToVoidId);
     const reason = expenseVoidReason.trim();
@@ -430,16 +442,21 @@ function App() {
       setNotice("Choisissez une dépense active et indiquez le motif de l’annulation.");
       return;
     }
-    const voidedAt = new Date().toISOString().slice(0, 10);
-    setExpenses((current) => current.map((item) => item.id === expense.id
-      ? { ...item, voidedAt, voidReason: reason }
-      : item));
-    setExpenseToVoidId(null);
-    setExpenseVoidReason("");
-    setNotice("Dépense annulée et conservée dans l’historique. Le total des dépenses actives a été recalculé.");
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      const cancelled = await voidAtelierExpense(session, atelierId, expense, new Date().toISOString().slice(0, 10), reason);
+      setExpenses((current) => current.map((item) => item.id === expense.id ? cancelled : item));
+      setExpenseToVoidId(null);
+      setExpenseVoidReason("");
+      setNotice("Dépense annulée sur le serveur et conservée dans l’historique.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Annulation non enregistrée : ${cause.message}` : "Impossible d'annuler cette dépense sur le serveur.");
+    }
   }
 
-  function addStockItem(event: FormEvent<HTMLFormElement>) {
+  async function addStockItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const name = stockName.trim();
     const initialQuantity = Number(stockInitialQuantity);
@@ -449,52 +466,55 @@ function App() {
       setNotice("Vérifiez le nom, l’unité et les quantités du produit.");
       return;
     }
-    const item: StockItem = {
-      id: "STK-" + Date.now(), name, unit: stockUnit,
-      quantity: 0, minimumQuantity,
-      createdAt: new Date().toISOString().slice(0, 10)
-    };
-    if (initialQuantity > 0) {
-      const opening: StockMovement = {
-        id: "MOV-" + Date.now() + "-opening", itemId: item.id, type: "Entrée",
-        quantity: initialQuantity, movedAt: item.createdAt, note: "Stock initial"
-      };
-      const result = recordStockMovement([item], [], opening);
-      if (!result) { setNotice("Impossible d’initialiser le stock. Vérifiez la quantité."); return; }
-      setStockItems(result.items);
-      setStockMovements((current) => [...result.movements, ...current]);
-    } else {
-      setStockItems((current) => [item, ...current]);
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      const created = await createAtelierStockArticle(session, atelierId, {
+        name, unit: stockUnit.trim(), minimumQuantity, initialQuantity,
+        createdAt: new Date().toISOString().slice(0, 10)
+      });
+      setStockItems((current) => [...created.items, ...current.filter((item) => item.id.startsWith("STK-"))]);
+      setStockMovements((current) => [...created.movements, ...current.filter((movement) => movement.id.startsWith("MOV-"))]);
+      setStockName("");
+      setStockInitialQuantity("0");
+      setStockMinimumQuantity("0");
+      setStockFormOpen(false);
+      setNotice("Article et stock initial enregistrés dans l’inventaire de l’atelier.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Article non enregistré : ${cause.message}` : "Impossible d'enregistrer cet article sur le serveur.");
     }
-    setStockName("");
-    setStockInitialQuantity("0");
-    setStockMinimumQuantity("0");
-    setStockFormOpen(false);
-    setNotice("Article ajouté au stock sur cet appareil.");
   }
 
-  function saveStockMovement(event: FormEvent<HTMLFormElement>) {
+  async function saveStockMovement(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const quantity = Number(stockMovementQuantity);
-    const movement: StockMovement = {
-      id: "MOV-" + Date.now(),
+    const movement: Omit<StockMovement, "id"> = {
       itemId: stockMovementItemId ?? "",
       type: stockMovementType,
       quantity,
       movedAt: new Date().toISOString().slice(0, 10),
       note: stockMovementNote.trim() || undefined
     };
-    const result = recordStockMovement(stockItems, stockMovements, movement);
-    if (!result) {
-      setNotice("Mouvement refusé : vérifiez l’article, la quantité et le stock disponible. Une sortie ne peut pas créer un stock négatif.");
+    if (!Number.isFinite(quantity) || quantity <= 0 || !stockItems.some((item) => item.id === movement.itemId)) {
+      setNotice("Mouvement refusé : vérifiez l’article et la quantité.");
       return;
     }
-    setStockItems(result.items);
-    setStockMovements(result.movements);
-    setStockMovementItemId(null);
-    setStockMovementQuantity("");
-    setStockMovementNote("");
-    setNotice("Mouvement de stock enregistré sur cet appareil.");
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      await createAtelierStockMovement(session, atelierId, movement);
+      const refreshed = await listAtelierStock(session, atelierId);
+      setStockItems((current) => [...refreshed.items, ...current.filter((item) => item.id.startsWith("STK-"))]);
+      setStockMovements((current) => [...refreshed.movements, ...current.filter((item) => item.id.startsWith("MOV-"))]);
+      setStockMovementItemId(null);
+      setStockMovementQuantity("");
+      setStockMovementNote("");
+      setNotice("Mouvement de stock enregistré et vérifié sur le serveur.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Mouvement refusé : ${cause.message}` : "Impossible d'enregistrer le mouvement de stock.");
+    }
   }
 
   function addPurchaseLine() {
@@ -548,22 +568,33 @@ function App() {
     setNotice("Achat fournisseur enregistré. Le stock ne changera qu’à la réception effective.");
   }
 
-  function receivePurchase(purchaseId: string) {
+  async function receivePurchase(purchaseId: string) {
     const purchase = supplierPurchases.find((item) => item.id === purchaseId);
     if (!purchase) return;
+    const receivedAt = new Date().toISOString().slice(0, 10);
     const result = receiveSupplierPurchase(
-      purchase, stockItems, stockMovements,
-      new Date().toISOString().slice(0, 10),
-      "MOV-" + Date.now() + "-purchase"
+      purchase, stockItems, stockMovements, receivedAt, "MOV-" + Date.now() + "-purchase"
     );
     if (!result) {
       setNotice("Réception refusée : vérifiez l’état de l’achat, le stock et l’historique des mouvements.");
       return;
     }
-    setStockItems(result.items);
-    setStockMovements(result.movements);
-    setSupplierPurchases((current) => current.map((item) => item.id === purchase.id ? result.purchase : item));
-    setNotice("Achat réceptionné : les entrées de stock et l’historique ont été mis à jour.");
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    const previousIds = new Set(stockMovements.map((movement) => movement.id));
+    const newMovements = result.movements.filter((movement) => !previousIds.has(movement.id));
+    try {
+      const refreshed = await createAtelierStockMovementsBatch(
+        session, atelierId, newMovements.map(({ id: _id, ...movement }) => movement)
+      );
+      setStockItems((current) => [...refreshed.items, ...current.filter((item) => item.id.startsWith("STK-"))]);
+      setStockMovements((current) => [...refreshed.movements, ...current.filter((item) => item.id.startsWith("MOV-"))]);
+      setSupplierPurchases((current) => current.map((item) => item.id === purchase.id ? result.purchase : item));
+      setNotice("Achat réceptionné : les entrées de stock ont été enregistrées ensemble sur le serveur.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Réception non enregistrée : ${cause.message}` : "Impossible de confirmer la réception sur le serveur.");
+    }
   }
 
   function recordSupplierPurchasePayment(event: FormEvent<HTMLFormElement>) {
@@ -606,7 +637,7 @@ function App() {
     setNotice("Achat annulé avec son motif conservé dans l’historique. Le stock n’a pas été modifié.");
   }
 
-  function addExpense(event: FormEvent<HTMLFormElement>) {
+  async function addExpense(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const category = expenseCategory.trim();
     const description = expenseDescription.trim();
@@ -615,18 +646,21 @@ function App() {
       setNotice("Vérifiez la catégorie, le motif et le montant de la dépense. Le montant doit être un entier supérieur à zéro.");
       return;
     }
-    const expense: Expense = {
-      id: "EXP-" + Date.now(),
-      spentAt: new Date().toISOString().slice(0, 10),
-      category,
-      description,
-      amount
-    };
-    setExpenses((current) => [expense, ...current]);
-    setExpenseDescription("");
-    setExpenseAmount("");
-    setExpenseFormOpen(false);
-    setNotice("Dépense de " + formatXof(amount) + " enregistrée sur cet appareil. Aucune copie serveur n’est active.");
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      const expense = await createAtelierExpense(session, atelierId, {
+        spentAt: new Date().toISOString().slice(0, 10), category, description, amount
+      });
+      setExpenses((current) => [expense, ...current]);
+      setExpenseDescription("");
+      setExpenseAmount("");
+      setExpenseFormOpen(false);
+      setNotice("Dépense de " + formatXof(amount) + " enregistrée dans la caisse de l’atelier.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Dépense non enregistrée : ${cause.message}` : "Impossible d'enregistrer la dépense sur le serveur.");
+    }
   }
 
   async function recordOrderPayment(event: FormEvent<HTMLFormElement>) {
