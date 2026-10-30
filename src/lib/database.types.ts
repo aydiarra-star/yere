@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      achat_fournisseur: {
+        Row: {
+          atelier_id: string
+          created_at: string
+          created_by: string | null
+          date_annulation: string | null
+          date_commande: string
+          date_reception: string | null
+          fournisseur_id: string
+          id: string
+          motif_annulation: string | null
+          note: string | null
+          reference: string
+          statut: string
+        }
+        Insert: {
+          atelier_id: string
+          created_at?: string
+          created_by?: string | null
+          date_annulation?: string | null
+          date_commande?: string
+          date_reception?: string | null
+          fournisseur_id: string
+          id?: string
+          motif_annulation?: string | null
+          note?: string | null
+          reference: string
+          statut?: string
+        }
+        Update: {
+          atelier_id?: string
+          created_at?: string
+          created_by?: string | null
+          date_annulation?: string | null
+          date_commande?: string
+          date_reception?: string | null
+          fournisseur_id?: string
+          id?: string
+          motif_annulation?: string | null
+          note?: string | null
+          reference?: string
+          statut?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "achat_fournisseur_atelier_id_fkey"
+            columns: ["atelier_id"]
+            isOneToOne: false
+            referencedRelation: "atelier"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "achat_fournisseur_fk"
+            columns: ["atelier_id", "fournisseur_id"]
+            isOneToOne: false
+            referencedRelation: "fournisseur"
+            referencedColumns: ["atelier_id", "id"]
+          },
+        ]
+      }
       atelier: {
         Row: {
           created_at: string
@@ -226,6 +286,110 @@ export type Database = {
           },
         ]
       }
+      fournisseur: {
+        Row: {
+          actif: boolean
+          atelier_id: string
+          categorie: string | null
+          contact: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          nom: string
+          note: string | null
+          telephone: string | null
+          updated_at: string
+          ville: string | null
+        }
+        Insert: {
+          actif?: boolean
+          atelier_id: string
+          categorie?: string | null
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nom: string
+          note?: string | null
+          telephone?: string | null
+          updated_at?: string
+          ville?: string | null
+        }
+        Update: {
+          actif?: boolean
+          atelier_id?: string
+          categorie?: string | null
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nom?: string
+          note?: string | null
+          telephone?: string | null
+          updated_at?: string
+          ville?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fournisseur_atelier_id_fkey"
+            columns: ["atelier_id"]
+            isOneToOne: false
+            referencedRelation: "atelier"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ligne_achat_fournisseur: {
+        Row: {
+          achat_id: string
+          article_id: string
+          atelier_id: string
+          cout_unitaire_fcfa: number
+          created_at: string
+          id: string
+          nom_article: string
+          quantite: number
+          unite: string
+        }
+        Insert: {
+          achat_id: string
+          article_id: string
+          atelier_id: string
+          cout_unitaire_fcfa: number
+          created_at?: string
+          id?: string
+          nom_article: string
+          quantite: number
+          unite: string
+        }
+        Update: {
+          achat_id?: string
+          article_id?: string
+          atelier_id?: string
+          cout_unitaire_fcfa?: number
+          created_at?: string
+          id?: string
+          nom_article?: string
+          quantite?: number
+          unite?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ligne_achat_article_fk"
+            columns: ["atelier_id", "article_id"]
+            isOneToOne: false
+            referencedRelation: "stock_article"
+            referencedColumns: ["atelier_id", "id"]
+          },
+          {
+            foreignKeyName: "ligne_achat_parent_fk"
+            columns: ["atelier_id", "achat_id"]
+            isOneToOne: false
+            referencedRelation: "achat_fournisseur"
+            referencedColumns: ["atelier_id", "id"]
+          },
+        ]
+      }
       mensuration: {
         Row: {
           atelier_id: string
@@ -310,6 +474,50 @@ export type Database = {
             columns: ["atelier_id", "commande_id"]
             isOneToOne: false
             referencedRelation: "commande"
+            referencedColumns: ["atelier_id", "id"]
+          },
+        ]
+      }
+      paiement_fournisseur: {
+        Row: {
+          achat_id: string
+          atelier_id: string
+          cle_idempotence: string
+          created_at: string
+          created_by: string | null
+          date_paiement: string
+          id: string
+          montant_fcfa: number
+          note: string | null
+        }
+        Insert: {
+          achat_id: string
+          atelier_id: string
+          cle_idempotence: string
+          created_at?: string
+          created_by?: string | null
+          date_paiement?: string
+          id?: string
+          montant_fcfa: number
+          note?: string | null
+        }
+        Update: {
+          achat_id?: string
+          atelier_id?: string
+          cle_idempotence?: string
+          created_at?: string
+          created_by?: string | null
+          date_paiement?: string
+          id?: string
+          montant_fcfa?: number
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paiement_fournisseur_achat_fk"
+            columns: ["atelier_id", "achat_id"]
+            isOneToOne: false
+            referencedRelation: "achat_fournisseur"
             referencedColumns: ["atelier_id", "id"]
           },
         ]
@@ -446,6 +654,27 @@ export type Database = {
       }
       create_stock_movements_batch: {
         Args: { p_atelier_id: string; p_movements: Json }
+        Returns: number
+      }
+      create_supplier_purchase: {
+        Args: {
+          p_atelier_id: string
+          p_date_commande: string
+          p_fournisseur_id: string
+          p_lignes: Json
+          p_note: string
+          p_reference: string
+        }
+        Returns: {
+          achat_id: string
+        }[]
+      }
+      receive_supplier_purchase: {
+        Args: {
+          p_achat_id: string
+          p_atelier_id: string
+          p_date_reception: string
+        }
         Returns: number
       }
     }
