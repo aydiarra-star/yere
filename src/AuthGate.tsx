@@ -52,6 +52,7 @@ export default function AuthGate({ children }: Props) {
         await loadWorkspace(current);
       } catch {
         clearSession();
+        if (active) { setSession(null); setAtelier(null); }
       } finally {
         if (active) setReady(true);
       }
