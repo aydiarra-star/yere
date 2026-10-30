@@ -194,7 +194,7 @@ export default function AuthGate({ children }: Props) {
         <button type="button" onClick={() => void handleSignOut()}>Déconnexion</button>
       </div>
       {pendingInvitations.length > 0 && <div className="auth-invitation-banner"><div><strong>Vous avez {pendingInvitations.length} invitation(s) d’atelier.</strong>{pendingInvitations.map((item) => <span key={item.id}>{item.atelierName} · {item.role}</span>)}</div><div>{pendingInvitations.map((item) => <button key={item.id} className="secondary-button" type="button" disabled={busy} onClick={() => void acceptInvitation(item)}>Rejoindre {item.atelierName}</button>)}</div>{error && <p className="auth-error" role="alert">{error}</p>}</div>}
-      <div className="auth-local-warning" role="status">La connexion, les ateliers, les clients, les mensurations, les commandes, les versements, les dépenses, l’inventaire et les fournisseurs sont synchronisés sur le serveur. La marketplace publique et les sauvegardes serveur restent à finaliser : n’utilisez pas encore ces deux modules pour vos données réelles.</div>
+      <div className="auth-local-warning" role="status">La connexion, les ateliers, les clients, les mensurations, les commandes, les versements, les dépenses, l’inventaire et les fournisseurs sont synchronisés sur le serveur. Les sauvegardes chiffrées sont opérationnelles ; leur restauration complète reste à tester. La marketplace publique est encore en développement : n’y saisissez pas de données réelles.</div>
       {children}
     </>
   );
