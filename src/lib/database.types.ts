@@ -122,10 +122,14 @@ export type Database = {
           created_by: string | null
           date_commande: string
           date_livraison: string | null
+          etape_retouche: string | null
           id: string
+          mensuration_snapshot: Json | null
+          mensuration_snapshot_date: string | null
           prix_fcfa: number
           reference: string
           statut: string
+          type_travail: string
           updated_at: string
           vetement: string
         }
@@ -136,10 +140,14 @@ export type Database = {
           created_by?: string | null
           date_commande?: string
           date_livraison?: string | null
+          etape_retouche?: string | null
           id?: string
+          mensuration_snapshot?: Json | null
+          mensuration_snapshot_date?: string | null
           prix_fcfa: number
           reference: string
           statut?: string
+          type_travail?: string
           updated_at?: string
           vetement: string
         }
@@ -150,10 +158,14 @@ export type Database = {
           created_by?: string | null
           date_commande?: string
           date_livraison?: string | null
+          etape_retouche?: string | null
           id?: string
+          mensuration_snapshot?: Json | null
+          mensuration_snapshot_date?: string | null
           prix_fcfa?: number
           reference?: string
           statut?: string
+          type_travail?: string
           updated_at?: string
           vetement?: string
         }
@@ -260,9 +272,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      create_atelier: {
-        Args: { p_nom: string; p_telephone?: string; p_ville?: string }
-        Returns: string
+      create_commande_with_initial_payment: {
+        Args: {
+          p_acompte_initial: number
+          p_atelier_id: string
+          p_client_id: string
+          p_date_commande: string
+          p_date_livraison: string
+          p_etape_retouche: string
+          p_mensuration_snapshot: Json
+          p_mensuration_snapshot_date: string
+          p_payment_key: string
+          p_prix: number
+          p_reference: string
+          p_statut: string
+          p_type_travail: string
+          p_vetement: string
+        }
+        Returns: {
+          commande_id: string
+          reference: string
+        }[]
       }
     }
     Enums: {
