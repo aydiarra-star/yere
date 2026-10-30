@@ -5,7 +5,7 @@ import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, workModes
 import { normalizeBackupOnboardingState, normalizeBackupMarketplaceListings } from "./localBackup";
 import { isMarketplaceListingListValid, type MarketplaceListing } from "./marketplace";
 import { usePersistentState } from "./usePersistentState";
-import { createAtelierClient, listAtelierClients, saveAtelierMeasurement } from "./lib/atelierData";
+import { createAtelierClient, createAtelierOrder, listAtelierClients, listAtelierOrders, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment } from "./lib/atelierData";
 import { readSession } from "./lib/supabaseAuth";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, receiveSupplierPurchase, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
@@ -115,15 +115,22 @@ function App() {
     const atelierId = window.sessionStorage.getItem("yere-active-atelier");
     if (!session || !atelierId) return;
     let active = true;
-    void listAtelierClients(session, atelierId)
-      .then((serverClients) => { if (active) setClients(serverClients); })
+    void Promise.all([listAtelierClients(session, atelierId), listAtelierOrders(session, atelierId)])
+      .then(([serverClients, serverOrders]) => {
+        if (!active) return;
+        setClients(serverClients);
+        setOrders((current) => {
+          const legacyLocalOrders = current.filter((order) => !order.serverId);
+          return [...serverOrders, ...legacyLocalOrders];
+        });
+      })
       .catch((cause) => {
         if (active) setNotice(cause instanceof Error
-          ? `Impossible de synchroniser les clients : ${cause.message}`
-          : "Impossible de synchroniser les clients avec le serveur.");
+          ? `Impossible de synchroniser les données de l'atelier : ${cause.message}`
+          : "Impossible de synchroniser les données de l'atelier avec le serveur.");
       });
     return () => { active = false; };
-  }, [setClients]);
+  }, [setClients, setOrders]);
 
   const visibleClients = useMemo(() => clients.filter((client) => matchesClient(client, query)), [clients, query]);
   const outstanding = orders.reduce((sum, order) => sum + balanceDue(order), 0);
@@ -221,12 +228,18 @@ function App() {
     setNotice(`Fiche de ${name} enregistrée dans votre atelier YÉRÉ.${firstClientMessage}`);
   }
 
-  function addOrder(event: FormEvent<HTMLFormElement>) {
+  async function addOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const price = Number(newOrderPrice);
     const deposit = Number(newOrderDeposit);
     if (!isOrderInputValid({ clientId: newOrderClientId, garment: newOrderGarment, dueDate: newOrderDueDate, price, deposit }, clients.map((client) => client.id))) {
       setNotice("Vérifiez le client, le vêtement, la date de livraison, le prix et l'acompte. Les montants doivent être des nombres entiers positifs, et l'acompte ne peut pas dépasser le prix.");
+      return;
+    }
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) {
+      setNotice("Votre session ou votre atelier n'est plus disponible. Reconnectez-vous.");
       return;
     }
     const orderedAt = new Date().toISOString().slice(0, 10);
@@ -240,27 +253,25 @@ function App() {
       setNotice("Les mensurations du client sont invalides. Vérifiez-les avant de créer la commande.");
       return;
     }
-    const order: Order = {
-      id: `YR-${Date.now()}`,
-      clientId: newOrderClientId,
-      garment: newOrderGarment.trim(),
-      kind: newOrderKind,
-      ...(newOrderKind === "retouche" ? { retouchStage: "À examiner" as RetouchStage } : {}),
-      ...measurementSnapshot,
-      dueDate: newOrderDueDate,
-      orderedAt,
-      price,
-      deposit,
-      payments: deposit > 0 ? [{ id: "PAY-" + Date.now() + "-initial", amount: deposit, paidAt: new Date().toISOString().slice(0, 10), note: "Acompte initial" }] : [],
-      status: "À préparer"
-    };
-    setOrders((current) => [order, ...current]);
-    setNewOrderGarment("");
-    setNewOrderKind("confection");
-    setNewOrderPrice("");
-    setNewOrderDeposit("0");
-    setShowOrderForm(false);
-    setNotice("Commande créée sur cet appareil. Aucune sauvegarde serveur n’est active.");
+    const reference = `YR-${Date.now()}`;
+    try {
+      const order = await createAtelierOrder(session, atelierId, {
+        reference, clientId: newOrderClientId, garment: newOrderGarment.trim(),
+        kind: newOrderKind, ...(newOrderKind === "retouche" ? { retouchStage: "À examiner" as RetouchStage } : {}),
+        ...measurementSnapshot, dueDate: newOrderDueDate, orderedAt, price, deposit, status: "À préparer"
+      });
+      setOrders((current) => [order, ...current]);
+      setNewOrderGarment("");
+      setNewOrderKind("confection");
+      setNewOrderPrice("");
+      setNewOrderDeposit("0");
+      setShowOrderForm(false);
+      setNotice(`Commande ${order.id} enregistrée dans votre atelier YÉRÉ, avec ${deposit > 0 ? "l'acompte initial" : "un solde intégral à régler"} synchronisé sur le serveur.`);
+    } catch (cause) {
+      setNotice(cause instanceof Error
+        ? `Commande non enregistrée : ${cause.message}`
+        : "Impossible d'enregistrer la commande sur le serveur.");
+    }
   }
 
   async function compressMarketplacePhoto(file: File): Promise<string> {
@@ -618,7 +629,7 @@ function App() {
     setNotice("Dépense de " + formatXof(amount) + " enregistrée sur cet appareil. Aucune copie serveur n’est active.");
   }
 
-  function recordOrderPayment(event: FormEvent<HTMLFormElement>) {
+  async function recordOrderPayment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const order = orders.find((item) => item.id === paymentOrderId);
     const amount = Number(paymentAmount);
@@ -627,8 +638,7 @@ function App() {
       return;
     }
     const updated = addOrderPayment(order, {
-      id: "PAY-" + Date.now(),
-      amount,
+      id: "pending-" + Date.now(), amount,
       paidAt: new Date().toISOString().slice(0, 10),
       note: "Versement enregistré manuellement"
     });
@@ -636,19 +646,59 @@ function App() {
       setNotice("Paiement refusé : vérifiez le montant restant dû. Un paiement ne peut pas dépasser le solde.");
       return;
     }
-    setOrders((current) => current.map((item) => item.id === order.id ? updated : item));
-    setPaymentAmount("");
-    setPaymentOrderId(null);
-    setNotice("Versement de " + formatXof(amount) + " enregistré sur cet appareil. Aucune copie serveur n’est active.");
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) {
+      setNotice("Votre session ou votre atelier n'est plus disponible. Reconnectez-vous.");
+      return;
+    }
+    try {
+      const savedPayment = await saveAtelierPayment(session, atelierId, order, {
+        amount, paidAt: new Date().toISOString().slice(0, 10), note: "Versement enregistré manuellement"
+      });
+      const confirmed = addOrderPayment(order, savedPayment);
+      if (!confirmed) throw new Error("Le versement serveur n'a pas pu être intégré à l'historique.");
+      setOrders((current) => current.map((item) => item.id === order.id ? confirmed : item));
+      setPaymentAmount("");
+      setPaymentOrderId(null);
+      setNotice("Versement de " + formatXof(amount) + " enregistré et confirmé sur le serveur YÉRÉ.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Versement non enregistré : ${cause.message}` : "Impossible d'enregistrer le versement sur le serveur.");
+    }
   }
 
-  function updateStatus(orderId: string, status: OrderStatus) {
-    setOrders((current) => current.map((order) => order.id === orderId ? { ...order, status } : order));
+  async function updateStatus(orderId: string, status: OrderStatus) {
+    const order = orders.find((item) => item.id === orderId);
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!order || !session || !atelierId) {
+      setNotice("Commande ou session introuvable. Reconnectez-vous puis réessayez.");
+      return;
+    }
+    try {
+      await saveAtelierOrderStatus(session, atelierId, order, status);
+      setOrders((current) => current.map((item) => item.id === orderId ? { ...item, status } : item));
+      setNotice(`Statut de la commande ${orderId} synchronisé.`);
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Statut non modifié : ${cause.message}` : "Impossible de modifier le statut sur le serveur.");
+    }
   }
 
-  function updateRetouchStage(orderId: string, retouchStage: RetouchStage) {
-    setOrders((current) => current.map((order) => order.id === orderId && order.kind === "retouche" ? { ...order, retouchStage } : order));
-    setNotice("Étape de retouche mise à jour sur cet appareil. Aucune sauvegarde serveur n’est active.");
+  async function updateRetouchStage(orderId: string, retouchStage: RetouchStage) {
+    const order = orders.find((item) => item.id === orderId && item.kind === "retouche");
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!order || !session || !atelierId) {
+      setNotice("Commande de retouche ou session introuvable. Réessayez après reconnexion.");
+      return;
+    }
+    try {
+      await saveAtelierOrderStatus(session, atelierId, order, order.status, retouchStage);
+      setOrders((current) => current.map((item) => item.id === orderId && item.kind === "retouche" ? { ...item, retouchStage } : item));
+      setNotice("Étape de retouche synchronisée sur le serveur YÉRÉ.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Étape de retouche non modifiée : ${cause.message}` : "Impossible de synchroniser l'étape de retouche.");
+    }
   }
 
   function updateMeasurement(field: keyof Measurement, value: string) {
