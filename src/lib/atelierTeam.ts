@@ -53,3 +53,8 @@ export async function acceptAtelierInvitation(session:YereSession,invitationId:s
   if(typeof data!=="string")throw new Error("L’acceptation de l’invitation n’a pas été confirmée.");
   return data;
 }
+
+export async function cancelAtelierInvitation(session:YereSession,invitationId:string):Promise<void>{
+  const data=await parse(await authenticatedFetch(session,"rest/v1/rpc/cancel_atelier_invitation",{method:"POST",body:JSON.stringify({p_invitation_id:invitationId})}));
+  if(data!==true)throw new Error("La révocation de l’invitation n’a pas été confirmée.");
+}
