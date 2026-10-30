@@ -58,3 +58,16 @@ export async function payAtelierSupplierPurchase(session:YereSession,atelierId:s
 export async function cancelAtelierSupplierPurchase(session:YereSession,atelierId:string,purchaseId:string,date:string,reason:string):Promise<void>{
  await json(await authenticatedFetch(session,`rest/v1/achat_fournisseur?id=eq.${encodeURIComponent(purchaseId)}&atelier_id=eq.${encodeURIComponent(atelierId)}&statut=eq.a_recevoir`,{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify({statut:"annulee",date_annulation:date,motif_annulation:reason})}));
 }
+
+export type AtelierSupplierProfile = {
+ businessName:string; contactName:string; phone:string; city:string; category:string; shopName:string; description:string;
+};
+type SupplierProfileRow = {nom_entreprise:string;nom_contact:string;telephone:string;ville:string;categorie:string;nom_boutique:string;description:string};
+export async function getAtelierSupplierProfile(session:YereSession,atelierId:string):Promise<AtelierSupplierProfile|null>{
+ const r=await authenticatedFetch(session,`rest/v1/profil_fournisseur?select=nom_entreprise,nom_contact,telephone,ville,categorie,nom_boutique,description&atelier_id=eq.${encodeURIComponent(atelierId)}`);
+ const data=await json(r);if(!Array.isArray(data))throw new Error("Réponse du profil fournisseur invalide.");
+ const x=(data as SupplierProfileRow[])[0];return x?{businessName:x.nom_entreprise,contactName:x.nom_contact,phone:x.telephone,city:x.ville,category:x.categorie,shopName:x.nom_boutique,description:x.description}:null;
+}
+export async function saveAtelierSupplierProfile(session:YereSession,atelierId:string,profile:AtelierSupplierProfile):Promise<void>{
+ await json(await authenticatedFetch(session,"rest/v1/profil_fournisseur?on_conflict=atelier_id",{method:"POST",headers:{"Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({atelier_id:atelierId,nom_entreprise:profile.businessName,nom_contact:profile.contactName,telephone:profile.phone,ville:profile.city,categorie:profile.category,nom_boutique:profile.shopName,description:profile.description})}));
+}
