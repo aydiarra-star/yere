@@ -12,3 +12,13 @@
 .auth-local-warning{padding:9px 16px;background:#fff8e7;color:#79551b;text-align:center;font-size:11px;line-height:1.5;border-bottom:1px solid #f0dfb8}
 .auth-loading{align-content:center;gap:14px;color:#66708b}.auth-loading .auth-mark{margin:auto}.auth-loading p{font-size:13px}
 @media(max-width:560px){.auth-session-bar{align-items:flex-start;font-size:10px}.auth-card{border-radius:20px}.auth-brand{margin-bottom:28px}}
+
+.auth-invitation-list{display:grid;gap:14px;margin:0 0 24px;padding:18px;border:1px solid rgba(39,94,77,.18);border-radius:16px;background:rgba(39,94,77,.045)}
+.auth-invitation-list h2{margin:0;font-size:1.2rem;line-height:1.35}
+.auth-invitation-item{display:grid;gap:7px;padding:14px;border-radius:12px;background:var(--surface,#fff);border:1px solid rgba(0,0,0,.08)}
+.auth-invitation-item span,.auth-invitation-item small{color:var(--muted,#68736e);font-size:.9rem}
+.auth-divider{display:flex;align-items:center;gap:12px;color:var(--muted,#68736e);font-size:.82rem;margin-top:8px}
+.auth-divider:before,.auth-divider:after{content:"";height:1px;flex:1;background:rgba(0,0,0,.12)}
+.auth-invitation-banner{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:12px 20px;background:#f4f8f5;border-bottom:1px solid rgba(39,94,77,.15)}
+.auth-invitation-banner>div:first-child{display:grid;gap:4px}.auth-invitation-banner span{font-size:.88rem;color:#58675f}
+.auth-invitation-banner>div:last-of-type{display:flex;gap:8px;flex-wrap:wrap}
