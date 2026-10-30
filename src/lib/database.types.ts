@@ -339,6 +339,50 @@ export type Database = {
           },
         ]
       }
+      invitation_atelier: {
+        Row: {
+          accepted_at: string | null
+          atelier_id: string
+          cancelled_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          role: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          atelier_id: string
+          cancelled_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          role: string
+        }
+        Update: {
+          accepted_at?: string | null
+          atelier_id?: string
+          cancelled_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitation_atelier_atelier_id_fkey"
+            columns: ["atelier_id"]
+            isOneToOne: false
+            referencedRelation: "atelier"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ligne_achat_fournisseur: {
         Row: {
           achat_id: string
@@ -666,6 +710,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_atelier_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: string
+      }
+      create_atelier_invitation: {
+        Args: { p_atelier_id: string; p_email: string; p_role: string }
+        Returns: {
+          email: string
+          expires_at: string
+          id: string
+          role: string
+        }[]
+      }
       create_commande_with_initial_payment: {
         Args: {
           p_acompte_initial: number
