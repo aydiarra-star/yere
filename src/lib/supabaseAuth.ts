@@ -42,6 +42,38 @@ function saveSession(session: YereSession): void {
   window.sessionStorage.setItem("yere-user-scope", session.user.id);
 }
 
+/**
+ * Consumes Supabase's email-confirmation implicit-flow fragment.
+ * The access token is validated against /auth/v1/user before it is stored.
+ */
+export async function consumeAuthCallback(): Promise<YereSession | null> {
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+  const callbackError = params.get("error_description") || params.get("error");
+  if (!accessToken && !callbackError) return null;
+
+  // Remove credentials from the address bar before doing any further work.
+  window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+
+  if (callbackError) throw new Error(decodeURIComponent(callbackError.replace(/\+/g, " ")));
+  if (!accessToken || !refreshToken) throw new Error("Le lien de confirmation est incomplet. Demandez un nouvel e-mail de confirmation.");
+
+  const response = await fetch(apiUrl("auth/v1/user"), { method: "GET", headers: headers(accessToken) });
+  const user = await parseResponse(response) as Record<string, unknown>;
+  if (typeof user.id !== "string") throw new Error("Supabase n'a pas confirmé l'identité du compte.");
+
+  const expiresIn = Number(params.get("expires_in") || 3600);
+  const session: YereSession = {
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    expires_at: Number(params.get("expires_at")) || Math.floor(Date.now() / 1000) + expiresIn,
+    user: { id: user.id, email: typeof user.email === "string" ? user.email : undefined }
+  };
+  saveSession(session);
+  return session;
+}
+
 export function readSession(): YereSession | null {
   try {
     const raw = window.localStorage.getItem(SESSION_KEY);
@@ -70,7 +102,9 @@ async function parseResponse(response: Response): Promise<unknown> {
 }
 
 export async function signUp(email: string, password: string): Promise<{ session: YereSession | null }> {
-  const response = await fetch(apiUrl("auth/v1/signup"), { method: "POST", headers: headers(), body: JSON.stringify({ email, password }) });
+  // Supabase's redirect_to parameter overrides any localhost Site URL for this signup.
+  const redirectTo = `${window.location.origin}/`;
+  const response = await fetch(apiUrl(`auth/v1/signup?redirect_to=${encodeURIComponent(redirectTo)}`), { method: "POST", headers: headers(), body: JSON.stringify({ email, password }) });
   const body = await parseResponse(response);
   const session = toSession(body);
   if (session) saveSession(session);
