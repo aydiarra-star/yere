@@ -1,0 +1,85 @@
+name: Sauvegarde Supabase YÉRÉ
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yere-supabase-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Exporter, chiffrer et archiver la base métier
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Vérifier la configuration
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$SUPABASE_DB_URL" ]]; then
+            echo "::error::Le secret SUPABASE_DB_URL est absent."
+            exit 1
+          fi
+          if [[ ! "$BACKUP_AGE_RECIPIENT" =~ ^age1[0-9a-z]+$ ]]; then
+            echo "::error::La variable BACKUP_AGE_RECIPIENT est absente ou invalide."
+            exit 1
+          fi
+
+      - name: Installer Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Installer age
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes age
+
+      - name: Exporter schéma, données et historique des migrations
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p backup
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/roles.sql --role-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/schema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/data.sql --use-copy --data-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/migration-history-schema.sql --schema supabase_migrations
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/migration-history-data.sql --use-copy --data-only --schema supabase_migrations
+          test -s backup/schema.sql
+          test -s backup/data.sql
+          printf 'Projet: YÉRÉ\nDate UTC: %s\nCommit: %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$GITHUB_SHA" > backup/README.txt
+          tar -czf yere-db-backup.tar.gz -C backup .
+          test -s yere-db-backup.tar.gz
+
+      - name: Chiffrer l'archive avant tout téléversement
+        shell: bash
+        env:
+          BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+        run: |
+          set -euo pipefail
+          age --encrypt --recipient "$BACKUP_AGE_RECIPIENT" --output yere-db-backup.tar.gz.age yere-db-backup.tar.gz
+          rm -f yere-db-backup.tar.gz
+          sha256sum yere-db-backup.tar.gz.age > yere-db-backup.tar.gz.age.sha256
+          test -s yere-db-backup.tar.gz.age
+
+      - name: Déposer uniquement l'archive chiffrée (14 jours)
+        uses: actions/upload-artifact@v4
+        with:
+          name: yere-supabase-backup-${{ github.run_id }}
+          path: |
+            yere-db-backup.tar.gz.age
+            yere-db-backup.tar.gz.age.sha256
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

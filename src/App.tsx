@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import HomeDashboard from "./HomeDashboard";
-import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, filterOrdersByDelivery, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, retouchStages, recordStockMovement, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderDeliveryFilter, type OrderStatus, type RetouchStage, type StockItem, type StockMovement } from "./domain";
+import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, filterOrdersByDelivery, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, retouchStages, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderDeliveryFilter, type OrderStatus, type RetouchStage, type StockItem, type StockMovement } from "./domain";
 import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, workModes, type AtelierProfile, type WorkMode } from "./atelierProfile";
 import { normalizeBackupOnboardingState, normalizeBackupMarketplaceListings } from "./localBackup";
 import { isMarketplaceListingListValid, type MarketplaceListing } from "./marketplace";
 import { usePersistentState } from "./usePersistentState";
-import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, receiveSupplierPurchase, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
+import { createAtelierClient, createAtelierOrder, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
+import { readSession } from "./lib/supabaseAuth";
+import { cancelAtelierInvitation, createAtelierInvitation, listAtelierInvitations, listAtelierMembers, type AtelierInvitation, type AtelierMember } from "./lib/atelierTeam";
+import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, getAtelierSupplierProfile, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, saveAtelierSupplierProfile, type AtelierSupplier } from "./lib/atelierSuppliers";
+import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
 const emptyMeasurement: Measurement = { bust: "", waist: "", hips: "", shoulder: "", sleeve: "", length: "", arm: "", neck: "", thigh: "", legLength: "", garmentType: "Tenue complète", note: "" };
 
@@ -87,6 +91,12 @@ function App() {
   const [stockMovementQuantity, setStockMovementQuantity] = useState("");
   const [stockMovementNote, setStockMovementNote] = useState("");
   const [supplierPurchases, setSupplierPurchases] = usePersistentState<SupplierPurchase[]>("yere-demo-supplier-purchases-v1", [], isSupplierPurchaseListValid);
+  const [supplierDirectory, setSupplierDirectory] = useState<AtelierSupplier[]>([]);
+  const [teamMembers, setTeamMembers] = useState<AtelierMember[]>([]);
+  const [teamInvitations, setTeamInvitations] = useState<AtelierInvitation[]>([]);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"gestionnaire" | "employe">("employe");
+  const [teamBusy, setTeamBusy] = useState(false);
   const [purchaseFormOpen, setPurchaseFormOpen] = useState(false);
   const [purchaseSupplierName, setPurchaseSupplierName] = useState("");
   const [purchaseStockItemId, setPurchaseStockItemId] = useState("");
@@ -108,7 +118,66 @@ function App() {
     if (onboardingStartedAt === null) setOnboardingStartedAt(Date.now());
   }, [onboardingStartedAt, setOnboardingStartedAt]);
 
+  useEffect(() => {
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) return;
+    let active = true;
+    void Promise.all([
+      listAtelierClients(session, atelierId), listAtelierOrders(session, atelierId),
+      listAtelierExpenses(session, atelierId), listAtelierStock(session, atelierId),
+      listAtelierSuppliers(session, atelierId), listAtelierSupplierPurchases(session, atelierId), getAtelierSupplierProfile(session, atelierId),
+      listAtelierMembers(session, atelierId), listAtelierInvitations(session, atelierId)
+    ])
+      .then(([serverClients, serverOrders, serverExpenses, serverStock, serverSuppliers, serverPurchases, serverSupplierProfile, serverMembers, serverInvitations]) => {
+        if (!active) return;
+        setClients(serverClients);
+        setOrders((current) => [...serverOrders, ...current.filter((order) => !order.serverId)]);
+        setExpenses((current) => [
+          ...serverExpenses,
+          ...current.filter((expense) => expense.id.startsWith("EXP-") && !serverExpenses.some((item) => item.id === expense.id))
+        ]);
+        setStockItems((current) => [
+          ...serverStock.items,
+          ...current.filter((item) => item.id.startsWith("STK-") && !serverStock.items.some((serverItem) => serverItem.id === item.id))
+        ]);
+        setStockMovements((current) => [
+          ...serverStock.movements,
+          ...current.filter((movement) => movement.id.startsWith("MOV-") && !serverStock.movements.some((serverMovement) => serverMovement.id === movement.id))
+        ]);
+        setSupplierDirectory(serverSuppliers);
+        setTeamMembers(serverMembers);
+        setTeamInvitations(serverInvitations);
+        if (serverSupplierProfile) setSupplier(serverSupplierProfile);
+        const supplierName = new Map(serverSuppliers.map((item) => [item.id, item.name]));
+        const mappedPurchases: SupplierPurchase[] = serverPurchases.map((purchase) => ({
+          id: purchase.id,
+          supplierName: supplierName.get(purchase.supplierId) ?? "Fournisseur",
+          orderedAt: purchase.orderedAt,
+          lines: purchase.lines,
+          status: purchase.status,
+          ...(purchase.receivedAt ? { receivedAt: purchase.receivedAt } : {}),
+          ...(purchase.cancelledAt ? { cancelledAt: purchase.cancelledAt } : {}),
+          ...(purchase.cancelReason ? { cancelReason: purchase.cancelReason } : {}),
+          ...(purchase.note ? { note: purchase.note } : {}),
+          payments: purchase.payments
+        }));
+        setSupplierPurchases((current) => [
+          ...mappedPurchases,
+          ...current.filter((purchase) => purchase.id.startsWith("ACH-") && !mappedPurchases.some((serverPurchase) => serverPurchase.id === purchase.id))
+        ]);
+      })
+      .catch((cause) => {
+        if (active) setNotice(cause instanceof Error
+          ? `Impossible de synchroniser les données de l'atelier : ${cause.message}`
+          : "Impossible de synchroniser les données de l'atelier avec le serveur.");
+      });
+    return () => { active = false; };
+  }, [setClients, setOrders, setSupplierPurchases]);
+
   const visibleClients = useMemo(() => clients.filter((client) => matchesClient(client, query)), [clients, query]);
+  const currentUserId = readSession()?.user.id;
+  const canManageTeam = teamMembers.some((member) => member.userId === currentUserId && member.active && (member.role === "proprietaire" || member.role === "gestionnaire"));
   const outstanding = orders.reduce((sum, order) => sum + balanceDue(order), 0);
   const outstandingOrderCount = orders.filter((order) => balanceDue(order) > 0).length;
   const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.voidedAt ? 0 : expense.amount), 0);
@@ -172,17 +241,23 @@ function App() {
     setDraftMeasurement(client ? { ...client.measurement } : { ...emptyMeasurement });
   }, [selectedClient, clients]);
 
-  function addClient(event: FormEvent<HTMLFormElement>) {
+  async function addClient(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const name = clientName.trim();
     if (!name) return;
-    const client: Client = {
-      id: `c-${Date.now()}`,
-      name,
-      phone: clientPhone.trim(),
-      createdAt: new Date().toISOString().slice(0, 10),
-      measurement: { ...emptyMeasurement }
-    };
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) {
+      setNotice("Votre session ou votre atelier n'est plus disponible. Reconnectez-vous.");
+      return;
+    }
+    let client: Client;
+    try {
+      client = await createAtelierClient(session, atelierId, { name, phone: clientPhone.trim() });
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Client non enregistré : ${cause.message}` : "Impossible d'enregistrer ce client sur le serveur.");
+      return;
+    }
     setClients((current) => [client, ...current]);
     setNewOrderClientId(client.id);
     setClientName("");
@@ -195,15 +270,21 @@ function App() {
           ? " Première fiche créée en moins de 3 minutes : parcours de démarrage réussi."
           : " Le premier client a été créé après 3 minutes : le parcours pourra être simplifié.")
       : "";
-    setNotice(`Fiche de ${name} créée sur cet appareil.${firstClientMessage}`);
+    setNotice(`Fiche de ${name} enregistrée dans votre atelier YÉRÉ.${firstClientMessage}`);
   }
 
-  function addOrder(event: FormEvent<HTMLFormElement>) {
+  async function addOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const price = Number(newOrderPrice);
     const deposit = Number(newOrderDeposit);
     if (!isOrderInputValid({ clientId: newOrderClientId, garment: newOrderGarment, dueDate: newOrderDueDate, price, deposit }, clients.map((client) => client.id))) {
       setNotice("Vérifiez le client, le vêtement, la date de livraison, le prix et l'acompte. Les montants doivent être des nombres entiers positifs, et l'acompte ne peut pas dépasser le prix.");
+      return;
+    }
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) {
+      setNotice("Votre session ou votre atelier n'est plus disponible. Reconnectez-vous.");
       return;
     }
     const orderedAt = new Date().toISOString().slice(0, 10);
@@ -217,27 +298,25 @@ function App() {
       setNotice("Les mensurations du client sont invalides. Vérifiez-les avant de créer la commande.");
       return;
     }
-    const order: Order = {
-      id: `YR-${Date.now()}`,
-      clientId: newOrderClientId,
-      garment: newOrderGarment.trim(),
-      kind: newOrderKind,
-      ...(newOrderKind === "retouche" ? { retouchStage: "À examiner" as RetouchStage } : {}),
-      ...measurementSnapshot,
-      dueDate: newOrderDueDate,
-      orderedAt,
-      price,
-      deposit,
-      payments: deposit > 0 ? [{ id: "PAY-" + Date.now() + "-initial", amount: deposit, paidAt: new Date().toISOString().slice(0, 10), note: "Acompte initial" }] : [],
-      status: "À préparer"
-    };
-    setOrders((current) => [order, ...current]);
-    setNewOrderGarment("");
-    setNewOrderKind("confection");
-    setNewOrderPrice("");
-    setNewOrderDeposit("0");
-    setShowOrderForm(false);
-    setNotice("Commande créée sur cet appareil. Aucune sauvegarde serveur n’est active.");
+    const reference = `YR-${Date.now()}`;
+    try {
+      const order = await createAtelierOrder(session, atelierId, {
+        reference, clientId: newOrderClientId, garment: newOrderGarment.trim(),
+        kind: newOrderKind, ...(newOrderKind === "retouche" ? { retouchStage: "À examiner" as RetouchStage } : {}),
+        ...measurementSnapshot, dueDate: newOrderDueDate, orderedAt, price, deposit, status: "À préparer"
+      });
+      setOrders((current) => [order, ...current]);
+      setNewOrderGarment("");
+      setNewOrderKind("confection");
+      setNewOrderPrice("");
+      setNewOrderDeposit("0");
+      setShowOrderForm(false);
+      setNotice(`Commande ${order.id} enregistrée dans votre atelier YÉRÉ, avec ${deposit > 0 ? "l'acompte initial" : "un solde intégral à régler"} synchronisé sur le serveur.`);
+    } catch (cause) {
+      setNotice(cause instanceof Error
+        ? `Commande non enregistrée : ${cause.message}`
+        : "Impossible d'enregistrer la commande sur le serveur.");
+    }
   }
 
   async function compressMarketplacePhoto(file: File): Promise<string> {
@@ -388,7 +467,7 @@ function App() {
     });
   }
 
-  function voidExpense(event: FormEvent<HTMLFormElement>) {
+  async function voidExpense(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const expense = expenses.find((item) => item.id === expenseToVoidId);
     const reason = expenseVoidReason.trim();
@@ -396,16 +475,25 @@ function App() {
       setNotice("Choisissez une dépense active et indiquez le motif de l’annulation.");
       return;
     }
-    const voidedAt = new Date().toISOString().slice(0, 10);
-    setExpenses((current) => current.map((item) => item.id === expense.id
-      ? { ...item, voidedAt, voidReason: reason }
-      : item));
-    setExpenseToVoidId(null);
-    setExpenseVoidReason("");
-    setNotice("Dépense annulée et conservée dans l’historique. Le total des dépenses actives a été recalculé.");
+    if (expense.id.startsWith("EXP-")) {
+      setNotice("Cette dépense provient d'une ancienne sauvegarde locale et n'est pas encore importée dans la caisse serveur. Conservez-la sur cet appareil jusqu'à sa migration.");
+      return;
+    }
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      const cancelled = await voidAtelierExpense(session, atelierId, expense, new Date().toISOString().slice(0, 10), reason);
+      setExpenses((current) => current.map((item) => item.id === expense.id ? cancelled : item));
+      setExpenseToVoidId(null);
+      setExpenseVoidReason("");
+      setNotice("Dépense annulée sur le serveur et conservée dans l’historique.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Annulation non enregistrée : ${cause.message}` : "Impossible d'annuler cette dépense sur le serveur.");
+    }
   }
 
-  function addStockItem(event: FormEvent<HTMLFormElement>) {
+  async function addStockItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const name = stockName.trim();
     const initialQuantity = Number(stockInitialQuantity);
@@ -415,52 +503,59 @@ function App() {
       setNotice("Vérifiez le nom, l’unité et les quantités du produit.");
       return;
     }
-    const item: StockItem = {
-      id: "STK-" + Date.now(), name, unit: stockUnit,
-      quantity: 0, minimumQuantity,
-      createdAt: new Date().toISOString().slice(0, 10)
-    };
-    if (initialQuantity > 0) {
-      const opening: StockMovement = {
-        id: "MOV-" + Date.now() + "-opening", itemId: item.id, type: "Entrée",
-        quantity: initialQuantity, movedAt: item.createdAt, note: "Stock initial"
-      };
-      const result = recordStockMovement([item], [], opening);
-      if (!result) { setNotice("Impossible d’initialiser le stock. Vérifiez la quantité."); return; }
-      setStockItems(result.items);
-      setStockMovements((current) => [...result.movements, ...current]);
-    } else {
-      setStockItems((current) => [item, ...current]);
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      const created = await createAtelierStockArticle(session, atelierId, {
+        name, unit: stockUnit.trim(), minimumQuantity, initialQuantity,
+        createdAt: new Date().toISOString().slice(0, 10)
+      });
+      setStockItems((current) => [...created.items, ...current.filter((item) => item.id.startsWith("STK-"))]);
+      setStockMovements((current) => [...created.movements, ...current.filter((movement) => movement.id.startsWith("MOV-"))]);
+      setStockName("");
+      setStockInitialQuantity("0");
+      setStockMinimumQuantity("0");
+      setStockFormOpen(false);
+      setNotice("Article et stock initial enregistrés dans l’inventaire de l’atelier.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Article non enregistré : ${cause.message}` : "Impossible d'enregistrer cet article sur le serveur.");
     }
-    setStockName("");
-    setStockInitialQuantity("0");
-    setStockMinimumQuantity("0");
-    setStockFormOpen(false);
-    setNotice("Article ajouté au stock sur cet appareil.");
   }
 
-  function saveStockMovement(event: FormEvent<HTMLFormElement>) {
+  async function saveStockMovement(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const quantity = Number(stockMovementQuantity);
-    const movement: StockMovement = {
-      id: "MOV-" + Date.now(),
+    const movement: Omit<StockMovement, "id"> = {
       itemId: stockMovementItemId ?? "",
       type: stockMovementType,
       quantity,
       movedAt: new Date().toISOString().slice(0, 10),
       note: stockMovementNote.trim() || undefined
     };
-    const result = recordStockMovement(stockItems, stockMovements, movement);
-    if (!result) {
-      setNotice("Mouvement refusé : vérifiez l’article, la quantité et le stock disponible. Une sortie ne peut pas créer un stock négatif.");
+    if (!Number.isFinite(quantity) || quantity <= 0 || !stockItems.some((item) => item.id === movement.itemId)) {
+      setNotice("Mouvement refusé : vérifiez l’article et la quantité.");
       return;
     }
-    setStockItems(result.items);
-    setStockMovements(result.movements);
-    setStockMovementItemId(null);
-    setStockMovementQuantity("");
-    setStockMovementNote("");
-    setNotice("Mouvement de stock enregistré sur cet appareil.");
+    if (movement.itemId.startsWith("STK-")) {
+      setNotice("Cet article vient d'une ancienne sauvegarde locale et n'est pas encore importé dans l'inventaire serveur.");
+      return;
+    }
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      await createAtelierStockMovement(session, atelierId, movement);
+      const refreshed = await listAtelierStock(session, atelierId);
+      setStockItems((current) => [...refreshed.items, ...current.filter((item) => item.id.startsWith("STK-"))]);
+      setStockMovements((current) => [...refreshed.movements, ...current.filter((item) => item.id.startsWith("MOV-"))]);
+      setStockMovementItemId(null);
+      setStockMovementQuantity("");
+      setStockMovementNote("");
+      setNotice("Mouvement de stock enregistré et vérifié sur le serveur.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Mouvement refusé : ${cause.message}` : "Impossible d'enregistrer le mouvement de stock.");
+    }
   }
 
   function addPurchaseLine() {
@@ -484,95 +579,222 @@ function App() {
     setNotice("Article ajouté à l’achat. Vous pouvez ajouter d’autres articles avant d’enregistrer.");
   }
 
-  function addSupplierPurchase(event: FormEvent<HTMLFormElement>) {
+  async function revokeTeamInvitation(invitationId: string) {
+    const session = readSession();
+    if (!session) { setNotice("Reconnectez-vous pour gérer les invitations."); return; }
+    setTeamBusy(true);
+    try {
+      await cancelAtelierInvitation(session, invitationId);
+      setTeamInvitations((current) => current.map((item) => item.id === invitationId ? { ...item, cancelledAt: new Date().toISOString() } : item));
+      setNotice("Invitation révoquée. Le destinataire ne peut plus la réclamer.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? "Révocation impossible : " + cause.message : "Impossible de révoquer l’invitation.");
+    } finally { setTeamBusy(false); }
+  }
+
+  async function inviteTeamMember(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setNotice("Saisissez une adresse e-mail valide pour le collaborateur.");
+      return;
+    }
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    setTeamBusy(true);
+    try {
+      const invitation = await createAtelierInvitation(session, atelierId, email, inviteRole);
+      setTeamInvitations((current) => [invitation, ...current.filter((item) => item.id !== invitation.id)]);
+      setInviteEmail("");
+      setNotice("Invitation enregistrée pour " + email + ". La personne doit se connecter à YÉRÉ avec cette adresse pour l’accepter. L’envoi automatique d’e-mail sera activé avec le service serveur.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? "Invitation non créée : " + cause.message : "Impossible de créer l’invitation.");
+    } finally { setTeamBusy(false); }
+  }
+
+  async function saveSupplierProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const profile = { ...supplier, businessName: supplier.businessName.trim() };
+    if (!profile.businessName) { setNotice("Indiquez le nom de votre entreprise fournisseur."); return; }
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      await saveAtelierSupplierProfile(session, atelierId, profile);
+      setSupplier(profile);
+      setNotice("Profil fournisseur enregistré dans la base sécurisée de votre atelier.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Profil non enregistré : ${cause.message}` : "Impossible d'enregistrer le profil fournisseur.");
+    }
+  }
+
+  async function addSupplierPurchase(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const supplierName = purchaseSupplierName.trim();
     if (!supplierName || purchaseDraftLines.length === 0) {
       setNotice("Indiquez le fournisseur et ajoutez au moins un article à l’achat.");
       return;
     }
-    const purchase: SupplierPurchase = {
-      id: "ACH-" + Date.now(),
-      supplierName,
-      orderedAt: new Date().toISOString().slice(0, 10),
-      status: "À recevoir",
-      lines: purchaseDraftLines.map((line) => ({ ...line })),
-      note: purchaseNote.trim() || undefined
-    };
-    if (!isSupplierPurchaseListValid([...supplierPurchases, purchase])) {
-      setNotice("Achat refusé : vérifiez les informations et l’identifiant de l’achat.");
-      return;
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      let supplierRecord = supplierDirectory.find((item) => item.name.trim().toLocaleLowerCase("fr-FR") === supplierName.toLocaleLowerCase("fr-FR"));
+      if (!supplierRecord) {
+        supplierRecord = await createAtelierSupplier(session, atelierId, {
+          name: supplierName, contact: "", phone: "", city: "", category: "", note: ""
+        });
+        setSupplierDirectory((current) => [...current, supplierRecord!].sort((a, b) => a.name.localeCompare(b.name, "fr")));
+      }
+      const reference = "ACH-" + Date.now();
+      await createAtelierSupplierPurchase(session, atelierId, supplierRecord.id, {
+        reference, orderedAt: new Date().toISOString().slice(0, 10),
+        note: purchaseNote.trim() || undefined, lines: purchaseDraftLines.map((line) => ({ ...line }))
+      });
+      const [serverPurchases, serverSuppliers] = await Promise.all([
+        listAtelierSupplierPurchases(session, atelierId), listAtelierSuppliers(session, atelierId)
+      ]);
+      setSupplierDirectory(serverSuppliers);
+      const names = new Map(serverSuppliers.map((item) => [item.id, item.name]));
+      const mappedPurchases: SupplierPurchase[] = serverPurchases.map((purchase) => ({
+        id: purchase.id, supplierName: names.get(purchase.supplierId) ?? supplierName,
+        orderedAt: purchase.orderedAt, lines: purchase.lines, status: purchase.status,
+        ...(purchase.receivedAt ? { receivedAt: purchase.receivedAt } : {}),
+        ...(purchase.cancelledAt ? { cancelledAt: purchase.cancelledAt } : {}),
+        ...(purchase.cancelReason ? { cancelReason: purchase.cancelReason } : {}),
+        ...(purchase.note ? { note: purchase.note } : {}), payments: purchase.payments
+      }));
+      setSupplierPurchases([...mappedPurchases, ...supplierPurchases.filter((purchase) => purchase.id.startsWith("ACH-"))]);
+      setPurchaseSupplierName("");
+      setPurchaseStockItemId("");
+      setPurchaseQuantity("");
+      setPurchaseUnitCost("");
+      setPurchaseNote("");
+      setPurchaseDraftLines([]);
+      setPurchaseFormOpen(false);
+      setNotice("Achat fournisseur enregistré sur le serveur. Le stock changera uniquement à la réception.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Achat non enregistré : ${cause.message}` : "Impossible d'enregistrer l'achat fournisseur.");
     }
-    setSupplierPurchases((current) => [purchase, ...current]);
-    setPurchaseSupplierName("");
-    setPurchaseStockItemId("");
-    setPurchaseQuantity("");
-    setPurchaseUnitCost("");
-    setPurchaseNote("");
-    setPurchaseDraftLines([]);
-    setPurchaseFormOpen(false);
-    setNotice("Achat fournisseur enregistré. Le stock ne changera qu’à la réception effective.");
   }
 
-  function receivePurchase(purchaseId: string) {
+  async function receivePurchase(purchaseId: string) {
     const purchase = supplierPurchases.find((item) => item.id === purchaseId);
     if (!purchase) return;
-    const result = receiveSupplierPurchase(
-      purchase, stockItems, stockMovements,
-      new Date().toISOString().slice(0, 10),
-      "MOV-" + Date.now() + "-purchase"
-    );
-    if (!result) {
-      setNotice("Réception refusée : vérifiez l’état de l’achat, le stock et l’historique des mouvements.");
+    if (purchase.id.startsWith("ACH-")) {
+      setNotice("Cet achat provient de l’ancien stockage local. Il doit être importé avant toute réception serveur.");
       return;
     }
-    setStockItems(result.items);
-    setStockMovements(result.movements);
-    setSupplierPurchases((current) => current.map((item) => item.id === purchase.id ? result.purchase : item));
-    setNotice("Achat réceptionné : les entrées de stock et l’historique ont été mis à jour.");
+    if (purchase.status !== "À recevoir" || !purchase.lines.length
+      || purchase.lines.some((line) => !stockItems.some((item) => item.id === line.stockItemId))) {
+      setNotice("Réception refusée : vérifiez l’état de l’achat et les articles de stock associés.");
+      return;
+    }
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      const receivedAt = new Date().toISOString().slice(0, 10);
+      await receiveAtelierSupplierPurchase(session, atelierId, purchase.id, receivedAt);
+      const [refreshed, serverPurchases] = await Promise.all([
+        listAtelierStock(session, atelierId), listAtelierSupplierPurchases(session, atelierId)
+      ]);
+      setStockItems((current) => [...refreshed.items, ...current.filter((item) => item.id.startsWith("STK-"))]);
+      setStockMovements((current) => [...refreshed.movements, ...current.filter((item) => item.id.startsWith("MOV-"))]);
+      const names = new Map(supplierDirectory.map((item) => [item.id, item.name]));
+      const mapped: SupplierPurchase[] = serverPurchases.map((item) => ({
+        id: item.id, supplierName: names.get(item.supplierId) ?? purchase.supplierName,
+        orderedAt: item.orderedAt, lines: item.lines, status: item.status,
+        ...(item.receivedAt ? { receivedAt: item.receivedAt } : {}),
+        ...(item.cancelledAt ? { cancelledAt: item.cancelledAt } : {}),
+        ...(item.cancelReason ? { cancelReason: item.cancelReason } : {}),
+        ...(item.note ? { note: item.note } : {}), payments: item.payments
+      }));
+      setSupplierPurchases((current) => [...mapped, ...current.filter((item) => item.id.startsWith("ACH-"))]);
+      setNotice("Achat réceptionné : les mouvements et le changement d’état ont été validés ensemble sur le serveur.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Réception non enregistrée : ${cause.message}` : "Impossible de confirmer la réception sur le serveur.");
+    }
   }
 
-  function recordSupplierPurchasePayment(event: FormEvent<HTMLFormElement>) {
+  async function recordSupplierPurchasePayment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const purchase = supplierPurchases.find((item) => item.id === supplierPaymentPurchaseId);
     const amount = Number(supplierPaymentAmount);
-    if (!purchase || !Number.isSafeInteger(amount) || amount <= 0) {
-      setNotice("Saisissez un montant entier supérieur à zéro pour le règlement fournisseur.");
+    if (!purchase || purchase.id.startsWith("ACH-") || !Number.isSafeInteger(amount) || amount <= 0) {
+      setNotice("Ce règlement nécessite un achat serveur et un montant entier supérieur à zéro.");
       return;
     }
     const updated = addSupplierPurchasePayment(purchase, {
-      id: "SUP-PAY-" + Date.now(),
-      paidAt: new Date().toISOString().slice(0, 10),
-      amount,
-      note: "Règlement fournisseur enregistré manuellement"
+      id: "SUP-PAY-" + Date.now(), paidAt: new Date().toISOString().slice(0, 10),
+      amount, note: "Règlement fournisseur enregistré manuellement"
     });
     if (!updated) {
       setNotice("Règlement refusé : vérifiez le solde restant. Un paiement ne peut pas dépasser le montant dû.");
       return;
     }
-    setSupplierPurchases((current) => current.map((item) => item.id === purchase.id ? updated : item));
-    setSupplierPaymentAmount("");
-    setSupplierPaymentPurchaseId(null);
-    setNotice("Règlement fournisseur de " + formatXof(amount) + " enregistré. La réception et le stock restent inchangés.");
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      await payAtelierSupplierPurchase(session, atelierId, purchase.id, {
+        amount, paidAt: new Date().toISOString().slice(0, 10), note: "Règlement fournisseur enregistré manuellement"
+      });
+      const serverPurchases = await listAtelierSupplierPurchases(session, atelierId);
+      const names = new Map(supplierDirectory.map((item) => [item.id, item.name]));
+      const mapped: SupplierPurchase[] = serverPurchases.map((item) => ({
+        id: item.id, supplierName: names.get(item.supplierId) ?? purchase.supplierName,
+        orderedAt: item.orderedAt, lines: item.lines, status: item.status,
+        ...(item.receivedAt ? { receivedAt: item.receivedAt } : {}),
+        ...(item.cancelledAt ? { cancelledAt: item.cancelledAt } : {}),
+        ...(item.cancelReason ? { cancelReason: item.cancelReason } : {}),
+        ...(item.note ? { note: item.note } : {}), payments: item.payments
+      }));
+      setSupplierPurchases((current) => [...mapped, ...current.filter((item) => item.id.startsWith("ACH-"))]);
+      setSupplierPaymentAmount("");
+      setSupplierPaymentPurchaseId(null);
+      setNotice("Règlement fournisseur de " + formatXof(amount) + " enregistré sur le serveur. La réception et le stock restent inchangés.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Règlement non enregistré : ${cause.message}` : "Impossible d'enregistrer le règlement fournisseur.");
+    }
   }
 
-  function cancelPurchase(event: FormEvent<HTMLFormElement>) {
+  async function cancelPurchase(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const purchase = supplierPurchases.find((item) => item.id === purchaseToCancelId);
     const cancelled = purchase
       ? cancelSupplierPurchase(purchase, new Date().toISOString().slice(0, 10), purchaseCancelReason)
       : null;
-    if (!cancelled) {
-      setNotice("Annulation refusée : seul un achat en attente peut être annulé, avec un motif obligatoire.");
+    if (!purchase || purchase.id.startsWith("ACH-") || !cancelled) {
+      setNotice("Annulation refusée : seul un achat serveur non réglé et en attente peut être annulé avec un motif obligatoire.");
       return;
     }
-    setSupplierPurchases((current) => current.map((item) => item.id === cancelled.id ? cancelled : item));
-    setPurchaseToCancelId(null);
-    setPurchaseCancelReason("");
-    setNotice("Achat annulé avec son motif conservé dans l’historique. Le stock n’a pas été modifié.");
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      await cancelAtelierSupplierPurchase(session, atelierId, purchase.id, cancelled.cancelledAt!, cancelled.cancelReason!);
+      const serverPurchases = await listAtelierSupplierPurchases(session, atelierId);
+      const names = new Map(supplierDirectory.map((item) => [item.id, item.name]));
+      const mapped: SupplierPurchase[] = serverPurchases.map((item) => ({
+        id: item.id, supplierName: names.get(item.supplierId) ?? purchase.supplierName,
+        orderedAt: item.orderedAt, lines: item.lines, status: item.status,
+        ...(item.receivedAt ? { receivedAt: item.receivedAt } : {}),
+        ...(item.cancelledAt ? { cancelledAt: item.cancelledAt } : {}),
+        ...(item.cancelReason ? { cancelReason: item.cancelReason } : {}),
+        ...(item.note ? { note: item.note } : {}), payments: item.payments
+      }));
+      setSupplierPurchases((current) => [...mapped, ...current.filter((item) => item.id.startsWith("ACH-"))]);
+      setPurchaseToCancelId(null);
+      setPurchaseCancelReason("");
+      setNotice("Achat annulé sur le serveur. Le motif reste conservé dans l’historique et le stock est inchangé.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Annulation non enregistrée : ${cause.message}` : "Impossible d'annuler l'achat fournisseur.");
+    }
   }
 
-  function addExpense(event: FormEvent<HTMLFormElement>) {
+  async function addExpense(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const category = expenseCategory.trim();
     const description = expenseDescription.trim();
@@ -581,21 +803,24 @@ function App() {
       setNotice("Vérifiez la catégorie, le motif et le montant de la dépense. Le montant doit être un entier supérieur à zéro.");
       return;
     }
-    const expense: Expense = {
-      id: "EXP-" + Date.now(),
-      spentAt: new Date().toISOString().slice(0, 10),
-      category,
-      description,
-      amount
-    };
-    setExpenses((current) => [expense, ...current]);
-    setExpenseDescription("");
-    setExpenseAmount("");
-    setExpenseFormOpen(false);
-    setNotice("Dépense de " + formatXof(amount) + " enregistrée sur cet appareil. Aucune copie serveur n’est active.");
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      const expense = await createAtelierExpense(session, atelierId, {
+        spentAt: new Date().toISOString().slice(0, 10), category, description, amount
+      });
+      setExpenses((current) => [expense, ...current]);
+      setExpenseDescription("");
+      setExpenseAmount("");
+      setExpenseFormOpen(false);
+      setNotice("Dépense de " + formatXof(amount) + " enregistrée dans la caisse de l’atelier.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Dépense non enregistrée : ${cause.message}` : "Impossible d'enregistrer la dépense sur le serveur.");
+    }
   }
 
-  function recordOrderPayment(event: FormEvent<HTMLFormElement>) {
+  async function recordOrderPayment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const order = orders.find((item) => item.id === paymentOrderId);
     const amount = Number(paymentAmount);
@@ -604,8 +829,7 @@ function App() {
       return;
     }
     const updated = addOrderPayment(order, {
-      id: "PAY-" + Date.now(),
-      amount,
+      id: "pending-" + Date.now(), amount,
       paidAt: new Date().toISOString().slice(0, 10),
       note: "Versement enregistré manuellement"
     });
@@ -613,41 +837,93 @@ function App() {
       setNotice("Paiement refusé : vérifiez le montant restant dû. Un paiement ne peut pas dépasser le solde.");
       return;
     }
-    setOrders((current) => current.map((item) => item.id === order.id ? updated : item));
-    setPaymentAmount("");
-    setPaymentOrderId(null);
-    setNotice("Versement de " + formatXof(amount) + " enregistré sur cet appareil. Aucune copie serveur n’est active.");
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) {
+      setNotice("Votre session ou votre atelier n'est plus disponible. Reconnectez-vous.");
+      return;
+    }
+    try {
+      const savedPayment = await saveAtelierPayment(session, atelierId, order, {
+        amount, paidAt: new Date().toISOString().slice(0, 10), note: "Versement enregistré manuellement"
+      });
+      const confirmed = addOrderPayment(order, savedPayment);
+      if (!confirmed) throw new Error("Le versement serveur n'a pas pu être intégré à l'historique.");
+      setOrders((current) => current.map((item) => item.id === order.id ? confirmed : item));
+      setPaymentAmount("");
+      setPaymentOrderId(null);
+      setNotice("Versement de " + formatXof(amount) + " enregistré et confirmé sur le serveur YÉRÉ.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Versement non enregistré : ${cause.message}` : "Impossible d'enregistrer le versement sur le serveur.");
+    }
   }
 
-  function updateStatus(orderId: string, status: OrderStatus) {
-    setOrders((current) => current.map((order) => order.id === orderId ? { ...order, status } : order));
+  async function updateStatus(orderId: string, status: OrderStatus) {
+    const order = orders.find((item) => item.id === orderId);
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!order || !session || !atelierId) {
+      setNotice("Commande ou session introuvable. Reconnectez-vous puis réessayez.");
+      return;
+    }
+    try {
+      await saveAtelierOrderStatus(session, atelierId, order, status);
+      setOrders((current) => current.map((item) => item.id === orderId ? { ...item, status } : item));
+      setNotice(`Statut de la commande ${orderId} synchronisé.`);
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Statut non modifié : ${cause.message}` : "Impossible de modifier le statut sur le serveur.");
+    }
   }
 
-  function updateRetouchStage(orderId: string, retouchStage: RetouchStage) {
-    setOrders((current) => current.map((order) => order.id === orderId && order.kind === "retouche" ? { ...order, retouchStage } : order));
-    setNotice("Étape de retouche mise à jour sur cet appareil. Aucune sauvegarde serveur n’est active.");
+  async function updateRetouchStage(orderId: string, retouchStage: RetouchStage) {
+    const order = orders.find((item) => item.id === orderId && item.kind === "retouche");
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!order || !session || !atelierId) {
+      setNotice("Commande de retouche ou session introuvable. Réessayez après reconnexion.");
+      return;
+    }
+    try {
+      await saveAtelierOrderStatus(session, atelierId, order, order.status, retouchStage);
+      setOrders((current) => current.map((item) => item.id === orderId && item.kind === "retouche" ? { ...item, retouchStage } : item));
+      setNotice("Étape de retouche synchronisée sur le serveur YÉRÉ.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Étape de retouche non modifiée : ${cause.message}` : "Impossible de synchroniser l'étape de retouche.");
+    }
   }
 
   function updateMeasurement(field: keyof Measurement, value: string) {
     setDraftMeasurement((current) => ({ ...current, [field]: value }));
   }
 
-  function saveMeasurements(event: FormEvent<HTMLFormElement>) {
+  async function saveMeasurements(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selected) return;
     if (!isMeasurementValid(draftMeasurement)) {
       setNotice("Chaque mensuration doit être un nombre positif ou nul.");
       return;
     }
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) {
+      setNotice("Votre session ou votre atelier n'est plus disponible. Reconnectez-vous.");
+      return;
+    }
     const measuredAt = new Date().toISOString().slice(0, 10);
     const versionId = `m-${Date.now()}`;
+    try {
+      await saveAtelierMeasurement(session, atelierId, selected.id, draftMeasurement, measuredAt);
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Mensurations non enregistrées : ${cause.message}` : "Impossible d'enregistrer les mensurations sur le serveur.");
+      return;
+    }
     setClients((current) => current.map((client) => client.id === selected.id
       ? saveMeasurementVersion(client, draftMeasurement, measuredAt, versionId)
       : client));
     setNewOrderClientId(selected.id);
     setShowOrderForm(true);
     setView("orders");
-    setNotice(`Mensurations de ${selected.name} enregistrées localement. Troisième étape : créez maintenant une commande.`);
+    setNotice(`Mensurations de ${selected.name} synchronisées sur YÉRÉ. Troisième étape : créez maintenant une commande.`);
   }
 
   const mobileNavItems: { id: View | "more"; label: string; icon: string }[] = [
@@ -736,7 +1012,7 @@ function App() {
             <div className="client-list">{visibleClients.map((client, index) => <button key={client.id} className={selectedClient === client.id ? "client-row selected" : "client-row"} onClick={() => setSelectedClient(selectedClient === client.id ? null : client.id)}><span className={`client-avatar avatar-${index % 4}`}>{client.name.split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</span><span className="client-main"><b>{client.name}</b><small>{client.phone || "Pas de téléphone renseigné"}</small></span><span className="client-measurements"><b>{[client.measurement.bust, client.measurement.waist, client.measurement.hips, client.measurement.shoulder, client.measurement.sleeve, client.measurement.length, client.measurement.arm, client.measurement.neck, client.measurement.thigh, client.measurement.legLength].filter(Boolean).length}/10</b><small>mesures saisies</small></span><span className="row-chevron">›</span></button>)}
               {visibleClients.length === 0 && <div className="empty-state"><span>⌕</span><b>Aucun client trouvé</b><p>Essayez un autre nom ou numéro.</p></div>}
             </div>
-            {selected && <div className="measurement-panel"><div className="section-heading"><div><h2>Mensurations de {selected.name}</h2><p>Dernière fiche de mesures enregistrée</p></div></div><form className="measurement-form" onSubmit={saveMeasurements}><label className="measure-field"><span>Type de vêtement</span><select aria-label="Type de vêtement" value={draftMeasurement.garmentType ?? "Tenue complète"} onChange={(event) => updateMeasurement("garmentType", event.target.value)}><option>Tenue complète</option><option>Boubou / robe</option><option>Pantalon</option><option>Chemise</option><option>Veste / costume</option><option>Autre</option></select></label><div className="measurement-grid">{(measurementFieldsByGarment[draftMeasurement.garmentType ?? "Tenue complète"] ?? measurementFieldsByGarment["Tenue complète"]).map(([label, key]) => <label className="measure-field" key={key}><span>{label} (cm)</span><input type="number" min="0" step="any" inputMode="decimal" aria-label={label} value={(draftMeasurement[key] ?? "") as string} onChange={(event) => updateMeasurement(key, event.target.value)} placeholder="Saisir en cm" /></label>)}</div><label className="measure-notes-field">Notes pour la prochaine commande<textarea value={draftMeasurement.note} onChange={(event) => updateMeasurement("note", event.target.value)} placeholder="Décrire les préférences, la coupe ou le tissu" rows={2} /></label><div className="form-actions"><button type="submit" className="primary-button">Enregistrer les mensurations</button></div></form><section className="measurement-history" aria-label="Historique des mensurations"><h3>Historique des prises de mesures</h3>{(selected.measurementHistory ?? []).length === 0 ? <p className="history-empty">Aucune prise de mesures enregistrée. Complétez les champs puis enregistrez une première version.</p> : <ol>{[...(selected.measurementHistory ?? [])].reverse().map((version) => <li key={version.id}><b>{new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(version.measuredAt + "T12:00:00"))}</b><span>{[version.measurement.garmentType, version.measurement.bust && `Poitrine ${version.measurement.bust} cm`, version.measurement.waist && `Taille ${version.measurement.waist} cm`, version.measurement.hips && `Hanches ${version.measurement.hips} cm`, version.measurement.shoulder && `Épaules ${version.measurement.shoulder} cm`, version.measurement.sleeve && `Manche ${version.measurement.sleeve} cm`, version.measurement.length && `Longueur ${version.measurement.length} cm`, version.measurement.arm && `Bras ${version.measurement.arm} cm`, version.measurement.neck && `Cou ${version.measurement.neck} cm`, version.measurement.thigh && `Cuisse ${version.measurement.thigh} cm`, version.measurement.legLength && `Jambe ${version.measurement.legLength} cm`, version.measurement.note].filter(Boolean).join(" · ") || "Aucune mesure renseignée"}</span><button type="button" className="secondary-button" onClick={() => { setDraftMeasurement({ ...version.measurement }); setNotice("Anciennes mensurations reprises dans le formulaire. Vérifiez-les puis enregistrez pour créer une nouvelle version datée."); }}>Reprendre ces mesures</button></li>)}</ol>}</section><p className="privacy-note">Les mensurations sont conservées uniquement dans ce navigateur, sans compte ni sauvegarde serveur. N’utilisez pas encore de données clients réelles.</p></div>}
+            {selected && <div className="measurement-panel"><div className="section-heading"><div><h2>Mensurations de {selected.name}</h2><p>Dernière fiche de mesures enregistrée</p></div></div><form className="measurement-form" onSubmit={saveMeasurements}><label className="measure-field"><span>Type de vêtement</span><select aria-label="Type de vêtement" value={draftMeasurement.garmentType ?? "Tenue complète"} onChange={(event) => updateMeasurement("garmentType", event.target.value)}><option>Tenue complète</option><option>Boubou / robe</option><option>Pantalon</option><option>Chemise</option><option>Veste / costume</option><option>Autre</option></select></label><div className="measurement-grid">{(measurementFieldsByGarment[draftMeasurement.garmentType ?? "Tenue complète"] ?? measurementFieldsByGarment["Tenue complète"]).map(([label, key]) => <label className="measure-field" key={key}><span>{label} (cm)</span><input type="number" min="0" step="any" inputMode="decimal" aria-label={label} value={(draftMeasurement[key] ?? "") as string} onChange={(event) => updateMeasurement(key, event.target.value)} placeholder="Saisir en cm" /></label>)}</div><label className="measure-notes-field">Notes pour la prochaine commande<textarea value={draftMeasurement.note} onChange={(event) => updateMeasurement("note", event.target.value)} placeholder="Décrire les préférences, la coupe ou le tissu" rows={2} /></label><div className="form-actions"><button type="submit" className="primary-button">Enregistrer les mensurations</button></div></form><section className="measurement-history" aria-label="Historique des mensurations"><h3>Historique des prises de mesures</h3>{(selected.measurementHistory ?? []).length === 0 ? <p className="history-empty">Aucune prise de mesures enregistrée. Complétez les champs puis enregistrez une première version.</p> : <ol>{[...(selected.measurementHistory ?? [])].reverse().map((version) => <li key={version.id}><b>{new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(version.measuredAt + "T12:00:00"))}</b><span>{[version.measurement.garmentType, version.measurement.bust && `Poitrine ${version.measurement.bust} cm`, version.measurement.waist && `Taille ${version.measurement.waist} cm`, version.measurement.hips && `Hanches ${version.measurement.hips} cm`, version.measurement.shoulder && `Épaules ${version.measurement.shoulder} cm`, version.measurement.sleeve && `Manche ${version.measurement.sleeve} cm`, version.measurement.length && `Longueur ${version.measurement.length} cm`, version.measurement.arm && `Bras ${version.measurement.arm} cm`, version.measurement.neck && `Cou ${version.measurement.neck} cm`, version.measurement.thigh && `Cuisse ${version.measurement.thigh} cm`, version.measurement.legLength && `Jambe ${version.measurement.legLength} cm`, version.measurement.note].filter(Boolean).join(" · ") || "Aucune mesure renseignée"}</span><button type="button" className="secondary-button" onClick={() => { setDraftMeasurement({ ...version.measurement }); setNotice("Anciennes mensurations reprises dans le formulaire. Vérifiez-les puis enregistrez pour créer une nouvelle version datée."); }}>Reprendre ces mesures</button></li>)}</ol>}</section><p className="privacy-note">Les fiches clients, les mensurations et leur historique sont synchronisés sur le serveur. Les anciennes données locales ne sont pas importées automatiquement.</p></div>}
           </section>}
 
           {view === "orders" && <section className="content-card"><div className="section-heading"><div><h2>Commandes de l’atelier</h2><p>Modifiez le statut pour tester le suivi de production.</p></div><button className="primary-button" onClick={() => { setShowOrderForm((value) => !value); setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); }}>＋ Nouvelle commande</button></div>
@@ -768,7 +1044,7 @@ function App() {
             <div className="cash-summary-grid">
               <article className="content-card cash-summary"><span>Reste à encaisser</span><strong>{formatXof(outstanding)}</strong><small>Soldes des commandes non réglées</small></article>
               <article className="content-card cash-summary"><span>Total encaissé</span><strong>{formatXof(totalCollected)}</strong><small>Versements enregistrés dans ce prototype</small></article>
-              <article className="content-card cash-summary"><span>Dépenses enregistrées</span><strong>{formatXof(totalExpenses)}</strong><small>Dépenses saisies localement, hors paiements fournisseurs suivis séparément</small></article>
+              <article className="content-card cash-summary"><span>Dépenses enregistrées</span><strong>{formatXof(totalExpenses)}</strong><small>Dépenses actives synchronisées sur le serveur, hors règlements fournisseurs suivis séparément</small></article>
               <article className="content-card cash-summary"><span>Règlements fournisseurs</span><strong>{formatXof(totalSupplierPayments)}</strong><small>Sorties enregistrées dans le module Achats fournisseurs</small></article>
               <article className="content-card cash-summary"><span>Encaissements − sorties suivies</span><strong>{formatXof(totalCollected - totalCashOutflows)}</strong><small>Indicateur de trésorerie simplifié, pas un solde comptable</small></article>
             </div>
@@ -779,12 +1055,12 @@ function App() {
             <section className="content-card"><div className="section-heading"><div><h2>Situation par commande</h2><p>Reste dû = prix convenu moins l’ensemble des versements enregistrés.</p></div></div>
               {orders.length === 0 ? <div className="empty-state">Aucune commande pour le moment. Créez une commande pour commencer à suivre les montants.</div> : <div className="table-wrap"><table><thead><tr><th>Commande</th><th>Prix</th><th>Total encaissé</th><th>Reste</th><th>Action</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}><td><b>{order.garment}</b><small>{clients.find((client) => client.id === order.clientId)?.name || "Client inconnu"}</small></td><td>{formatXof(order.price)}</td><td>{formatXof(totalPaid(order))}</td><td><b>{formatXof(balanceDue(order))}</b></td><td><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setPaymentHistoryOrderId(order.id)}>Historique</button><button type="button" className="secondary-button" disabled={balanceDue(order) === 0} onClick={() => { setPaymentOrderId(order.id); setPaymentAmount(""); }}>Encaisser</button></div></td></tr>)}</tbody></table></div>}{paymentOrderId && orders.some((order) => order.id === paymentOrderId) && <form className="new-order-form" onSubmit={recordOrderPayment}><h3>Nouveau versement — {orders.find((order) => order.id === paymentOrderId)?.garment}</h3><p>Reste à payer : {formatXof(balanceDue(orders.find((order) => order.id === paymentOrderId)!))}</p><label>Montant reçu (FCFA)<input required type="number" min="1" step="1" inputMode="numeric" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} placeholder="Ex. 5000" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => { setPaymentOrderId(null); setPaymentAmount(""); }}>Annuler</button><button type="submit" className="primary-button">Confirmer le versement</button></div></form>}{paymentHistoryOrderId && orders.some((order) => order.id === paymentHistoryOrderId) && <section className="content-card"><div className="section-heading"><div><h2>Historique des versements</h2><p>{orders.find((order) => order.id === paymentHistoryOrderId)?.garment} · {clients.find((client) => client.id === orders.find((order) => order.id === paymentHistoryOrderId)?.clientId)?.name ?? "Client inconnu"}</p></div><button type="button" className="secondary-button" onClick={() => setPaymentHistoryOrderId(null)}>Fermer</button></div>{(orders.find((order) => order.id === paymentHistoryOrderId)?.payments ?? []).length === 0 ? <p className="empty-state">Aucun historique détaillé disponible pour cette ancienne commande. Son acompte historique reste pris en compte dans le solde et sera repris lors du prochain versement.</p> : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Libellé</th><th>Montant</th></tr></thead><tbody>{(orders.find((order) => order.id === paymentHistoryOrderId)?.payments ?? []).map((payment) => <tr key={payment.id}><td>{payment.paidAt}</td><td>{payment.note || "Versement"}</td><td>{formatXof(payment.amount)}</td></tr>)}</tbody></table></div>}</section>}
             </section>
-            <p className="privacy-note">Cette vue est un aperçu des montants des commandes. Les dépenses, le rapprochement de caisse, les écritures comptables et les rapports financiers restent à développer. Ne l'utilisez pas comme comptabilité officielle.</p>
+            <p className="privacy-note">Cette vue est un aperçu des montants des commandes. Le rapprochement de caisse, les écritures comptables et les rapports financiers restent à développer. Cette vue ne remplace pas une comptabilité officielle.</p>
           </section>}
 
           {view === "account" && <section className="content-card account-page">
             <div className="section-heading account-section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div></div>
-            <form className="account-form" onSubmit={(event) => { event.preventDefault(); setAtelier((current) => normalizeAtelierProfile(current)); setNotice("Profil d'atelier mis à jour sur cet appareil uniquement."); }}>
+            <form className="account-form" onSubmit={(event) => { event.preventDefault(); setAtelier((current) => normalizeAtelierProfile(current)); setNotice("Profil d'atelier mis à jour localement. La synchronisation des champs de profil sera ajoutée dans un prochain chantier."); }}>
               <div className="profile-profession" aria-label="Métier YÉRÉ"><span>Métier</span><strong>Tailleur</strong><small>YÉRÉ est actuellement dédié aux tailleurs.</small></div>
               
               <label>Organisation du travail<select value={atelier.workMode ?? "independent"} onChange={(event) => setAtelier((current) => ({ ...current, workMode: event.target.value as WorkMode }))}>{workModes.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}</select></label>
@@ -793,6 +1069,20 @@ function App() {
               <label>Ville<input value={atelier.city} onChange={(event) => setAtelier((current) => ({ ...current, city: event.target.value }))} /></label>
               <button type="submit" className="primary-button">Enregistrer le profil</button>
             </form>
+            <section className="content-card team-panel" aria-labelledby="team-title">
+              <div className="section-heading"><div><h3 id="team-title">Équipe et accès à l’atelier</h3><p>Les droits sont contrôlés sur le serveur et chaque membre reste limité à cet atelier.</p></div><span className="marketplace-listing-count">{teamMembers.filter((member) => member.active).length} membre(s)</span></div>
+              <div className="table-wrap"><table><thead><tr><th>Identifiant du compte</th><th>Rôle</th><th>État</th><th>Depuis</th></tr></thead><tbody>{teamMembers.map((member) => <tr key={member.userId}><td><code>{member.userId.slice(0,8)}…{member.userId.slice(-4)}</code>{member.userId === currentUserId ? <small>Votre compte</small> : null}</td><td>{member.role === "proprietaire" ? "Propriétaire" : member.role === "gestionnaire" ? "Gestionnaire" : "Employé"}</td><td>{member.active ? "Actif" : "Désactivé"}</td><td>{new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(member.createdAt))}</td></tr>)}</tbody></table></div>
+              {canManageTeam ? <>
+                <form className="new-order-form team-invite-form" onSubmit={inviteTeamMember}>
+                  <h4>Inviter un collaborateur</h4>
+                  <label>Adresse e-mail<input type="email" required maxLength={254} value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="collaborateur@exemple.com" /></label>
+                  <label>Rôle<select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as "gestionnaire" | "employe")}><option value="employe">Employé — accès opérationnel</option><option value="gestionnaire">Gestionnaire — gestion de l’atelier</option></select></label>
+                  <div className="form-actions"><button className="primary-button" type="submit" disabled={teamBusy}>{teamBusy ? "Création…" : "Créer l’invitation"}</button></div>
+                </form>
+                <div className="team-invitation-list"><h4>Invitations envoyées</h4>{teamInvitations.filter((item) => !item.acceptedAt && !item.cancelledAt).length === 0 ? <p className="empty-state">Aucune invitation en attente.</p> : teamInvitations.filter((item) => !item.acceptedAt && !item.cancelledAt).map((item) => <div className="team-invitation-row" key={item.id}><span><b>{item.email}</b><small>{item.role === "gestionnaire" ? "Gestionnaire" : "Employé"} · expire le {new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(item.expiresAt))}</small></span><span className="team-invitation-status">{new Date(item.expiresAt).getTime() > Date.now() ? "En attente" : "Expirée"}<button type="button" className="text-button" disabled={teamBusy || new Date(item.expiresAt).getTime() <= Date.now()} onClick={() => void revokeTeamInvitation(item.id)}>Révoquer</button></span></div>)}</div>
+              </> : <p className="privacy-note">Seuls le propriétaire et les gestionnaires peuvent créer des invitations. Vous pouvez consulter votre propre accès à l’atelier.</p>}
+              <p className="privacy-note">L’invitation est enregistrée côté serveur et peut être acceptée uniquement par un compte dont l’adresse e-mail est confirmée et correspond à l’invitation. Aucun e-mail automatique n’est envoyé à ce stade.</p>
+            </section>
             <section className="backup-panel" aria-labelledby="backup-title">
               <div><h3 id="backup-title">Sauvegarde locale</h3><p>Exportez vos fiches, mensurations, commandes, annonces de vitrine et profil. La restauration remplace les données actuellement enregistrées sur cet appareil.</p></div>
               <div className="backup-actions">
@@ -803,13 +1093,13 @@ function App() {
               <p className="privacy-note">Attention : le fichier exporté contient des informations personnelles. Gardez-le hors d’accès public. Avant restauration, exportez les données actuelles si vous souhaitez les conserver.</p>
             </section>
             <div className="account-secondary"><div><b>Relances clients</b><p>Consultez les suggestions de relance manuelle, sans envoi automatique.</p></div><button className="secondary-button" onClick={() => setView("reminders")}>Ouvrir les relances →</button></div>
-            <p className="privacy-note">Cet espace est enregistré sur cet appareil. La création de comptes avec e-mail et mot de passe, la connexion sécurisée et la synchronisation entre appareils nécessitent encore le branchement du serveur d’authentification.</p>
+            <p className="privacy-note">Les comptes, les ateliers et les données métier principales sont synchronisés. Les champs de profil de cet écran restent enregistrés localement jusqu’au raccordement de leur formulaire à la base serveur.</p>
           </section>}
           {view === "stock" && <section className="stock-page">
             <div className="cash-summary-grid">
-              <article className="content-card cash-summary"><span>Articles suivis</span><strong>{stockItems.length}</strong><small>Articles enregistrés sur cet appareil</small></article>
+              <article className="content-card cash-summary"><span>Articles suivis</span><strong>{stockItems.length}</strong><small>Articles synchronisés sur le serveur</small></article>
               <article className="content-card cash-summary"><span>Alertes de stock</span><strong>{stockItems.filter((item) => item.quantity <= item.minimumQuantity).length}</strong><small>Stock au seuil minimum ou en dessous</small></article>
-              <article className="content-card cash-summary"><span>Mouvements récents</span><strong>{stockMovements.length}</strong><small>Historique local des entrées et sorties</small></article>
+              <article className="content-card cash-summary"><span>Mouvements récents</span><strong>{stockMovements.length}</strong><small>Mouvements synchronisés sur le serveur</small></article>
             </div>
             <section className="content-card"><div className="section-heading"><div><h2>Inventaire de l’atelier</h2><p>Suivez les tissus et fournitures avec des unités adaptées.</p></div><button type="button" className="primary-button" onClick={() => setStockFormOpen((open) => !open)}>{stockFormOpen ? "Annuler" : "＋ Ajouter un article"}</button></div>
               {stockFormOpen && <form className="new-order-form" onSubmit={addStockItem}><label>Nom de l’article<input required maxLength={100} value={stockName} onChange={(event) => setStockName(event.target.value)} placeholder="Ex. tissu bazin" /></label><label>Unité<select value={stockUnit} onChange={(event) => setStockUnit(event.target.value)}><option>mètre</option><option>pièce</option><option>bobine</option><option>rouleau</option><option>paquet</option><option>kilogramme</option><option>litre</option><option>autre</option></select></label><label>Stock initial<input required type="number" min="0" step="any" inputMode="decimal" value={stockInitialQuantity} onChange={(event) => setStockInitialQuantity(event.target.value)} /></label><label>Seuil d’alerte<input required type="number" min="0" step="any" inputMode="decimal" value={stockMinimumQuantity} onChange={(event) => setStockMinimumQuantity(event.target.value)} /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setStockFormOpen(false)}>Annuler</button><button type="submit" className="primary-button">Créer l’article</button></div></form>}
@@ -818,6 +1108,7 @@ function App() {
             </section>
             <section className="content-card">
               <div className="section-heading"><div><h2>Achats fournisseurs</h2><p>Enregistrez une commande fournisseur, puis réceptionnez-la lorsque les fournitures arrivent.</p></div><button type="button" className="primary-button" disabled={stockItems.length === 0} onClick={() => setPurchaseFormOpen((open) => !open)}>{purchaseFormOpen ? "Annuler" : "＋ Nouvel achat"}</button></div>
+              {supplierDirectory.length > 0 && <div className="supplier-directory-summary"><b>Répertoire de l’atelier · {supplierDirectory.length} fournisseur(s)</b><p>{supplierDirectory.map((item) => item.name + (item.city ? " · " + item.city : "")).join("  |  ")}</p></div>}
               {purchaseFormOpen && <form className="new-order-form" onSubmit={addSupplierPurchase}>
                 <label>Fournisseur<input required maxLength={120} value={purchaseSupplierName} onChange={(event) => setPurchaseSupplierName(event.target.value)} placeholder="Ex. Mercerie Ndiaye" /></label>
                 <div className="section-heading"><div><h3>Articles de l’achat</h3><p>Ajoutez chaque tissu ou fourniture avant d’enregistrer la commande.</p></div></div>
@@ -838,7 +1129,7 @@ function App() {
           </section>}
           {view === "suppliers" && <section className="content-card supplier-page">
             <div className="section-heading"><div><h2>Profil fournisseur</h2><p>Renseignez les informations professionnelles de votre espace fournisseur.</p></div><span className="supplier-symbol"><NavIcon name="truck" /></span></div>
-            <form className="supplier-form" onSubmit={(event) => { event.preventDefault(); setNotice("Profil fournisseur enregistré sur cet appareil. La publication publique nécessite encore l’activation du serveur."); }}>
+            <form className="supplier-form" onSubmit={saveSupplierProfile}>
               <label>Nom de l’entreprise<input required value={supplier.businessName} onChange={(event) => setSupplier((current) => ({ ...current, businessName: event.target.value }))} placeholder="Nom de votre entreprise" /></label>
               <label>Nom du contact<input value={supplier.contactName} onChange={(event) => setSupplier((current) => ({ ...current, contactName: event.target.value }))} placeholder="Nom du responsable" /></label>
               <label>Téléphone professionnel<input type="tel" value={supplier.phone} onChange={(event) => setSupplier((current) => ({ ...current, phone: event.target.value }))} placeholder="Téléphone de contact" /></label>
@@ -849,7 +1140,7 @@ function App() {
               <button type="submit" className="primary-button">Enregistrer le profil fournisseur</button>
             </form>
             <div className="supplier-shop-access"><div><span className="supplier-symbol"><NavIcon name="store" /></span><div><h3>Création de boutique</h3><p>Préparez votre boutique avec un nom public, une catégorie et une zone de livraison.</p></div></div><button className="secondary-button" onClick={() => { setSupplier((current) => ({ ...current, shopName: current.shopName || current.businessName })); setView("marketplace"); }}>Créer / gérer ma boutique <span>→</span></button></div>
-            <p className="privacy-note">Les informations sont conservées localement sur cet appareil. Les comptes fournisseurs, les permissions réelles, le catalogue public et les commandes marketplace ne sont pas encore activés côté serveur.</p>
+            <p className="privacy-note">Le profil fournisseur et le carnet de fournisseurs sont enregistrés dans la base sécurisée de votre atelier. La publication publique du catalogue et les commandes marketplace restent à activer côté serveur.</p>
           </section>}
           {view === "marketplace" && <section className="marketplace-page">
             <div className="marketplace-hero content-card">

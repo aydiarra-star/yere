@@ -36,13 +36,17 @@ export function usePersistentState<T>(
   initialValue: T,
   isValid?: (value: unknown) => value is T
 ): [T, Dispatch<SetStateAction<T>>] {
+  // Authenticated accounts get isolated browser caches while cloud sync is being rolled out.
+  const storageKey = typeof window !== "undefined"
+    ? `${key}::${window.sessionStorage.getItem("yere-user-scope") ?? "guest"}`
+    : key;
   const skipInitialWrite = useRef(false);
   const [value, setValue] = useState<T>(() => {
     if (typeof window === "undefined") return initialValue;
 
     let saved: string | null;
     try {
-      saved = window.localStorage.getItem(key);
+      saved = window.localStorage.getItem(storageKey);
     } catch {
       return initialValue;
     }
@@ -52,14 +56,14 @@ export function usePersistentState<T>(
     try {
       parsed = JSON.parse(saved);
     } catch {
-      if (!preserveRejectedStorageValue(window.localStorage, key, saved)) {
+      if (!preserveRejectedStorageValue(window.localStorage, storageKey, saved)) {
         skipInitialWrite.current = true;
       }
       return initialValue;
     }
 
     if (isValid && !isValid(parsed)) {
-      if (!preserveRejectedStorageValue(window.localStorage, key, saved)) {
+      if (!preserveRejectedStorageValue(window.localStorage, storageKey, saved)) {
         skipInitialWrite.current = true;
       }
       return initialValue;
@@ -74,11 +78,11 @@ export function usePersistentState<T>(
       return;
     }
     try {
-      window.localStorage.setItem(key, JSON.stringify(value));
+      window.localStorage.setItem(storageKey, JSON.stringify(value));
     } catch {
       // Storage can be unavailable or full; keep the UI usable for this session.
     }
-  }, [key, value]);
+  }, [storageKey, value]);
 
   return [value, setValue];
 }

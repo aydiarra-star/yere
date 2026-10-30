@@ -116,6 +116,8 @@ export type OrderPayment = {
 
 export type Order = {
   id: string;
+  /** UUID stored by PostgreSQL; absent only on legacy local backups. */
+  serverId?: string;
   clientId: string;
   /** Optional, immutable-at-creation copy of the client's measurements for this order. */
   measurementSnapshot?: Measurement;
@@ -151,6 +153,7 @@ export function isOrderListValid(value: unknown): value is Order[] {
   return Array.isArray(value) && value.every((item) =>
     isRecord(item)
     && typeof item.id === "string" && item.id.length > 0
+    && (item.serverId === undefined || (typeof item.serverId === "string" && item.serverId.length > 0))
     && typeof item.clientId === "string" && item.clientId.length > 0
     && typeof item.garment === "string" && item.garment.trim().length > 0
     && (item.kind === undefined || item.kind === "confection" || item.kind === "retouche")
