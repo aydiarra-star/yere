@@ -522,6 +522,56 @@ export type Database = {
           },
         ]
       }
+      profil_fournisseur: {
+        Row: {
+          atelier_id: string
+          categorie: string
+          created_at: string
+          created_by: string | null
+          description: string
+          nom_boutique: string
+          nom_contact: string
+          nom_entreprise: string
+          telephone: string
+          updated_at: string
+          ville: string
+        }
+        Insert: {
+          atelier_id: string
+          categorie?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          nom_boutique?: string
+          nom_contact?: string
+          nom_entreprise: string
+          telephone?: string
+          updated_at?: string
+          ville?: string
+        }
+        Update: {
+          atelier_id?: string
+          categorie?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          nom_boutique?: string
+          nom_contact?: string
+          nom_entreprise?: string
+          telephone?: string
+          updated_at?: string
+          ville?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profil_fournisseur_atelier_id_fkey"
+            columns: ["atelier_id"]
+            isOneToOne: true
+            referencedRelation: "atelier"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_article: {
         Row: {
           atelier_id: string
