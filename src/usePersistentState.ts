@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 
 type StorageReaderWriter = Pick<Storage, "getItem" | "setItem">;
+export type PersistenceScope = "user" | "atelier";
+
+export function resolvePersistentStorageKey(key: string, userId: string | null, atelierId: string | null, scope: PersistenceScope = "user"): string {
+  const userScope = userId ?? "guest";
+  return scope === "atelier" ? `${key}::${userScope}::${atelierId ?? "no-atelier"}` : `${key}::${userScope}`;
+}
 
 /**
  * Preserve rejected browser data before the normal persistence effect replaces it.
@@ -34,11 +40,12 @@ export function preserveRejectedStorageValue(
 export function usePersistentState<T>(
   key: string,
   initialValue: T,
-  isValid?: (value: unknown) => value is T
+  isValid?: (value: unknown) => value is T,
+  scope: PersistenceScope = "user"
 ): [T, Dispatch<SetStateAction<T>>] {
   // Authenticated accounts get isolated browser caches while cloud sync is being rolled out.
   const storageKey = typeof window !== "undefined"
-    ? `${key}::${window.sessionStorage.getItem("yere-user-scope") ?? "guest"}`
+    ? resolvePersistentStorageKey(key, window.sessionStorage.getItem("yere-user-scope"), window.sessionStorage.getItem("yere-active-atelier"), scope)
     : key;
   const skipInitialWrite = useRef(false);
   const [value, setValue] = useState<T>(() => {
