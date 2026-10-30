@@ -375,6 +375,7 @@ body, button, input, select, textarea {
   .dock-item.is-active::before { content: ""; position: absolute; top: 0; width: 22px; height: 2px; border-radius: 0 0 3px 3px; background: #d8e0ff; }
   .dock-icon { display: grid; place-items: center; height: 27px; }
   .dock-icon svg { width: 26px; height: 26px; stroke-width: 1.45; }
+  .dock-icon img { display: block; width: 26px; height: 26px; object-fit: contain; pointer-events: none; }
   .app-shell.yere-app .dock-item small { max-width: 100%; overflow: hidden; color: inherit; font-size: 9.5px !important; font-weight: 650; line-height: 1.2 !important; text-overflow: ellipsis; white-space: nowrap; }
   .app-shell.yere-app .dock-item.is-active small { font-weight: 800; }
   .more-backdrop { align-items: flex-end; padding: 0; }

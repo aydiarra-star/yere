@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="shearMetal" x1="16" y1="8" x2="112" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".4" stop-color="#e8edf7"/>
+      <stop offset="1" stop-color="#8f99b5"/>
+    </linearGradient>
+    <linearGradient id="shearBlade" x1="24" y1="16" x2="104" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".5" stop-color="#d5dcec"/>
+      <stop offset="1" stop-color="#9aa4bf"/>
+    </linearGradient>
+    <filter id="shearRelief" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.1" result="b"/>
+      <feSpecularLighting in="b" surfaceScale="5.5" specularConstant="1.18" specularExponent="15" lighting-color="#ffffff" result="s">
+        <fePointLight x="-18" y="-28" z="48"/>
+      </feSpecularLighting>
+      <feComposite in="s" in2="SourceAlpha" operator="in" result="so"/>
+      <feComposite in="SourceGraphic" in2="so" operator="arithmetic" k1="0" k2="1" k3="1.05" k4="0"/>
+    </filter>
+  </defs>
+  <g filter="url(#shearRelief)">
+    <path fill="url(#shearMetal)" fill-rule="evenodd" d="M36 80a16 16 0 1 0 0 32 16 16 0 0 0 0-32Zm0 7a9 9 0 1 1 0 18 9 9 0 0 1 0-18Z"/>
+    <path fill="url(#shearMetal)" fill-rule="evenodd" d="M92 80a16 16 0 1 0 0 32 16 16 0 0 0 0-32Zm0 7a9 9 0 1 1 0 18 9 9 0 0 1 0-18Z"/>
+    <path d="M46 86 L96 22 C99 18 105 20 106 25 L58 94 Z" fill="url(#shearBlade)"/>
+    <path d="M82 86 L32 22 C29 18 23 20 22 25 L70 94 Z" fill="url(#shearBlade)"/>
+    <circle cx="64" cy="78" r="6.2" fill="#f7f9fd"/>
+    <circle cx="64" cy="78" r="6.2" stroke="#c5cde0" stroke-width="1.4"/>
+    <circle cx="64" cy="78" r="2.4" fill="#9aa4bf"/>
+    <path d="M50 34 L78 34" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" opacity=".45"/>
+  </g>
+</svg>
