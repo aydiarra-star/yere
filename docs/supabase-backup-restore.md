@@ -45,7 +45,7 @@ Créer :
 - dans **Secrets**, `SUPABASE_DB_URL` : l'URL PostgreSQL de connexion Supabase, mot de passe inclus et correctement encodé ;
 - dans **Variables**, `BACKUP_AGE_RECIPIENT` : le destinataire public `age1...` obtenu à l'étape précédente.
 
-**Réseau IPv4 de GitHub Actions :** le workflow détecte l'URL directe YÉRÉ (`db.<project-ref>.supabase.co:5432`) et la convertit automatiquement vers le **Shared Pooler en mode Session** (hôte `aws-0-eu-west-3.pooler.supabase.com`, port `5432`, utilisateur `postgres.<project-ref>`). Cela évite l'échec IPv6 des runners GitHub sans exiger de remplacer le secret déjà configuré. Si le secret contient déjà l'URL du Session pooler, il est utilisé tel quel. Ne pas utiliser le Transaction pooler (port `6543`) pour `pg_dump`.
+**Réseau IPv4 de GitHub Actions :** le workflow détecte l'URL directe YÉRÉ (`db.<project-ref>.supabase.co:5432`) et la convertit automatiquement vers le **Shared Pooler en mode Session** (hôte `aws-1-eu-west-3.pooler.supabase.com`, port `5432`, utilisateur `postgres.<project-ref>`). Cela évite l'échec IPv6 des runners GitHub sans exiger de remplacer le secret déjà configuré. Si le secret contient déjà l'URL du Session pooler, il est utilisé tel quel. Ne pas utiliser le Transaction pooler (port `6543`) pour `pg_dump`.
 
 Ne jamais mettre le mot de passe PostgreSQL dans une variable publique, un fichier ou le code.
 
