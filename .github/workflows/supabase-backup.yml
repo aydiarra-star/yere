@@ -65,7 +65,7 @@ jobs:
           url = os.environ["SUPABASE_DB_URL"]
           project_ref = "anphzspjnnhzcqzwhpsg"
           direct_host = f"db.{project_ref}.supabase.co"
-          pooler_host = "aws-0-eu-west-3.pooler.supabase.com"
+          pooler_host = "aws-1-eu-west-3.pooler.supabase.com"
 
           try:
               parts = urlsplit(url)
