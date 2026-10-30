@@ -7,7 +7,7 @@ import { isMarketplaceListingListValid, type MarketplaceListing } from "./market
 import { usePersistentState } from "./usePersistentState";
 import { createAtelierClient, createAtelierOrder, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
 import { readSession } from "./lib/supabaseAuth";
-import { createAtelierInvitation, listAtelierInvitations, listAtelierMembers, type AtelierInvitation, type AtelierMember } from "./lib/atelierTeam";
+import { cancelAtelierInvitation, createAtelierInvitation, listAtelierInvitations, listAtelierMembers, type AtelierInvitation, type AtelierMember } from "./lib/atelierTeam";
 import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, getAtelierSupplierProfile, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, saveAtelierSupplierProfile, type AtelierSupplier } from "./lib/atelierSuppliers";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
@@ -579,6 +579,19 @@ function App() {
     setNotice("Article ajouté à l’achat. Vous pouvez ajouter d’autres articles avant d’enregistrer.");
   }
 
+  async function revokeTeamInvitation(invitationId: string) {
+    const session = readSession();
+    if (!session) { setNotice("Reconnectez-vous pour gérer les invitations."); return; }
+    setTeamBusy(true);
+    try {
+      await cancelAtelierInvitation(session, invitationId);
+      setTeamInvitations((current) => current.map((item) => item.id === invitationId ? { ...item, cancelledAt: new Date().toISOString() } : item));
+      setNotice("Invitation révoquée. Le destinataire ne peut plus la réclamer.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? "Révocation impossible : " + cause.message : "Impossible de révoquer l’invitation.");
+    } finally { setTeamBusy(false); }
+  }
+
   async function inviteTeamMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const email = inviteEmail.trim().toLowerCase();
@@ -1066,7 +1079,7 @@ function App() {
                   <label>Rôle<select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as "gestionnaire" | "employe")}><option value="employe">Employé — accès opérationnel</option><option value="gestionnaire">Gestionnaire — gestion de l’atelier</option></select></label>
                   <div className="form-actions"><button className="primary-button" type="submit" disabled={teamBusy}>{teamBusy ? "Création…" : "Créer l’invitation"}</button></div>
                 </form>
-                <div className="team-invitation-list"><h4>Invitations envoyées</h4>{teamInvitations.filter((item) => !item.acceptedAt && !item.cancelledAt).length === 0 ? <p className="empty-state">Aucune invitation en attente.</p> : teamInvitations.filter((item) => !item.acceptedAt && !item.cancelledAt).map((item) => <div className="team-invitation-row" key={item.id}><span><b>{item.email}</b><small>{item.role === "gestionnaire" ? "Gestionnaire" : "Employé"} · expire le {new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(item.expiresAt))}</small></span><span>{new Date(item.expiresAt).getTime() > Date.now() ? "En attente" : "Expirée"}</span></div>)}</div>
+                <div className="team-invitation-list"><h4>Invitations envoyées</h4>{teamInvitations.filter((item) => !item.acceptedAt && !item.cancelledAt).length === 0 ? <p className="empty-state">Aucune invitation en attente.</p> : teamInvitations.filter((item) => !item.acceptedAt && !item.cancelledAt).map((item) => <div className="team-invitation-row" key={item.id}><span><b>{item.email}</b><small>{item.role === "gestionnaire" ? "Gestionnaire" : "Employé"} · expire le {new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(item.expiresAt))}</small></span><span className="team-invitation-status">{new Date(item.expiresAt).getTime() > Date.now() ? "En attente" : "Expirée"}<button type="button" className="text-button" disabled={teamBusy || new Date(item.expiresAt).getTime() <= Date.now()} onClick={() => void revokeTeamInvitation(item.id)}>Révoquer</button></span></div>)}</div>
               </> : <p className="privacy-note">Seuls le propriétaire et les gestionnaires peuvent créer des invitations. Vous pouvez consulter votre propre accès à l’atelier.</p>}
               <p className="privacy-note">L’invitation est enregistrée côté serveur et peut être acceptée uniquement par un compte dont l’adresse e-mail est confirmée et correspond à l’invitation. Aucun e-mail automatique n’est envoyé à ce stade.</p>
             </section>
