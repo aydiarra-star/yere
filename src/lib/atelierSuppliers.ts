@@ -1,4 +1,3 @@
-import type { StockItem } from "../domain";
 import type { YereSession } from "./supabaseAuth";
 import { authenticatedFetch } from "./supabaseAuth";
 
@@ -56,7 +55,8 @@ export async function payAtelierSupplierPurchase(session:YereSession,atelierId:s
  await json(await authenticatedFetch(session,"rest/v1/paiement_fournisseur",{method:"POST",headers:{"Prefer":"return=minimal"},body:JSON.stringify({atelier_id:atelierId,achat_id:purchaseId,date_paiement:input.paidAt,montant_fcfa:input.amount,note:input.note??null,cle_idempotence:key})}));
 }
 export async function cancelAtelierSupplierPurchase(session:YereSession,atelierId:string,purchaseId:string,date:string,reason:string):Promise<void>{
- await json(await authenticatedFetch(session,`rest/v1/achat_fournisseur?id=eq.${encodeURIComponent(purchaseId)}&atelier_id=eq.${encodeURIComponent(atelierId)}&statut=eq.a_recevoir`,{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify({statut:"annulee",date_annulation:date,motif_annulation:reason})}));
+ const data=await json(await authenticatedFetch(session,`rest/v1/achat_fournisseur?id=eq.${encodeURIComponent(purchaseId)}&atelier_id=eq.${encodeURIComponent(atelierId)}&statut=eq.a_recevoir`,{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify({statut:"annulee",date_annulation:date,motif_annulation:reason})}));
+ if(!Array.isArray(data)||data.length!==1)throw new Error("Achat non annulé : il est peut-être déjà traité ou inaccessible.");
 }
 
 export type AtelierSupplierProfile = {
