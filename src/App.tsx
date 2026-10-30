@@ -442,6 +442,10 @@ function App() {
       setNotice("Choisissez une dépense active et indiquez le motif de l’annulation.");
       return;
     }
+    if (expense.id.startsWith("EXP-")) {
+      setNotice("Cette dépense provient d'une ancienne sauvegarde locale et n'est pas encore importée dans la caisse serveur. Conservez-la sur cet appareil jusqu'à sa migration.");
+      return;
+    }
     const session = readSession();
     const atelierId = window.sessionStorage.getItem("yere-active-atelier");
     if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
@@ -498,6 +502,10 @@ function App() {
     };
     if (!Number.isFinite(quantity) || quantity <= 0 || !stockItems.some((item) => item.id === movement.itemId)) {
       setNotice("Mouvement refusé : vérifiez l’article et la quantité.");
+      return;
+    }
+    if (movement.itemId.startsWith("STK-")) {
+      setNotice("Cet article vient d'une ancienne sauvegarde locale et n'est pas encore importé dans l'inventaire serveur.");
       return;
     }
     const session = readSession();
@@ -584,6 +592,10 @@ function App() {
     if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
     const previousIds = new Set(stockMovements.map((movement) => movement.id));
     const newMovements = result.movements.filter((movement) => !previousIds.has(movement.id));
+    if (newMovements.some((movement) => movement.itemId.startsWith("STK-"))) {
+      setNotice("Réception impossible : un article de cet achat appartient à l'ancien stock local. Importez d'abord cet article dans l'inventaire serveur.");
+      return;
+    }
     try {
       const refreshed = await createAtelierStockMovementsBatch(
         session, atelierId, newMovements.map(({ id: _id, ...movement }) => movement)
