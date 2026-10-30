@@ -46,14 +46,14 @@ function isNullableTimestamp(value: unknown): value is number | null {
 }
 
 function App() {
-  const [clients, setClients] = usePersistentState<Client[]>("yere-demo-clients-v1", [], isClientListValid);
-  const [orders, setOrders] = usePersistentState<Order[]>("yere-demo-orders-v1", [], isOrderListValid);
-  const [expenses, setExpenses] = usePersistentState<Expense[]>("yere-demo-expenses-v1", [], isExpenseListValid);
-  const [stockItems, setStockItems] = usePersistentState<StockItem[]>("yere-demo-stock-items-v1", [], isStockItemListValid);
-  const [stockMovements, setStockMovements] = usePersistentState<StockMovement[]>("yere-demo-stock-movements-v1", [], isStockMovementListValid);
+  const [clients, setClients] = usePersistentState<Client[]>("yere-demo-clients-v1", [], isClientListValid, "atelier");
+  const [orders, setOrders] = usePersistentState<Order[]>("yere-demo-orders-v1", [], isOrderListValid, "atelier");
+  const [expenses, setExpenses] = usePersistentState<Expense[]>("yere-demo-expenses-v1", [], isExpenseListValid, "atelier");
+  const [stockItems, setStockItems] = usePersistentState<StockItem[]>("yere-demo-stock-items-v1", [], isStockItemListValid, "atelier");
+  const [stockMovements, setStockMovements] = usePersistentState<StockMovement[]>("yere-demo-stock-movements-v1", [], isStockMovementListValid, "atelier");
   const [atelier, setAtelier] = usePersistentState<AtelierProfile>("yere-demo-atelier-v1", emptyAtelier, isAtelierProfileValid);
-  const [supplier, setSupplier] = usePersistentState<SupplierProfile>("yere-supplier-profile-v1", emptySupplier, isSupplierProfileValid);
-  const [marketplaceListings, setMarketplaceListings] = usePersistentState<MarketplaceListing[]>("yere-marketplace-listings-v1", [], isMarketplaceListingListValid);
+  const [supplier, setSupplier] = usePersistentState<SupplierProfile>("yere-supplier-profile-v1", emptySupplier, isSupplierProfileValid, "atelier");
+  const [marketplaceListings, setMarketplaceListings] = usePersistentState<MarketplaceListing[]>("yere-marketplace-listings-v1", [], isMarketplaceListingListValid, "atelier");
   const [listingDraft, setListingDraft] = useState<Omit<MarketplaceListing, "id">>({ ...emptyListing });
   const [listingFormOpen, setListingFormOpen] = useState(false);
   const [editingListingId, setEditingListingId] = useState<string | null>(null);
@@ -90,7 +90,7 @@ function App() {
   const [stockMovementType, setStockMovementType] = useState<"Entrée" | "Sortie">("Entrée");
   const [stockMovementQuantity, setStockMovementQuantity] = useState("");
   const [stockMovementNote, setStockMovementNote] = useState("");
-  const [supplierPurchases, setSupplierPurchases] = usePersistentState<SupplierPurchase[]>("yere-demo-supplier-purchases-v1", [], isSupplierPurchaseListValid);
+  const [supplierPurchases, setSupplierPurchases] = usePersistentState<SupplierPurchase[]>("yere-demo-supplier-purchases-v1", [], isSupplierPurchaseListValid, "atelier");
   const [supplierDirectory, setSupplierDirectory] = useState<AtelierSupplier[]>([]);
   const [teamMembers, setTeamMembers] = useState<AtelierMember[]>([]);
   const [teamInvitations, setTeamInvitations] = useState<AtelierInvitation[]>([]);
