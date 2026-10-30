@@ -1,4 +1,4 @@
-import type { Client, Measurement, MeasurementVersion } from "../domain";
+import type { Client, Expense, Measurement, MeasurementVersion, StockItem, StockMovement } from "../domain";
 import { authenticatedFetch, type YereSession } from "./supabaseAuth";
 
 type ClientRow = { id: string; nom: string; telephone: string | null; created_at: string };
@@ -225,4 +225,143 @@ export async function saveAtelierOrderStatus(
   });
   const data = await responseJson(response);
   if (!Array.isArray(data) || data.length !== 1) throw new Error("La mise à jour n'a pas été confirmée par le serveur.");
+}
+
+
+type ExpenseRow = {
+  id: string; date_depense: string; categorie: string; description: string;
+  montant_fcfa: number | string; annulee_le: string | null; motif_annulation: string | null;
+};
+type StockArticleRow = {
+  id: string; nom: string; unite: string; seuil_alerte: number | string; created_at: string;
+};
+type StockMovementRow = {
+  id: string; article_id: string; type: string; quantite: number | string;
+  date_mouvement: string; note: string | null;
+};
+
+export async function listAtelierExpenses(session: YereSession, atelierId: string): Promise<Expense[]> {
+  const response = await authenticatedFetch(session,
+    `rest/v1/depense?select=id,date_depense,categorie,description,montant_fcfa,annulee_le,motif_annulation&atelier_id=eq.${encodeURIComponent(atelierId)}&order=date_depense.desc,created_at.desc`);
+  const data = await responseJson(response);
+  if (!Array.isArray(data)) throw new Error("Réponse serveur inattendue lors du chargement de la caisse.");
+  return (data as ExpenseRow[]).map((row) => ({
+    id: row.id, spentAt: row.date_depense, category: row.categorie, description: row.description,
+    amount: Number(row.montant_fcfa),
+    ...(row.annulee_le && row.motif_annulation ? { voidedAt: row.annulee_le, voidReason: row.motif_annulation } : {})
+  }));
+}
+
+export async function createAtelierExpense(
+  session: YereSession, atelierId: string, input: Omit<Expense, "id" | "voidedAt" | "voidReason">
+): Promise<Expense> {
+  const response = await authenticatedFetch(session, "rest/v1/depense?select=id,date_depense,categorie,description,montant_fcfa", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      atelier_id: atelierId, date_depense: input.spentAt, categorie: input.category,
+      description: input.description, montant_fcfa: input.amount
+    })
+  });
+  const data = await responseJson(response);
+  const row = Array.isArray(data) ? data[0] as ExpenseRow | undefined : undefined;
+  if (!row) throw new Error("Le serveur n'a pas confirmé l'enregistrement de la dépense.");
+  return { id: row.id, spentAt: row.date_depense, category: row.categorie, description: row.description, amount: Number(row.montant_fcfa) };
+}
+
+export async function voidAtelierExpense(
+  session: YereSession, atelierId: string, expense: Expense, voidedAt: string, reason: string
+): Promise<Expense> {
+  const response = await authenticatedFetch(session,
+    `rest/v1/depense?id=eq.${encodeURIComponent(expense.id)}&atelier_id=eq.${encodeURIComponent(atelierId)}&annulee_le=is.null&select=id,date_depense,categorie,description,montant_fcfa,annulee_le,motif_annulation`, {
+      method: "PATCH", headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ annulee_le: voidedAt, motif_annulation: reason })
+    });
+  const data = await responseJson(response);
+  const row = Array.isArray(data) ? data[0] as ExpenseRow | undefined : undefined;
+  if (!row) throw new Error("La dépense a déjà été annulée ou n'est plus accessible.");
+  return {
+    id: row.id, spentAt: row.date_depense, category: row.categorie, description: row.description,
+    amount: Number(row.montant_fcfa), voidedAt: row.annulee_le ?? undefined,
+    voidReason: row.motif_annulation ?? undefined
+  };
+}
+
+export async function listAtelierStock(
+  session: YereSession, atelierId: string
+): Promise<{ items: StockItem[]; movements: StockMovement[] }> {
+  const filter = encodeURIComponent(atelierId);
+  const [itemsResponse, movementsResponse] = await Promise.all([
+    authenticatedFetch(session, `rest/v1/stock_article?select=id,nom,unite,seuil_alerte,created_at&atelier_id=eq.${filter}&order=created_at.desc`),
+    authenticatedFetch(session, `rest/v1/stock_mouvement?select=id,article_id,type,quantite,date_mouvement,note&atelier_id=eq.${filter}&order=date_mouvement.desc,created_at.desc`)
+  ]);
+  const [itemsData, movementsData] = await Promise.all([responseJson(itemsResponse), responseJson(movementsResponse)]);
+  if (!Array.isArray(itemsData) || !Array.isArray(movementsData)) throw new Error("Réponse serveur inattendue lors du chargement du stock.");
+  const movements = (movementsData as StockMovementRow[]).map((row) => ({
+    id: row.id, itemId: row.article_id, type: row.type === "sortie" ? "Sortie" as const : "Entrée" as const,
+    quantity: Number(row.quantite), movedAt: row.date_mouvement, ...(row.note ? { note: row.note } : {})
+  }));
+  const quantities = new Map<string, number>();
+  for (const movement of movements) {
+    quantities.set(movement.itemId, (quantities.get(movement.itemId) ?? 0)
+      + (movement.type === "Entrée" ? movement.quantity : -movement.quantity));
+  }
+  const items = (itemsData as StockArticleRow[]).map((row) => ({
+    id: row.id, name: row.nom, unit: row.unite, quantity: quantities.get(row.id) ?? 0,
+    minimumQuantity: Number(row.seuil_alerte), createdAt: row.created_at.slice(0, 10)
+  }));
+  return { items, movements };
+}
+
+export async function createAtelierStockArticle(
+  session: YereSession, atelierId: string,
+  input: { name: string; unit: string; minimumQuantity: number; initialQuantity: number; createdAt: string }
+): Promise<{ items: StockItem[]; movements: StockMovement[] }> {
+  const key = `yere-stock-opening-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+  const response = await authenticatedFetch(session, "rest/v1/rpc/create_stock_article_with_opening", {
+    method: "POST",
+    body: JSON.stringify({
+      p_atelier_id: atelierId, p_nom: input.name, p_unite: input.unit,
+      p_seuil: input.minimumQuantity, p_quantite_initiale: input.initialQuantity,
+      p_date: input.createdAt, p_cle_idempotence: key
+    })
+  });
+  await responseJson(response);
+  return listAtelierStock(session, atelierId);
+}
+
+export async function createAtelierStockMovement(
+  session: YereSession, atelierId: string, input: Omit<StockMovement, "id">
+): Promise<StockMovement> {
+  const key = `yere-stock-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+  const response = await authenticatedFetch(session, "rest/v1/stock_mouvement?select=id,article_id,type,quantite,date_mouvement,note", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      atelier_id: atelierId, article_id: input.itemId,
+      type: input.type === "Entrée" ? "entree" : "sortie", quantite: input.quantity,
+      date_mouvement: input.movedAt, note: input.note ?? null, cle_idempotence: key
+    })
+  });
+  const data = await responseJson(response);
+  const row = Array.isArray(data) ? data[0] as StockMovementRow | undefined : undefined;
+  if (!row) throw new Error("Le serveur n'a pas confirmé le mouvement de stock.");
+  return {
+    id: row.id, itemId: row.article_id, type: row.type === "sortie" ? "Sortie" : "Entrée",
+    quantity: Number(row.quantite), movedAt: row.date_mouvement, ...(row.note ? { note: row.note } : {})
+  };
+}
+
+export async function createAtelierStockMovementsBatch(
+  session: YereSession, atelierId: string, movements: Array<Omit<StockMovement, "id">>
+): Promise<{ items: StockItem[]; movements: StockMovement[] }> {
+  const payload = movements.map((movement) => ({
+    article_id: movement.itemId, type: movement.type === "Entrée" ? "entree" : "sortie",
+    quantite: movement.quantity, date_mouvement: movement.movedAt,
+    note: movement.note ?? null,
+    cle_idempotence: `yere-stock-batch-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`
+  }));
+  const response = await authenticatedFetch(session, "rest/v1/rpc/create_stock_movements_batch", {
+    method: "POST", body: JSON.stringify({ p_atelier_id: atelierId, p_movements: payload })
+  });
+  await responseJson(response);
+  return listAtelierStock(session, atelierId);
 }
