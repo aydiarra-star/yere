@@ -51,11 +51,68 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p backup
-          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/roles.sql --role-only
-          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/schema.sql
-          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/data.sql --use-copy --data-only
-          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/migration-history-schema.sql --schema supabase_migrations
-          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/migration-history-data.sql --use-copy --data-only --schema supabase_migrations
+
+          # GitHub-hosted runners are IPv4-only. Supabase direct DB endpoints
+          # are IPv6-only on projects without the IPv4 add-on. Convert only
+          # this project's known direct URL to its shared SESSION pooler URL
+          # (port 5432), which supports pg_dump. Never print the credential URL.
+          BACKUP_DB_URL="$(python3 - <<'PY'
+          import os
+          import re
+          import sys
+          from urllib.parse import urlsplit
+
+          url = os.environ["SUPABASE_DB_URL"]
+          project_ref = "anphzspjnnhzcqzwhpsg"
+          direct_host = f"db.{project_ref}.supabase.co"
+          pooler_host = "aws-0-eu-west-3.pooler.supabase.com"
+
+          try:
+              parts = urlsplit(url)
+              username = parts.username or ""
+              host = parts.hostname or ""
+              password = parts.password
+              port = parts.port or 5432
+          except ValueError:
+              print("URL PostgreSQL SUPABASE_DB_URL invalide.", file=sys.stderr)
+              sys.exit(1)
+
+          if host == direct_host:
+              if username != "postgres" or password is None:
+                  print("L'URL directe YÉRÉ doit utiliser l'utilisateur postgres et un mot de passe.", file=sys.stderr)
+                  sys.exit(1)
+              # Preserve the already URL-encoded password exactly as supplied.
+              authority = url.split("://", 1)[1].split("@", 1)[0]
+              raw_password = authority.split(":", 1)[1] if ":" in authority else ""
+              if not raw_password:
+                  print("Mot de passe absent de SUPABASE_DB_URL.", file=sys.stderr)
+                  sys.exit(1)
+              url = re.sub(
+                  r"^(postgres(?:ql)?://)postgres:",
+                  rf"\1postgres.{project_ref}:",
+                  url,
+                  count=1,
+              )
+              url = url.replace(f"@{direct_host}:{port}/", f"@{pooler_host}:5432/", 1)
+              print("Connexion directe IPv6 convertie en pooler de session IPv4.", file=sys.stderr)
+          elif host == pooler_host:
+              if username != f"postgres.{project_ref}" or port != 5432:
+                  print("Le pooler doit utiliser postgres.<project-ref> sur le port 5432 (session mode).", file=sys.stderr)
+                  sys.exit(1)
+              print("Pooler de session IPv4 déjà configuré.", file=sys.stderr)
+          else:
+              print("Hôte PostgreSQL inattendu pour le projet YÉRÉ; vérifiez le secret SUPABASE_DB_URL.", file=sys.stderr)
+              sys.exit(1)
+
+          print(url)
+          PY
+          )"
+
+          supabase db dump --db-url "$BACKUP_DB_URL" -f backup/roles.sql --role-only
+          supabase db dump --db-url "$BACKUP_DB_URL" -f backup/schema.sql
+          supabase db dump --db-url "$BACKUP_DB_URL" -f backup/data.sql --use-copy --data-only
+          supabase db dump --db-url "$BACKUP_DB_URL" -f backup/migration-history-schema.sql --schema supabase_migrations
+          supabase db dump --db-url "$BACKUP_DB_URL" -f backup/migration-history-data.sql --use-copy --data-only --schema supabase_migrations
           test -s backup/schema.sql
           test -s backup/data.sql
           printf 'Projet: YÉRÉ\nDate UTC: %s\nCommit: %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$GITHUB_SHA" > backup/README.txt
