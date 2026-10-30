@@ -1,0 +1,1 @@
+create index profil_fournisseur_created_by_idx on public.profil_fournisseur(created_by) where created_by is not null;
