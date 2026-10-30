@@ -619,74 +619,116 @@ function App() {
   async function receivePurchase(purchaseId: string) {
     const purchase = supplierPurchases.find((item) => item.id === purchaseId);
     if (!purchase) return;
-    const receivedAt = new Date().toISOString().slice(0, 10);
-    const result = receiveSupplierPurchase(
-      purchase, stockItems, stockMovements, receivedAt, "MOV-" + Date.now() + "-purchase"
-    );
-    if (!result) {
-      setNotice("Réception refusée : vérifiez l’état de l’achat, le stock et l’historique des mouvements.");
+    if (purchase.id.startsWith("ACH-")) {
+      setNotice("Cet achat provient de l’ancien stockage local. Il doit être importé avant toute réception serveur.");
+      return;
+    }
+    if (purchase.status !== "À recevoir" || !purchase.lines.length
+      || purchase.lines.some((line) => !stockItems.some((item) => item.id === line.stockItemId))) {
+      setNotice("Réception refusée : vérifiez l’état de l’achat et les articles de stock associés.");
       return;
     }
     const session = readSession();
     const atelierId = window.sessionStorage.getItem("yere-active-atelier");
     if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
-    const previousIds = new Set(stockMovements.map((movement) => movement.id));
-    const newMovements = result.movements.filter((movement) => !previousIds.has(movement.id));
-    if (newMovements.some((movement) => movement.itemId.startsWith("STK-"))) {
-      setNotice("Réception impossible : un article de cet achat appartient à l'ancien stock local. Importez d'abord cet article dans l'inventaire serveur.");
-      return;
-    }
     try {
-      const refreshed = await createAtelierStockMovementsBatch(
-        session, atelierId, newMovements.map(({ id: _id, ...movement }) => movement)
-      );
+      const receivedAt = new Date().toISOString().slice(0, 10);
+      await receiveAtelierSupplierPurchase(session, atelierId, purchase.id, receivedAt);
+      const [refreshed, serverPurchases] = await Promise.all([
+        listAtelierStock(session, atelierId), listAtelierSupplierPurchases(session, atelierId)
+      ]);
       setStockItems((current) => [...refreshed.items, ...current.filter((item) => item.id.startsWith("STK-"))]);
       setStockMovements((current) => [...refreshed.movements, ...current.filter((item) => item.id.startsWith("MOV-"))]);
-      setSupplierPurchases((current) => current.map((item) => item.id === purchase.id ? result.purchase : item));
-      setNotice("Achat réceptionné : les entrées de stock ont été enregistrées ensemble sur le serveur.");
+      const names = new Map(supplierDirectory.map((item) => [item.id, item.name]));
+      const mapped: SupplierPurchase[] = serverPurchases.map((item) => ({
+        id: item.id, supplierName: names.get(item.supplierId) ?? purchase.supplierName,
+        orderedAt: item.orderedAt, lines: item.lines, status: item.status,
+        ...(item.receivedAt ? { receivedAt: item.receivedAt } : {}),
+        ...(item.cancelledAt ? { cancelledAt: item.cancelledAt } : {}),
+        ...(item.cancelReason ? { cancelReason: item.cancelReason } : {}),
+        ...(item.note ? { note: item.note } : {}), payments: item.payments
+      }));
+      setSupplierPurchases((current) => [...mapped, ...current.filter((item) => item.id.startsWith("ACH-"))]);
+      setNotice("Achat réceptionné : les mouvements et le changement d’état ont été validés ensemble sur le serveur.");
     } catch (cause) {
       setNotice(cause instanceof Error ? `Réception non enregistrée : ${cause.message}` : "Impossible de confirmer la réception sur le serveur.");
     }
   }
 
-  function recordSupplierPurchasePayment(event: FormEvent<HTMLFormElement>) {
+  async function recordSupplierPurchasePayment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const purchase = supplierPurchases.find((item) => item.id === supplierPaymentPurchaseId);
     const amount = Number(supplierPaymentAmount);
-    if (!purchase || !Number.isSafeInteger(amount) || amount <= 0) {
-      setNotice("Saisissez un montant entier supérieur à zéro pour le règlement fournisseur.");
+    if (!purchase || purchase.id.startsWith("ACH-") || !Number.isSafeInteger(amount) || amount <= 0) {
+      setNotice("Ce règlement nécessite un achat serveur et un montant entier supérieur à zéro.");
       return;
     }
     const updated = addSupplierPurchasePayment(purchase, {
-      id: "SUP-PAY-" + Date.now(),
-      paidAt: new Date().toISOString().slice(0, 10),
-      amount,
-      note: "Règlement fournisseur enregistré manuellement"
+      id: "SUP-PAY-" + Date.now(), paidAt: new Date().toISOString().slice(0, 10),
+      amount, note: "Règlement fournisseur enregistré manuellement"
     });
     if (!updated) {
       setNotice("Règlement refusé : vérifiez le solde restant. Un paiement ne peut pas dépasser le montant dû.");
       return;
     }
-    setSupplierPurchases((current) => current.map((item) => item.id === purchase.id ? updated : item));
-    setSupplierPaymentAmount("");
-    setSupplierPaymentPurchaseId(null);
-    setNotice("Règlement fournisseur de " + formatXof(amount) + " enregistré. La réception et le stock restent inchangés.");
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      await payAtelierSupplierPurchase(session, atelierId, purchase.id, {
+        amount, paidAt: new Date().toISOString().slice(0, 10), note: "Règlement fournisseur enregistré manuellement"
+      });
+      const serverPurchases = await listAtelierSupplierPurchases(session, atelierId);
+      const names = new Map(supplierDirectory.map((item) => [item.id, item.name]));
+      const mapped: SupplierPurchase[] = serverPurchases.map((item) => ({
+        id: item.id, supplierName: names.get(item.supplierId) ?? purchase.supplierName,
+        orderedAt: item.orderedAt, lines: item.lines, status: item.status,
+        ...(item.receivedAt ? { receivedAt: item.receivedAt } : {}),
+        ...(item.cancelledAt ? { cancelledAt: item.cancelledAt } : {}),
+        ...(item.cancelReason ? { cancelReason: item.cancelReason } : {}),
+        ...(item.note ? { note: item.note } : {}), payments: item.payments
+      }));
+      setSupplierPurchases((current) => [...mapped, ...current.filter((item) => item.id.startsWith("ACH-"))]);
+      setSupplierPaymentAmount("");
+      setSupplierPaymentPurchaseId(null);
+      setNotice("Règlement fournisseur de " + formatXof(amount) + " enregistré sur le serveur. La réception et le stock restent inchangés.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Règlement non enregistré : ${cause.message}` : "Impossible d'enregistrer le règlement fournisseur.");
+    }
   }
 
-  function cancelPurchase(event: FormEvent<HTMLFormElement>) {
+  async function cancelPurchase(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const purchase = supplierPurchases.find((item) => item.id === purchaseToCancelId);
     const cancelled = purchase
       ? cancelSupplierPurchase(purchase, new Date().toISOString().slice(0, 10), purchaseCancelReason)
       : null;
-    if (!cancelled) {
-      setNotice("Annulation refusée : seul un achat en attente peut être annulé, avec un motif obligatoire.");
+    if (!purchase || purchase.id.startsWith("ACH-") || !cancelled) {
+      setNotice("Annulation refusée : seul un achat serveur non réglé et en attente peut être annulé avec un motif obligatoire.");
       return;
     }
-    setSupplierPurchases((current) => current.map((item) => item.id === cancelled.id ? cancelled : item));
-    setPurchaseToCancelId(null);
-    setPurchaseCancelReason("");
-    setNotice("Achat annulé avec son motif conservé dans l’historique. Le stock n’a pas été modifié.");
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      await cancelAtelierSupplierPurchase(session, atelierId, purchase.id, cancelled.cancelledAt!, cancelled.cancelReason!);
+      const serverPurchases = await listAtelierSupplierPurchases(session, atelierId);
+      const names = new Map(supplierDirectory.map((item) => [item.id, item.name]));
+      const mapped: SupplierPurchase[] = serverPurchases.map((item) => ({
+        id: item.id, supplierName: names.get(item.supplierId) ?? purchase.supplierName,
+        orderedAt: item.orderedAt, lines: item.lines, status: item.status,
+        ...(item.receivedAt ? { receivedAt: item.receivedAt } : {}),
+        ...(item.cancelledAt ? { cancelledAt: item.cancelledAt } : {}),
+        ...(item.cancelReason ? { cancelReason: item.cancelReason } : {}),
+        ...(item.note ? { note: item.note } : {}), payments: item.payments
+      }));
+      setSupplierPurchases((current) => [...mapped, ...current.filter((item) => item.id.startsWith("ACH-"))]);
+      setPurchaseToCancelId(null);
+      setPurchaseCancelReason("");
+      setNotice("Achat annulé sur le serveur. Le motif reste conservé dans l’historique et le stock est inchangé.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Annulation non enregistrée : ${cause.message}` : "Impossible d'annuler l'achat fournisseur.");
+    }
   }
 
   async function addExpense(event: FormEvent<HTMLFormElement>) {
