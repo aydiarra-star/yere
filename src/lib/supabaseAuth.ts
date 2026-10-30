@@ -102,7 +102,7 @@ export async function signOut(session: YereSession): Promise<void> {
 }
 
 export async function authenticatedFetch(session: YereSession, path: string, init: RequestInit = {}): Promise<Response> {
-  let active = session;
+  let active = readSession() ?? session;
   if (active.expires_at * 1000 <= Date.now() + 60_000) active = await refreshSession(active);
   const response = await fetch(apiUrl(path), {
     ...init,
