@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { clearSession, createAtelier, listMyAteliers, readSession, refreshSession, signIn, signOut, signUp, supabaseReady, type YereSession } from "./lib/supabaseAuth";
+import { acceptAtelierInvitation, listMyAtelierInvitations, type AtelierInvitation } from "./lib/atelierTeam";
 import "./auth-gate.css";
 
 type Atelier = { id: string; nom: string; telephone: string | null; ville: string | null };
@@ -18,6 +19,7 @@ function seedLocalProfile(userId: string, atelier: Atelier) {
 export default function AuthGate({ children }: Props) {
   const [session, setSession] = useState<YereSession | null>(null);
   const [atelier, setAtelier] = useState<Atelier | null>(null);
+  const [pendingInvitations, setPendingInvitations] = useState<AtelierInvitation[]>([]);
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
@@ -30,13 +32,36 @@ export default function AuthGate({ children }: Props) {
   const [error, setError] = useState("");
 
   async function loadWorkspace(activeSession: YereSession) {
-    const workspaces = await listMyAteliers(activeSession);
+    const [workspaces, invitations] = await Promise.all([
+      listMyAteliers(activeSession), listMyAtelierInvitations(activeSession)
+    ]);
+    setPendingInvitations(invitations.filter((item) =>
+      item.email.toLowerCase() === (activeSession.user.email ?? "").toLowerCase()
+      && new Date(item.expiresAt).getTime() > Date.now()
+    ));
     if (workspaces.length > 0) {
       seedLocalProfile(activeSession.user.id, workspaces[0]);
       setAtelier(workspaces[0]);
     } else {
       setAtelier(null);
     }
+  }
+
+  async function acceptInvitation(invitation: AtelierInvitation) {
+    if (!session) return;
+    setBusy(true); setError(""); setMessage("");
+    try {
+      const atelierId = await acceptAtelierInvitation(session, invitation.id);
+      const workspaces = await listMyAteliers(session);
+      const accepted = workspaces.find((item) => item.id === atelierId);
+      if (!accepted) throw new Error("Invitation acceptée, mais l’atelier n’est pas encore accessible. Reconnectez-vous.");
+      seedLocalProfile(session.user.id, accepted);
+      setAtelier(accepted);
+      setPendingInvitations((current) => current.filter((item) => item.id !== invitation.id));
+      setMessage("Vous avez rejoint l’atelier " + accepted.nom + ".");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Impossible d’accepter cette invitation.");
+    } finally { setBusy(false); }
   }
 
   useEffect(() => {
@@ -131,6 +156,17 @@ export default function AuthGate({ children }: Props) {
   if (!atelier) return (
     <main className="auth-shell">
       <section className="auth-card auth-workspace-card">
+        {pendingInvitations.length > 0 && <div className="auth-invitation-list">
+          <p className="eyebrow">INVITATIONS REÇUES</p><h2>Vous êtes invité à rejoindre un atelier.</h2>
+          {pendingInvitations.map((invitation) => <article key={invitation.id} className="auth-invitation-item">
+            <strong>{invitation.atelierName}</strong><span>{invitation.email} · {invitation.role === "gestionnaire" ? "Gestionnaire" : "Employé"}</span>
+            <small>Expire le {new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(invitation.expiresAt))}</small>
+            <button className="primary-button auth-submit" type="button" disabled={busy} onClick={() => void acceptInvitation(invitation)}>{busy ? "Acceptation…" : "Accepter l’invitation"}</button>
+          </article>)}
+          {error && <p className="auth-error" role="alert">{error}</p>}
+          {message && <p className="auth-message" role="status">{message}</p>}
+          <div className="auth-divider"><span>ou créer votre propre atelier</span></div>
+        </div>}
         <div className="auth-brand"><span className="auth-mark">Y</span><span><strong>YÉRÉ</strong><small>ATELIER</small></span><button className="auth-signout" type="button" onClick={() => void handleSignOut()}>Déconnexion</button></div>
         <p className="eyebrow">PREMIÈRE CONFIGURATION</p>
         <h1>Créons votre atelier.</h1>
@@ -153,7 +189,8 @@ export default function AuthGate({ children }: Props) {
         <span><strong>Connecté</strong> · {session.user.email} · {atelier.nom}</span>
         <button type="button" onClick={() => void handleSignOut()}>Déconnexion</button>
       </div>
-      <div className="auth-local-warning" role="status">La connexion, l'atelier, les clients, les mensurations, les commandes, les versements, les dépenses et l'inventaire sont synchronisés sur le serveur. Les fiches et achats fournisseurs, les règlements fournisseurs, les membres d'équipe, les sauvegardes et la marketplace restent à synchroniser : n'utilisez pas encore ces modules pour vos données réelles.</div>
+      {pendingInvitations.length > 0 && <div className="auth-invitation-banner"><div><strong>Vous avez {pendingInvitations.length} invitation(s) d’atelier.</strong>{pendingInvitations.map((item) => <span key={item.id}>{item.atelierName} · {item.role}</span>)}</div><div>{pendingInvitations.map((item) => <button key={item.id} className="secondary-button" type="button" disabled={busy} onClick={() => void acceptInvitation(item)}>Rejoindre {item.atelierName}</button>)}</div>{error && <p className="auth-error" role="alert">{error}</p>}</div>}
+      <div className="auth-local-warning" role="status">La connexion, les ateliers, les clients, les mensurations, les commandes, les versements, les dépenses, l’inventaire et les fournisseurs sont synchronisés sur le serveur. La marketplace publique et les sauvegardes serveur restent à finaliser : n’utilisez pas encore ces deux modules pour vos données réelles.</div>
       {children}
     </>
   );
