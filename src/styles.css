@@ -3124,3 +3124,15 @@ main.main-content .page-wrap .tailor-priority-card .tailor-card-art{
   main.main-content .page-wrap > .welcome-row.overview-welcome{margin-bottom:0!important}
   main.main-content .page-wrap > .welcome-row.overview-welcome + .welcome-action{margin-top:18px!important;margin-bottom:22px!important}
 }
+
+/* Atelier team and invitation management */
+.team-panel{margin-top:22px}
+.team-panel .section-heading h3{margin:0 0 6px}
+.team-invite-form{margin-top:20px;padding:18px;border:1px solid var(--line,#e6e8e5);border-radius:14px;background:var(--surface-soft,#fafbf9)}
+.team-invite-form h4,.team-invitation-list h4{margin:0 0 10px;font-size:1rem}
+.team-invite-form label{display:grid;gap:7px;min-width:0}
+.team-invitation-list{display:grid;gap:10px;margin-top:18px}
+.team-invitation-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;border:1px solid var(--line,#e6e8e5);border-radius:12px}
+.team-invitation-row>span:first-child{display:grid;gap:4px;min-width:0;overflow-wrap:anywhere}
+.team-invitation-row small{color:var(--muted,#6d756f)}
+.team-invitation-row>span:last-child{font-size:.85rem;white-space:nowrap;color:var(--muted,#6d756f)}
