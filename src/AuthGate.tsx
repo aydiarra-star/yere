@@ -19,6 +19,7 @@ function seedLocalProfile(userId: string, atelier: Atelier) {
 export default function AuthGate({ children }: Props) {
   const [session, setSession] = useState<YereSession | null>(null);
   const [atelier, setAtelier] = useState<Atelier | null>(null);
+  const [workspaces, setWorkspaces] = useState<Atelier[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<AtelierInvitation[]>([]);
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -35,14 +36,18 @@ export default function AuthGate({ children }: Props) {
     const [workspaces, invitations] = await Promise.all([
       listMyAteliers(activeSession), listMyAtelierInvitations(activeSession)
     ]);
+    setWorkspaces(workspaces);
     setPendingInvitations(invitations.filter((item) =>
       item.email.toLowerCase() === (activeSession.user.email ?? "").toLowerCase()
       && new Date(item.expiresAt).getTime() > Date.now()
     ));
-    if (workspaces.length > 0) {
-      seedLocalProfile(activeSession.user.id, workspaces[0]);
-      setAtelier(workspaces[0]);
+    const savedAtelierId = window.sessionStorage.getItem("yere-active-atelier");
+    const selectedAtelier = workspaces.find((item) => item.id === savedAtelierId) ?? workspaces[0];
+    if (selectedAtelier) {
+      seedLocalProfile(activeSession.user.id, selectedAtelier);
+      setAtelier(selectedAtelier);
     } else {
+      window.sessionStorage.removeItem("yere-active-atelier");
       setAtelier(null);
     }
   }
@@ -53,6 +58,7 @@ export default function AuthGate({ children }: Props) {
     try {
       const atelierId = await acceptAtelierInvitation(session, invitation.id);
       const workspaces = await listMyAteliers(session);
+      setWorkspaces(workspaces);
       const accepted = workspaces.find((item) => item.id === atelierId);
       if (!accepted) throw new Error("Invitation acceptée, mais l’atelier n’est pas encore accessible. Reconnectez-vous.");
       seedLocalProfile(session.user.id, accepted);
@@ -119,7 +125,9 @@ export default function AuthGate({ children }: Props) {
     setBusy(true); setError("");
     try {
       const id = await createAtelier(session, { nom: atelierName.trim(), telephone: phone.trim(), ville: city.trim() });
-      const created = (await listMyAteliers(session)).find((item) => item.id === id);
+      const workspaces = await listMyAteliers(session);
+      setWorkspaces(workspaces);
+      const created = workspaces.find((item) => item.id === id);
       if (!created) throw new Error("Atelier créé, mais impossible de le relire avec les droits du compte. Contactez l'assistance avant de poursuivre.");
       seedLocalProfile(session.user.id, created);
       setAtelier(created);
@@ -128,9 +136,17 @@ export default function AuthGate({ children }: Props) {
     } finally { setBusy(false); }
   }
 
+  function switchAtelier(nextAtelierId: string) {
+    if (!session) return;
+    const nextAtelier = workspaces.find((item) => item.id === nextAtelierId);
+    if (!nextAtelier || nextAtelier.id === atelier?.id) return;
+    seedLocalProfile(session.user.id, nextAtelier);
+    window.location.reload();
+  }
+
   async function handleSignOut() {
     if (session) await signOut(session);
-    setSession(null); setAtelier(null); setMessage(""); setError("");
+    setSession(null); setAtelier(null); setWorkspaces([]); setMessage(""); setError("");
   }
 
   if (!ready) return <main className="auth-loading"><span className="auth-mark">Y</span><p>Préparation de votre espace YÉRÉ…</p></main>;
@@ -190,7 +206,8 @@ export default function AuthGate({ children }: Props) {
   return (
     <>
       <div className="auth-session-bar">
-        <span><strong>Connecté</strong> · {session.user.email} · {atelier.nom}</span>
+        <span className="auth-session-identity"><strong>Connecté</strong> · {session.user.email}</span>
+        {workspaces.length > 1 ? <label className="auth-workspace-switch"><span>Atelier actif</span><select aria-label="Choisir l’atelier actif" value={atelier.id} onChange={(event) => switchAtelier(event.target.value)}>{workspaces.map((item) => <option key={item.id} value={item.id}>{item.nom}{item.ville ? ` · ${item.ville}` : ""}</option>)}</select></label> : <span className="auth-session-workspace">{atelier.nom}</span>}
         <button type="button" onClick={() => void handleSignOut()}>Déconnexion</button>
       </div>
       {pendingInvitations.length > 0 && <div className="auth-invitation-banner"><div><strong>Vous avez {pendingInvitations.length} invitation(s) d’atelier.</strong>{pendingInvitations.map((item) => <span key={item.id}>{item.atelierName} · {item.role}</span>)}</div><div>{pendingInvitations.map((item) => <button key={item.id} className="secondary-button" type="button" disabled={busy} onClick={() => void acceptInvitation(item)}>Rejoindre {item.atelierName}</button>)}</div>{error && <p className="auth-error" role="alert">{error}</p>}</div>}

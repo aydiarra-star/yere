@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { preserveRejectedStorageValue } from "./usePersistentState";
+import { preserveRejectedStorageValue, resolvePersistentStorageKey } from "./usePersistentState";
+
+describe("resolvePersistentStorageKey", () => {
+  it("keeps account-level preferences scoped to the user", () => {
+    expect(resolvePersistentStorageKey("yere-onboarding", "user-a", "atelier-a", "user")).toBe("yere-onboarding::user-a");
+  });
+
+  it("isolates cached business data by both user and active atelier", () => {
+    expect(resolvePersistentStorageKey("yere-clients", "user-a", "atelier-a", "atelier")).toBe("yere-clients::user-a::atelier-a");
+    expect(resolvePersistentStorageKey("yere-clients", "user-a", "atelier-b", "atelier")).toBe("yere-clients::user-a::atelier-b");
+  });
+
+  it("does not share an atelier cache with a guest or a missing atelier", () => {
+    expect(resolvePersistentStorageKey("yere-clients", null, null, "atelier")).toBe("yere-clients::guest::no-atelier");
+  });
+});
 
 function createStorage(initial: Record<string, string> = {}) {
   const values = new Map(Object.entries(initial));
