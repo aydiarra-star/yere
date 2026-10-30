@@ -51,7 +51,7 @@ function App() {
   const [expenses, setExpenses] = usePersistentState<Expense[]>("yere-demo-expenses-v1", [], isExpenseListValid, "atelier");
   const [stockItems, setStockItems] = usePersistentState<StockItem[]>("yere-demo-stock-items-v1", [], isStockItemListValid, "atelier");
   const [stockMovements, setStockMovements] = usePersistentState<StockMovement[]>("yere-demo-stock-movements-v1", [], isStockMovementListValid, "atelier");
-  const [atelier, setAtelier] = usePersistentState<AtelierProfile>("yere-demo-atelier-v1", emptyAtelier, isAtelierProfileValid);
+  const [atelier, setAtelier] = usePersistentState<AtelierProfile>("yere-demo-atelier-v1", emptyAtelier, isAtelierProfileValid, "atelier");
   const [supplier, setSupplier] = usePersistentState<SupplierProfile>("yere-supplier-profile-v1", emptySupplier, isSupplierProfileValid, "atelier");
   const [marketplaceListings, setMarketplaceListings] = usePersistentState<MarketplaceListing[]>("yere-marketplace-listings-v1", [], isMarketplaceListingListValid, "atelier");
   const [listingDraft, setListingDraft] = useState<Omit<MarketplaceListing, "id">>({ ...emptyListing });
