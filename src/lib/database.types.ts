@@ -179,6 +179,53 @@ export type Database = {
           },
         ]
       }
+      depense: {
+        Row: {
+          annulee_le: string | null
+          atelier_id: string
+          categorie: string
+          created_at: string
+          created_by: string | null
+          date_depense: string
+          description: string
+          id: string
+          montant_fcfa: number
+          motif_annulation: string | null
+        }
+        Insert: {
+          annulee_le?: string | null
+          atelier_id: string
+          categorie: string
+          created_at?: string
+          created_by?: string | null
+          date_depense?: string
+          description: string
+          id?: string
+          montant_fcfa: number
+          motif_annulation?: string | null
+        }
+        Update: {
+          annulee_le?: string | null
+          atelier_id?: string
+          categorie?: string
+          created_at?: string
+          created_by?: string | null
+          date_depense?: string
+          description?: string
+          id?: string
+          montant_fcfa?: number
+          motif_annulation?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "depense_atelier_id_fkey"
+            columns: ["atelier_id"]
+            isOneToOne: false
+            referencedRelation: "atelier"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mensuration: {
         Row: {
           atelier_id: string
@@ -267,6 +314,95 @@ export type Database = {
           },
         ]
       }
+      stock_article: {
+        Row: {
+          atelier_id: string
+          created_at: string
+          id: string
+          nom: string
+          seuil_alerte: number
+          unite: string
+        }
+        Insert: {
+          atelier_id: string
+          created_at?: string
+          id?: string
+          nom: string
+          seuil_alerte?: number
+          unite: string
+        }
+        Update: {
+          atelier_id?: string
+          created_at?: string
+          id?: string
+          nom?: string
+          seuil_alerte?: number
+          unite?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_article_atelier_id_fkey"
+            columns: ["atelier_id"]
+            isOneToOne: false
+            referencedRelation: "atelier"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_mouvement: {
+        Row: {
+          article_id: string
+          atelier_id: string
+          cle_idempotence: string
+          created_at: string
+          created_by: string | null
+          date_mouvement: string
+          id: string
+          note: string | null
+          quantite: number
+          type: string
+        }
+        Insert: {
+          article_id: string
+          atelier_id: string
+          cle_idempotence: string
+          created_at?: string
+          created_by?: string | null
+          date_mouvement?: string
+          id?: string
+          note?: string | null
+          quantite: number
+          type: string
+        }
+        Update: {
+          article_id?: string
+          atelier_id?: string
+          cle_idempotence?: string
+          created_at?: string
+          created_by?: string | null
+          date_mouvement?: string
+          id?: string
+          note?: string | null
+          quantite?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_mouvement_article_atelier_fkey"
+            columns: ["atelier_id", "article_id"]
+            isOneToOne: false
+            referencedRelation: "stock_article"
+            referencedColumns: ["atelier_id", "id"]
+          },
+          {
+            foreignKeyName: "stock_mouvement_atelier_id_fkey"
+            columns: ["atelier_id"]
+            isOneToOne: false
+            referencedRelation: "atelier"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -293,6 +429,24 @@ export type Database = {
           commande_id: string
           reference: string
         }[]
+      }
+      create_stock_article_with_opening: {
+        Args: {
+          p_atelier_id: string
+          p_cle_idempotence: string
+          p_date: string
+          p_nom: string
+          p_quantite_initiale: number
+          p_seuil: number
+          p_unite: string
+        }
+        Returns: {
+          article_id: string
+        }[]
+      }
+      create_stock_movements_batch: {
+        Args: { p_atelier_id: string; p_movements: Json }
+        Returns: number
       }
     }
     Enums: {
