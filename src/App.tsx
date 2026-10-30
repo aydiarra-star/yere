@@ -612,14 +612,15 @@ function App() {
       ]);
       setSupplierDirectory(serverSuppliers);
       const names = new Map(serverSuppliers.map((item) => [item.id, item.name]));
-      setSupplierPurchases(serverPurchases.map((purchase) => ({
+      const mappedPurchases: SupplierPurchase[] = serverPurchases.map((purchase) => ({
         id: purchase.id, supplierName: names.get(purchase.supplierId) ?? supplierName,
         orderedAt: purchase.orderedAt, lines: purchase.lines, status: purchase.status,
         ...(purchase.receivedAt ? { receivedAt: purchase.receivedAt } : {}),
         ...(purchase.cancelledAt ? { cancelledAt: purchase.cancelledAt } : {}),
         ...(purchase.cancelReason ? { cancelReason: purchase.cancelReason } : {}),
         ...(purchase.note ? { note: purchase.note } : {}), payments: purchase.payments
-      })).concat(supplierPurchases.filter((purchase) => purchase.id.startsWith("ACH-"))));
+      }));
+      setSupplierPurchases([...mappedPurchases, ...supplierPurchases.filter((purchase) => purchase.id.startsWith("ACH-"))]);
       setPurchaseSupplierName("");
       setPurchaseStockItemId("");
       setPurchaseQuantity("");
