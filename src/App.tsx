@@ -7,6 +7,7 @@ import { isMarketplaceListingListValid, type MarketplaceListing } from "./market
 import { usePersistentState } from "./usePersistentState";
 import { createAtelierClient, createAtelierOrder, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
 import { readSession } from "./lib/supabaseAuth";
+import { createAtelierInvitation, listAtelierInvitations, listAtelierMembers, type AtelierInvitation, type AtelierMember } from "./lib/atelierTeam";
 import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, getAtelierSupplierProfile, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, saveAtelierSupplierProfile, type AtelierSupplier } from "./lib/atelierSuppliers";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
@@ -91,6 +92,11 @@ function App() {
   const [stockMovementNote, setStockMovementNote] = useState("");
   const [supplierPurchases, setSupplierPurchases] = usePersistentState<SupplierPurchase[]>("yere-demo-supplier-purchases-v1", [], isSupplierPurchaseListValid);
   const [supplierDirectory, setSupplierDirectory] = useState<AtelierSupplier[]>([]);
+  const [teamMembers, setTeamMembers] = useState<AtelierMember[]>([]);
+  const [teamInvitations, setTeamInvitations] = useState<AtelierInvitation[]>([]);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"gestionnaire" | "employe">("employe");
+  const [teamBusy, setTeamBusy] = useState(false);
   const [purchaseFormOpen, setPurchaseFormOpen] = useState(false);
   const [purchaseSupplierName, setPurchaseSupplierName] = useState("");
   const [purchaseStockItemId, setPurchaseStockItemId] = useState("");
@@ -120,9 +126,10 @@ function App() {
     void Promise.all([
       listAtelierClients(session, atelierId), listAtelierOrders(session, atelierId),
       listAtelierExpenses(session, atelierId), listAtelierStock(session, atelierId),
-      listAtelierSuppliers(session, atelierId), listAtelierSupplierPurchases(session, atelierId), getAtelierSupplierProfile(session, atelierId)
+      listAtelierSuppliers(session, atelierId), listAtelierSupplierPurchases(session, atelierId), getAtelierSupplierProfile(session, atelierId),
+      listAtelierMembers(session, atelierId), listAtelierInvitations(session, atelierId)
     ])
-      .then(([serverClients, serverOrders, serverExpenses, serverStock, serverSuppliers, serverPurchases, serverSupplierProfile]) => {
+      .then(([serverClients, serverOrders, serverExpenses, serverStock, serverSuppliers, serverPurchases, serverSupplierProfile, serverMembers, serverInvitations]) => {
         if (!active) return;
         setClients(serverClients);
         setOrders((current) => [...serverOrders, ...current.filter((order) => !order.serverId)]);
@@ -139,6 +146,8 @@ function App() {
           ...current.filter((movement) => movement.id.startsWith("MOV-") && !serverStock.movements.some((serverMovement) => serverMovement.id === movement.id))
         ]);
         setSupplierDirectory(serverSuppliers);
+        setTeamMembers(serverMembers);
+        setTeamInvitations(serverInvitations);
         if (serverSupplierProfile) setSupplier(serverSupplierProfile);
         const supplierName = new Map(serverSuppliers.map((item) => [item.id, item.name]));
         const mappedPurchases: SupplierPurchase[] = serverPurchases.map((purchase) => ({
@@ -167,6 +176,8 @@ function App() {
   }, [setClients, setOrders, setSupplierPurchases]);
 
   const visibleClients = useMemo(() => clients.filter((client) => matchesClient(client, query)), [clients, query]);
+  const currentUserId = readSession()?.user.id;
+  const canManageTeam = teamMembers.some((member) => member.userId === currentUserId && member.active && (member.role === "proprietaire" || member.role === "gestionnaire"));
   const outstanding = orders.reduce((sum, order) => sum + balanceDue(order), 0);
   const outstandingOrderCount = orders.filter((order) => balanceDue(order) > 0).length;
   const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.voidedAt ? 0 : expense.amount), 0);
@@ -566,6 +577,27 @@ function App() {
     setPurchaseQuantity("");
     setPurchaseUnitCost("");
     setNotice("Article ajouté à l’achat. Vous pouvez ajouter d’autres articles avant d’enregistrer.");
+  }
+
+  async function inviteTeamMember(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setNotice("Saisissez une adresse e-mail valide pour le collaborateur.");
+      return;
+    }
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    setTeamBusy(true);
+    try {
+      const invitation = await createAtelierInvitation(session, atelierId, email, inviteRole);
+      setTeamInvitations((current) => [invitation, ...current.filter((item) => item.id !== invitation.id)]);
+      setInviteEmail("");
+      setNotice("Invitation enregistrée pour " + email + ". La personne doit se connecter à YÉRÉ avec cette adresse pour l’accepter. L’envoi automatique d’e-mail sera activé avec le service serveur.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? "Invitation non créée : " + cause.message : "Impossible de créer l’invitation.");
+    } finally { setTeamBusy(false); }
   }
 
   async function saveSupplierProfile(event: FormEvent<HTMLFormElement>) {
@@ -1024,6 +1056,20 @@ function App() {
               <label>Ville<input value={atelier.city} onChange={(event) => setAtelier((current) => ({ ...current, city: event.target.value }))} /></label>
               <button type="submit" className="primary-button">Enregistrer le profil</button>
             </form>
+            <section className="content-card team-panel" aria-labelledby="team-title">
+              <div className="section-heading"><div><h3 id="team-title">Équipe et accès à l’atelier</h3><p>Les droits sont contrôlés sur le serveur et chaque membre reste limité à cet atelier.</p></div><span className="marketplace-listing-count">{teamMembers.filter((member) => member.active).length} membre(s)</span></div>
+              <div className="table-wrap"><table><thead><tr><th>Identifiant du compte</th><th>Rôle</th><th>État</th><th>Depuis</th></tr></thead><tbody>{teamMembers.map((member) => <tr key={member.userId}><td><code>{member.userId.slice(0,8)}…{member.userId.slice(-4)}</code>{member.userId === currentUserId ? <small>Votre compte</small> : null}</td><td>{member.role === "proprietaire" ? "Propriétaire" : member.role === "gestionnaire" ? "Gestionnaire" : "Employé"}</td><td>{member.active ? "Actif" : "Désactivé"}</td><td>{new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(member.createdAt))}</td></tr>)}</tbody></table></div>
+              {canManageTeam ? <>
+                <form className="new-order-form team-invite-form" onSubmit={inviteTeamMember}>
+                  <h4>Inviter un collaborateur</h4>
+                  <label>Adresse e-mail<input type="email" required maxLength={254} value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="collaborateur@exemple.com" /></label>
+                  <label>Rôle<select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as "gestionnaire" | "employe")}><option value="employe">Employé — accès opérationnel</option><option value="gestionnaire">Gestionnaire — gestion de l’atelier</option></select></label>
+                  <div className="form-actions"><button className="primary-button" type="submit" disabled={teamBusy}>{teamBusy ? "Création…" : "Créer l’invitation"}</button></div>
+                </form>
+                <div className="team-invitation-list"><h4>Invitations envoyées</h4>{teamInvitations.filter((item) => !item.acceptedAt && !item.cancelledAt).length === 0 ? <p className="empty-state">Aucune invitation en attente.</p> : teamInvitations.filter((item) => !item.acceptedAt && !item.cancelledAt).map((item) => <div className="team-invitation-row" key={item.id}><span><b>{item.email}</b><small>{item.role === "gestionnaire" ? "Gestionnaire" : "Employé"} · expire le {new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(item.expiresAt))}</small></span><span>{new Date(item.expiresAt).getTime() > Date.now() ? "En attente" : "Expirée"}</span></div>)}</div>
+              </> : <p className="privacy-note">Seuls le propriétaire et les gestionnaires peuvent créer des invitations. Vous pouvez consulter votre propre accès à l’atelier.</p>}
+              <p className="privacy-note">L’invitation est enregistrée côté serveur et peut être acceptée uniquement par un compte dont l’adresse e-mail est confirmée et correspond à l’invitation. Aucun e-mail automatique n’est envoyé à ce stade.</p>
+            </section>
             <section className="backup-panel" aria-labelledby="backup-title">
               <div><h3 id="backup-title">Sauvegarde locale</h3><p>Exportez vos fiches, mensurations, commandes, annonces de vitrine et profil. La restauration remplace les données actuellement enregistrées sur cet appareil.</p></div>
               <div className="backup-actions">
