@@ -98,6 +98,11 @@ type PaymentRow = {
   id: string; commande_id: string; montant_fcfa: number | string;
   date_paiement: string; note: string | null;
 };
+type OrderFinancialRow = {
+  commande_id: string;
+  prix_fcfa: number | string;
+  paiements: PaymentRow[];
+};
 const statusToDb: Record<OrderStatus, string> = {
   "À préparer": "a_preparer", "En confection": "en_confection", "Prêt": "pret", "Livré": "livre"
 };
@@ -144,26 +149,33 @@ function mapOrder(row: OrderRow, payments: PaymentRow[]): Order {
 export async function listAtelierOrders(session: YereSession, atelierId: string, includeFinancials = true): Promise<Order[]> {
   const filter = encodeURIComponent(atelierId);
   const orderFields = "id,reference,client_id,vetement,date_commande,date_livraison,statut,type_travail,etape_retouche,mensuration_snapshot,mensuration_snapshot_date";
-  const ordersUrl = includeFinancials
-    ? `rest/v1/commande?select=id,reference,client_id,vetement,date_commande,date_livraison,statut,prix_fcfa,type_travail,etape_retouche,mensuration_snapshot,mensuration_snapshot_date&atelier_id=eq.${filter}&order=date_commande.desc,created_at.desc`
-    : `rest/v1/commande?select=${orderFields}&atelier_id=eq.${filter}&order=date_commande.desc,created_at.desc`;
-  const ordersResponse = await authenticatedFetch(session, ordersUrl);
+  const ordersResponse = await authenticatedFetch(session,
+    `rest/v1/commande?select=${orderFields}&atelier_id=eq.${filter}&order=date_commande.desc,created_at.desc`);
   const ordersData = await responseJson(ordersResponse);
   if (!Array.isArray(ordersData)) throw new Error("Réponse serveur inattendue lors du chargement des commandes.");
+
   if (!includeFinancials) {
     return (ordersData as Array<Omit<OrderRow, "prix_fcfa">>).map((row) => mapOrder({ ...row, prix_fcfa: 0 }, []));
   }
-  const paymentsResponse = await authenticatedFetch(session,
-    `rest/v1/paiement?select=id,commande_id,montant_fcfa,date_paiement,note&atelier_id=eq.${filter}&statut=eq.confirme&order=date_paiement.asc`);
-  const paymentsData = await responseJson(paymentsResponse);
-  if (!Array.isArray(paymentsData)) throw new Error("Réponse serveur inattendue lors du chargement des paiements.");
-  const paymentsByOrder = new Map<string, PaymentRow[]>();
-  for (const payment of paymentsData as PaymentRow[]) {
-    const current = paymentsByOrder.get(payment.commande_id) ?? [];
-    current.push(payment);
-    paymentsByOrder.set(payment.commande_id, current);
-  }
-  return (ordersData as OrderRow[]).map((row) => mapOrder(row, paymentsByOrder.get(row.id) ?? []));
+
+  // Prices and payment history are delivered by an owner-checked database RPC.
+  // The base command table never exposes prix_fcfa through the Data API.
+  const financeResponse = await authenticatedFetch(session, "rest/v1/rpc/get_atelier_order_financials", {
+    method: "POST",
+    body: JSON.stringify({ p_atelier_id: atelierId })
+  });
+  const financeData = await responseJson(financeResponse);
+  if (!Array.isArray(financeData)) throw new Error("Réponse serveur inattendue lors du chargement des données financières.");
+  const financeByOrder = new Map<string, OrderFinancialRow>();
+  for (const item of financeData as OrderFinancialRow[]) financeByOrder.set(item.commande_id, item);
+
+  return (ordersData as Array<Omit<OrderRow, "prix_fcfa">>).map((row) => {
+    const finance = financeByOrder.get(row.id);
+    return mapOrder(
+      { ...row, prix_fcfa: finance?.prix_fcfa ?? 0 },
+      finance?.paiements ?? []
+    );
+  });
 }
 
 export async function createAtelierOrder(
