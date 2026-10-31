@@ -1,6 +1,6 @@
--- Preserve the existing RLS rules while allowing the validated order RPC
--- to create an order for operational members and its optional initial payment.
-create or replace function public.create_commande_with_initial_payment(
+-- Keep the PostgREST RPC as SECURITY INVOKER. Move only the narrowly
+-- validated writes into a non-exposed private SECURITY DEFINER function.
+create or replace function private.create_commande_with_initial_payment(
   p_atelier_id uuid,
   p_reference text,
   p_client_id uuid,
@@ -44,23 +44,19 @@ begin
   end if;
 
   if p_client_id is null or not exists (
-    select 1
-    from public.client c
-    where c.id = p_client_id
-      and c.atelier_id = p_atelier_id
+    select 1 from public.client c
+    where c.id = p_client_id and c.atelier_id = p_atelier_id
   ) then
     raise exception 'Client introuvable dans cet atelier' using errcode = '23503';
   end if;
 
   if p_acompte_initial > 0 then
     if not private.has_atelier_role(
-      p_atelier_id,
-      array['proprietaire', 'gestionnaire']::text[]
+      p_atelier_id, array['proprietaire', 'gestionnaire']::text[]
     ) then
       raise exception 'Seul le propriétaire ou le gestionnaire peut enregistrer un acompte initial'
         using errcode = '42501';
     end if;
-
     if nullif(btrim(p_payment_key), '') is null then
       raise exception 'Clé de paiement requise pour un acompte initial' using errcode = '23514';
     end if;
@@ -89,6 +85,43 @@ begin
 
   return query select v_commande_id, p_reference;
 end;
+$function$;
+
+revoke all on function private.create_commande_with_initial_payment(
+  uuid, text, uuid, text, date, date, text, bigint, text, text, jsonb, date, bigint, text
+) from public, anon;
+grant execute on function private.create_commande_with_initial_payment(
+  uuid, text, uuid, text, date, date, text, bigint, text, text, jsonb, date, bigint, text
+) to authenticated;
+
+-- Public API entry point: invoker rights only, forwarding to the guarded worker.
+create or replace function public.create_commande_with_initial_payment(
+  p_atelier_id uuid,
+  p_reference text,
+  p_client_id uuid,
+  p_vetement text,
+  p_date_commande date,
+  p_date_livraison date,
+  p_statut text,
+  p_prix bigint,
+  p_type_travail text,
+  p_etape_retouche text,
+  p_mensuration_snapshot jsonb,
+  p_mensuration_snapshot_date date,
+  p_acompte_initial bigint,
+  p_payment_key text
+)
+returns table(commande_id uuid, reference text)
+language sql
+security invoker
+set search_path = ''
+as $function$
+  select * from private.create_commande_with_initial_payment(
+    p_atelier_id, p_reference, p_client_id, p_vetement, p_date_commande,
+    p_date_livraison, p_statut, p_prix, p_type_travail, p_etape_retouche,
+    p_mensuration_snapshot, p_mensuration_snapshot_date, p_acompte_initial,
+    p_payment_key
+  );
 $function$;
 
 revoke all on function public.create_commande_with_initial_payment(
