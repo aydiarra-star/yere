@@ -25,6 +25,7 @@ export default function AuthGate({ children }: Props) {
   const [creatingAtelier, setCreatingAtelier] = useState(false);
   const [pendingInvitations, setPendingInvitations] = useState<AtelierInvitation[]>([]);
   const [inboxOpen, setInboxOpen] = useState(false);
+  const [profileControlsTarget, setProfileControlsTarget] = useState<HTMLElement | null>(null);
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<"login" | "signup" | "recovery">("login");
   const [passwordRecovery, setPasswordRecovery] = useState(false);
@@ -38,6 +39,14 @@ export default function AuthGate({ children }: Props) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const findTarget = () => setProfileControlsTarget(document.getElementById("yere-profile-account-controls"));
+    findTarget();
+    const observer = new MutationObserver(findTarget);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
 
   async function loadWorkspace(activeSession: YereSession) {
     const [workspaces, invitations] = await Promise.all([
@@ -311,7 +320,7 @@ export default function AuthGate({ children }: Props) {
 
   return (
     <>
-      {document.getElementById("yere-profile-account-controls") && createPortal(<section className="profile-account-controls" aria-label="Gestion du compte et des ateliers">
+      {profileControlsTarget && createPortal(<section className="profile-account-controls" aria-label="Gestion du compte et des ateliers">
 <div className="auth-session-bar">
         <span className="auth-session-identity"><strong>Connecté</strong> · {session.user.email}</span>
         {workspaces.length > 1 ? <label className="auth-workspace-switch"><span>Atelier actif</span><select aria-label="Choisir l’atelier actif" value={atelier.id} onChange={(event) => switchAtelier(event.target.value)}>{workspaces.map((item) => <option key={item.id} value={item.id}>{item.nom}{item.ville ? ` · ${item.ville}` : ""}</option>)}</select></label> : <span className="auth-session-workspace">{atelier.nom}</span>}
@@ -352,7 +361,7 @@ export default function AuthGate({ children }: Props) {
         {error && <p className="auth-error" role="alert">{error}</p>}
         {message && <p className="auth-message" role="status">{message}</p>}
       </section>}
-      </section>, document.getElementById("yere-profile-account-controls")!)}
+      </section>, profileControlsTarget)}
       <div className="auth-local-warning" role="status">La connexion, les ateliers, les clients, les mensurations, les commandes, les versements, les dépenses, l’inventaire et les fournisseurs sont synchronisés sur le serveur. Les sauvegardes chiffrées sont opérationnelles ; leur restauration complète reste à tester. La marketplace publique est encore en développement : n’y saisissez pas de données réelles.</div>
       {children}
     </>
