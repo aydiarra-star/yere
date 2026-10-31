@@ -28,3 +28,14 @@
 .auth-recovery-link{margin:12px 0 0;text-align:center}
 .auth-recovery-link button{border:0;background:transparent;color:#344b9f;font:inherit;font-size:13px;font-weight:800;padding:6px 10px;cursor:pointer}
 .auth-recovery-link button:focus-visible,.auth-switch button:focus-visible{outline:2px solid #5268bd;outline-offset:3px;border-radius:5px}
+
+/* Inbox invitations: always visible in the signed-in workspace shell. */
+.auth-invitation-inbox{display:grid;gap:14px;margin:0;padding:18px clamp(14px,3vw,28px);background:#f5f7ff;border-bottom:1px solid rgba(32,47,114,.14)}
+.auth-invitation-inbox-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.auth-invitation-inbox-heading .eyebrow{margin:0 0 3px;color:#5264a5;font-size:10px;font-weight:800;letter-spacing:.12em}
+.auth-invitation-inbox-heading h2{margin:0;color:#202f72;font-size:17px}
+.auth-invitation-inbox-heading p:not(.eyebrow){margin:4px 0 0;color:#59647c;font-size:12px}
+.auth-invitation-empty{margin:0;padding:12px 14px;border:1px dashed rgba(32,47,114,.22);border-radius:10px;color:#5f6981;font-size:13px}
+.auth-invitation-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:10px}
+.auth-invitation-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
+.auth-invitation-actions .primary-button,.auth-invitation-actions .secondary-button{min-height:38px}
