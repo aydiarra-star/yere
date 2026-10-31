@@ -20,6 +20,10 @@ Les tests ont été exécutés dans des transactions annulées ensuite ; aucune 
 - Un compte non membre ne voit aucune dépense de l'autre atelier : réussi.
 - Le rôle gestionnaire voit les clients mais ne voit ni les paiements ni les dépenses : réussi.
 - Le rôle propriétaire voit les paiements de son atelier : réussi.
+- Le propriétaire peut inviter un employé ou un gestionnaire : réussi en transaction annulée.
+- Le gestionnaire peut inviter un employé mais ne peut pas promouvoir/inviter un autre gestionnaire : réussi en transaction annulée.
+- Le propriétaire ne peut pas inviter dans un atelier dont il n'est ni membre ni gestionnaire : refusé en transaction annulée.
+- Une adresse e-mail mal formée est refusée par la fonction SQL : réussi.
 - Simulation temporaire du rôle employé : l'acompte initial est refusé, la modification du prix d'une commande est refusée, la création d'une commande sans acompte est autorisée ; transaction annulée et rôle restauré ensuite.
 
 Ces contrôles SQL valident des règles RLS et des fonctions en contexte PostgreSQL simulé. Ils ne remplacent pas encore les tests navigateur avec les vrais jetons Auth ni le parcours d'invitation complet. Aucun compte employé permanent n'est encore disponible pour un test utilisateur réel.
@@ -42,7 +46,7 @@ L'advisor de sécurité signale que la protection contre les mots de passe compr
 
 - Vérifier depuis un navigateur que les deux comptes existants se connectent au service Render principal.
 - Tester l'inscription, la confirmation e-mail, la déconnexion, le renouvellement de session et la récupération de mot de passe.
-- Tester les invitations de bout en bout avec deux boîtes e-mail contrôlées : réception dans la boîte de réception intégrée, acceptation, refus, annulation et expiration. La création d’une invitation enregistre actuellement une ligne en base mais n’envoie pas automatiquement d’e-mail ; le destinataire doit se connecter avec la même adresse et ouvrir « Boîte de réception » dans la barre de session.
+- Tester les invitations de bout en bout avec deux boîtes e-mail contrôlées : réception dans la boîte de réception intégrée, acceptation, refus, annulation et expiration. Les tests SQL transactionnels couvrent déjà les autorisations de création, mais pas le parcours complet avec deux vrais comptes distincts. La création d’une invitation enregistre actuellement une ligne en base mais n’envoie pas automatiquement d’e-mail ; le destinataire doit se connecter avec la même adresse et ouvrir « Boîte de réception » dans la barre de session.
 - L’invitation actuellement présente dans la base est déjà acceptée ; elle n’apparaît donc plus dans la liste des invitations en attente.
 - Tester chaque rôle avec de vrais comptes Auth, dont un employé permanent.
 - Vérifier les paiements et les achats fournisseurs avec des montants fictifs, y compris les doublons et dépassements de solde.
