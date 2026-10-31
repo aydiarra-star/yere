@@ -175,3 +175,25 @@ export async function createAtelier(session: YereSession, input: { nom: string; 
   if (!created) throw new Error("Atelier créé, mais non visible après son rattachement. Vérifiez les droits du compte avant de poursuivre.");
   return created.id;
 }
+
+
+/** Sends a password recovery email and returns no account-existence information. */
+export async function requestPasswordRecovery(email: string): Promise<void> {
+  const redirectTo = `${window.location.origin}/`;
+  const response = await fetch(apiUrl(`auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`), {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ email })
+  });
+  await parseResponse(response);
+}
+
+/** Updates the password using the short-lived session from the recovery link. */
+export async function updatePassword(session: YereSession, password: string): Promise<void> {
+  const response = await fetch(apiUrl("auth/v1/user"), {
+    method: "PUT",
+    headers: headers(session.access_token),
+    body: JSON.stringify({ password })
+  });
+  await parseResponse(response);
+}
