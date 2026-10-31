@@ -998,6 +998,7 @@ function App() {
   }
 
   function createOrder() {
+    if (!isAtelierOwner) return;
     setNewOrderClientId(selectedClient ?? clients[0]?.id ?? "");
     setShowOrderForm(true);
     setView("orders");
@@ -1054,6 +1055,7 @@ function App() {
             outstandingOrderCount={outstandingOrderCount}
             outstanding={outstanding}
             showFinancials={isAtelierOwner}
+            canCreateOrders={isAtelierOwner}
             activeOrderCount={orders.filter((order) => order.status !== "Livré").length}
             inProductionOrder={orders.find((order) => order.status === "En confection")}
             onOpenDeliveries={() => { setOrderDeliveryFilter("all"); setView("orders"); }}
