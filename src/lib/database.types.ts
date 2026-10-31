@@ -345,6 +345,7 @@ export type Database = {
           atelier_id: string
           atelier_nom: string
           cancelled_at: string | null
+          declined_at: string | null
           created_at: string
           email: string
           expires_at: string
@@ -357,6 +358,7 @@ export type Database = {
           atelier_id: string
           atelier_nom?: string
           cancelled_at?: string | null
+          declined_at?: string | null
           created_at?: string
           email: string
           expires_at?: string
@@ -369,6 +371,7 @@ export type Database = {
           atelier_id?: string
           atelier_nom?: string
           cancelled_at?: string | null
+          declined_at?: string | null
           created_at?: string
           email?: string
           expires_at?: string
@@ -718,6 +721,10 @@ export type Database = {
         Returns: string
       }
       cancel_atelier_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: boolean
+      }
+      decline_atelier_invitation: {
         Args: { p_invitation_id: string }
         Returns: boolean
       }
