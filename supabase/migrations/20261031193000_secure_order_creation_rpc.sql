@@ -77,12 +77,11 @@ begin
 
   if p_acompte_initial > 0 then
     insert into public.paiement (
-      atelier_id, commande_id, montant_fcfa, date_paiement, statut,
+      atelier_id, commande_id, montant_fcfa, statut,
       cle_idempotence, note
     ) values (
       p_atelier_id, v_commande_id, p_acompte_initial,
-      p_date_commande::timestamptz, 'confirme', p_payment_key,
-      'Acompte initial'
+      'confirme', p_payment_key, 'Acompte initial'
     );
   end if;
 
