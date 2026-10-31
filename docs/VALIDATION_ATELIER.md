@@ -42,7 +42,8 @@ L'advisor de sécurité signale que la protection contre les mots de passe compr
 
 - Vérifier depuis un navigateur que les deux comptes existants se connectent au service Render principal.
 - Tester l'inscription, la confirmation e-mail, la déconnexion, le renouvellement de session et la récupération de mot de passe.
-- Tester les invitations de bout en bout avec deux boîtes e-mail contrôlées : réception, acceptation, refus, annulation et expiration.
+- Tester les invitations de bout en bout avec deux boîtes e-mail contrôlées : réception dans la boîte de réception intégrée, acceptation, refus, annulation et expiration. La création d’une invitation enregistre actuellement une ligne en base mais n’envoie pas automatiquement d’e-mail ; le destinataire doit se connecter avec la même adresse et ouvrir « Boîte de réception » dans la barre de session.
+- L’invitation actuellement présente dans la base est déjà acceptée ; elle n’apparaît donc plus dans la liste des invitations en attente.
 - Tester chaque rôle avec de vrais comptes Auth, dont un employé permanent.
 - Vérifier les paiements et les achats fournisseurs avec des montants fictifs, y compris les doublons et dépassements de solde.
 - Ajouter l'exécution de `npm test` au contrôle CI/build avant d'ouvrir le pilote.
