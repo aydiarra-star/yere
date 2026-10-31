@@ -9,6 +9,7 @@ type HomeDashboardProps = {
   deliveryCount: number;
   outstandingOrderCount: number;
   outstanding: number;
+  showFinancials?: boolean;
   activeOrderCount: number;
   inProductionOrder?: Order;
   onOpenDeliveries: () => void;
@@ -75,7 +76,7 @@ function PriorityCard({ index, title, icon, badges, count, countLabel, detail, i
   </article>;
 }
 
-export default function HomeDashboard({ atelierName, isExample, today, deliveryCount, outstandingOrderCount, outstanding, activeOrderCount, inProductionOrder, onOpenDeliveries, onOpenPayments, onOpenProduction, onCreateOrder, onOpenMeasurements, onOpenTools, onConfigure }: HomeDashboardProps) {
+export default function HomeDashboard({ atelierName, isExample, today, deliveryCount, outstandingOrderCount, outstanding, showFinancials = true, activeOrderCount, inProductionOrder, onOpenDeliveries, onOpenPayments, onOpenProduction, onCreateOrder, onOpenMeasurements, onOpenTools, onConfigure }: HomeDashboardProps) {
   const date = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" }).format(today);
   const deliveries = isExample ? 3 : deliveryCount;
   const invoices = isExample ? 2 : outstandingOrderCount;
@@ -110,7 +111,7 @@ export default function HomeDashboard({ atelierName, isExample, today, deliveryC
               actionLabel="Voir les livraisons et les commandes"
               onOpen={onOpenDeliveries}
             />
-            <PriorityCard
+            {showFinancials ? <PriorityCard
               index="02"
               title="Encaissements & paiements"
               icon="payment"
@@ -121,7 +122,7 @@ export default function HomeDashboard({ atelierName, isExample, today, deliveryC
               image={illustrationUrl("payment")}
               actionLabel="Voir les encaissements et paiements"
               onOpen={onOpenPayments}
-            />
+            /> : null}
             <PriorityCard
               index="03"
               title="Commandes en production"
