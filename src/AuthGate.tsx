@@ -211,7 +211,7 @@ export default function AuthGate({ children }: Props) {
           {message && <p className="auth-message" role="status">{message}</p>}
           <button className="primary-button auth-submit" disabled={busy} type="submit">{busy ? "Veuillez patienter…" : mode === "login" ? "Se connecter" : mode === "recovery" ? "Envoyer le lien de récupération" : "Créer mon compte"} <span>→</span></button>
         </form>
-        <>{mode === "login" && <p className="auth-recovery-link"><button type="button" onClick={() => { setMode("recovery"); setError(""); setMessage(""); setPassword(""); }}>Mot de passe oublié ?</button></p>}<p className="auth-switch">{mode === "login" ? "Vous n'avez pas encore de compte ?" : mode === "recovery" ? "Vous vous souvenez de votre mot de passe ?" : "Vous avez déjà un compte ?"} <button type="button" onClick={() => { setMode("login"); setError(""); setMessage(""); }}>{mode === "login" ? "Créer un compte" : "Se connecter"}</button></p></>
+        <>{mode === "login" && <p className="auth-recovery-link"><button type="button" onClick={() => { setMode("recovery"); setError(""); setMessage(""); setPassword(""); }}>Mot de passe oublié ?</button></p>}<p className="auth-switch">{mode === "login" ? "Vous n'avez pas encore de compte ?" : mode === "recovery" ? "Vous vous souvenez de votre mot de passe ?" : "Vous avez déjà un compte ?"} <button type="button" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); setMessage(""); }}>{mode === "login" ? "Créer un compte" : "Se connecter"}</button></p></>
         <p className="auth-footnote">Votre compte est protégé par Supabase Auth. Ne partagez jamais votre mot de passe.</p>
       </section>
     </main>
