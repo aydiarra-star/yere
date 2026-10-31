@@ -9,6 +9,7 @@
 .auth-footnote{font-size:11px;line-height:1.6;color:#8790a5;margin:24px 0 0}.auth-error,.auth-message{padding:11px 13px;border-radius:10px;font-size:12px;line-height:1.5;margin:0}.auth-error{background:#fff0f0;color:#a12e36}.auth-message{background:#edf7f1;color:#236b47}
 .auth-signout{margin-left:auto;border:1px solid #dce1ee;border-radius:10px;background:#fff;padding:9px 12px;color:#4d5875;font-weight:700;cursor:pointer}
 .auth-session-bar{position:relative;z-index:30;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px clamp(14px,3vw,28px);background:#202f72;color:#fff;font-size:11px}.auth-session-bar button{border:1px solid rgba(255,255,255,.35);border-radius:8px;background:transparent;color:#fff;padding:6px 10px;font:inherit;font-weight:700;cursor:pointer}
+.auth-session-bar .auth-inbox-toggle{border-color:rgba(255,255,255,.55);background:rgba(255,255,255,.1);white-space:nowrap}.auth-session-bar .auth-inbox-toggle[aria-expanded="true"]{background:#fff;color:#202f72;border-color:#fff}.auth-session-bar button:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .auth-local-warning{padding:9px 16px;background:#fff8e7;color:#79551b;text-align:center;font-size:11px;line-height:1.5;border-bottom:1px solid #f0dfb8}
 .auth-loading{align-content:center;gap:14px;color:#66708b}.auth-loading .auth-mark{margin:auto}.auth-loading p{font-size:13px}
 @media(max-width:560px){.auth-session-bar{align-items:flex-start;font-size:10px}.auth-card{border-radius:20px}.auth-brand{margin-bottom:28px}}
