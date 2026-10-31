@@ -1,32 +1,53 @@
 # Validation avant pilote
 
-Le projet Supabase dédié à YÉRÉ existe déjà et contient le socle de données installé. Cette checklist concerne maintenant la validation fonctionnelle et de sécurité avant le pilote ; elle ne demande pas de recréer le projet ni de réappliquer les migrations.
+Le projet Supabase dédié à YÉRÉ existe déjà et contient le socle de données installé. Cette checklist suit maintenant la validation fonctionnelle et de sécurité ; elle ne demande ni de recréer le projet ni de réappliquer les migrations existantes.
 
 ## État vérifié le 31 octobre 2026
 
-- Projet Supabase : `yere` (région `eu-west-3`).
+- Projet Supabase : `yere`, région `eu-west-3`, état `ACTIVE_HEALTHY`.
 - 31 migrations enregistrées.
 - 15 tables publiques, toutes avec RLS activé.
 - 41 politiques RLS.
-- 2 comptes Auth, 2 ateliers et 3 appartenances présentes dans la base.
-- Aucune donnée réelle de clients ne doit être utilisée pendant les tests.
+- 2 comptes Auth, 2 ateliers et 3 appartenances présentes.
+- Projet sur le forfait Free.
+
+## Tests RLS effectués (simulation de rôle PostgreSQL)
+
+Les tests ont été exécutés dans des transactions annulées ensuite ; aucune donnée métier de test n'a été conservée.
+
+- Un membre voit les 2 clients de son atelier : réussi.
+- Le même compte ne voit aucun client ni aucune commande d'un autre atelier : réussi.
+- Un compte non membre ne voit aucune dépense de l'autre atelier : réussi.
+- Le rôle gestionnaire voit les clients mais ne voit ni les paiements ni les dépenses : réussi.
+- Le rôle propriétaire voit les paiements de son atelier : réussi.
+- Simulation temporaire du rôle employé : l'acompte initial est refusé, la modification du prix d'une commande est refusée, la création d'une commande sans acompte est autorisée ; transaction annulée et rôle restauré ensuite.
+
+Ces contrôles SQL valident des règles RLS et des fonctions en contexte PostgreSQL simulé. Ils ne remplacent pas encore les tests navigateur avec les vrais jetons Auth ni le parcours d'invitation complet. Aucun compte employé permanent n'est encore disponible pour un test utilisateur réel.
+
+## Configuration Render vérifiée
+
+- Service principal de prévisualisation : `yere-main-preview`.
+- Dépôt : `aydiarra-star/yere`, branche `main`.
+- Variables `VITE_SUPABASE_URL` et `VITE_SUPABASE_PUBLISHABLE_KEY` configurées sur ce service avec les valeurs publiques du projet Supabase YÉRÉ.
+- Redéploiement déclenché après configuration : terminé avec succès le 31 octobre 2026 à 15:44:57 UTC.
+- URL : https://yere-main-preview.onrender.com
+
+Les autres services Render YÉRÉ n'ont pas été modifiés. Le build de ce service exécute actuellement `npm install && npm run build` ; les tests Vitest ne sont donc pas encore lancés automatiquement par ce service.
+
+## Alerte Supabase restante
+
+L'advisor de sécurité signale que la protection contre les mots de passe compromis est désactivée. La documentation Supabase indique que cette option est disponible à partir du forfait Pro ; le projet est actuellement en Free. Ne pas présenter cette option comme activable gratuitement. Conserver des mots de passe d'au moins 8 caractères et envisager le changement de forfait uniquement si cette protection devient nécessaire.
 
 ## Contrôles restant à exécuter
 
-- Un utilisateur non connecté ne lit ni n'écrit de données privées.
-- Un membre d'un atelier ne peut pas consulter ou modifier les données d'un autre atelier.
-- Seuls les rôles autorisés peuvent enregistrer un acompte et accéder aux données financières.
-- Les montants et l'appartenance du client sont vérifiés côté serveur.
-- Les requêtes répétées ne créent pas de doublons.
-- Les invitations sont visibles par le destinataire, acceptables ou refusables, et limitées au bon atelier.
-- Les règles d'accès sont testées avec des comptes de chaque rôle, pas avec un compte administrateur.
-
-## Configuration applicative à vérifier
-
-- Le déploiement YÉRÉ doit disposer de `VITE_SUPABASE_URL` et `VITE_SUPABASE_PUBLISHABLE_KEY`.
-- Vérifier que ces variables pointent vers le projet YÉRÉ, jamais vers JotColis ou Dekk Food.
-- Le dépôt contient déjà le flux d'authentification et les appels REST Supabase ; le contrôle porte sur leur configuration et leur validation de bout en bout.
+- Vérifier depuis un navigateur que les deux comptes existants se connectent au service Render principal.
+- Tester l'inscription, la confirmation e-mail, la déconnexion, le renouvellement de session et la récupération de mot de passe.
+- Tester les invitations de bout en bout avec deux boîtes e-mail contrôlées : réception, acceptation, refus, annulation et expiration.
+- Tester chaque rôle avec de vrais comptes Auth, dont un employé permanent.
+- Vérifier les paiements et les achats fournisseurs avec des montants fictifs, y compris les doublons et dépassements de solde.
+- Ajouter l'exécution de `npm test` au contrôle CI/build avant d'ouvrir le pilote.
+- Faire une revue finale des fonctions privilégiées, des sauvegardes et des journaux.
 
 ## Passage au pilote
 
-Consigner les résultats des tests, corriger chaque échec et examiner les alertes de sécurité avant tout déploiement ou import de données réelles. Ne pas appliquer de migration supplémentaire sans vérifier d'abord qu'elle n'est pas déjà enregistrée dans le projet.
+Consigner les résultats des tests navigateur, corriger chaque échec et examiner les alertes avant tout déploiement ou import de données réelles. Ne pas appliquer de migration supplémentaire sans vérifier d'abord qu'elle n'est pas déjà enregistrée dans le projet.
