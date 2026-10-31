@@ -141,14 +141,22 @@ function mapOrder(row: OrderRow, payments: PaymentRow[]): Order {
   };
 }
 
-export async function listAtelierOrders(session: YereSession, atelierId: string): Promise<Order[]> {
+export async function listAtelierOrders(session: YereSession, atelierId: string, includeFinancials = true): Promise<Order[]> {
   const filter = encodeURIComponent(atelierId);
-  const [ordersResponse, paymentsResponse] = await Promise.all([
-    authenticatedFetch(session, `rest/v1/commande?select=id,reference,client_id,vetement,date_commande,date_livraison,statut,prix_fcfa,type_travail,etape_retouche,mensuration_snapshot,mensuration_snapshot_date&atelier_id=eq.${filter}&order=date_commande.desc,created_at.desc`),
-    authenticatedFetch(session, `rest/v1/paiement?select=id,commande_id,montant_fcfa,date_paiement,note&atelier_id=eq.${filter}&statut=eq.confirme&order=date_paiement.asc`)
-  ]);
-  const [ordersData, paymentsData] = await Promise.all([responseJson(ordersResponse), responseJson(paymentsResponse)]);
-  if (!Array.isArray(ordersData) || !Array.isArray(paymentsData)) throw new Error("Réponse serveur inattendue lors du chargement des commandes.");
+  const orderFields = "id,reference,client_id,vetement,date_commande,date_livraison,statut,type_travail,etape_retouche,mensuration_snapshot,mensuration_snapshot_date";
+  const ordersUrl = includeFinancials
+    ? `rest/v1/commande?select=id,reference,client_id,vetement,date_commande,date_livraison,statut,prix_fcfa,type_travail,etape_retouche,mensuration_snapshot,mensuration_snapshot_date&atelier_id=eq.${filter}&order=date_commande.desc,created_at.desc`
+    : `rest/v1/commande?select=${orderFields}&atelier_id=eq.${filter}&order=date_commande.desc,created_at.desc`;
+  const ordersResponse = await authenticatedFetch(session, ordersUrl);
+  const ordersData = await responseJson(ordersResponse);
+  if (!Array.isArray(ordersData)) throw new Error("Réponse serveur inattendue lors du chargement des commandes.");
+  if (!includeFinancials) {
+    return (ordersData as Array<Omit<OrderRow, "prix_fcfa">>).map((row) => mapOrder({ ...row, prix_fcfa: 0 }, []));
+  }
+  const paymentsResponse = await authenticatedFetch(session,
+    `rest/v1/paiement?select=id,commande_id,montant_fcfa,date_paiement,note&atelier_id=eq.${filter}&statut=eq.confirme&order=date_paiement.asc`);
+  const paymentsData = await responseJson(paymentsResponse);
+  if (!Array.isArray(paymentsData)) throw new Error("Réponse serveur inattendue lors du chargement des paiements.");
   const paymentsByOrder = new Map<string, PaymentRow[]>();
   for (const payment of paymentsData as PaymentRow[]) {
     const current = paymentsByOrder.get(payment.commande_id) ?? [];
