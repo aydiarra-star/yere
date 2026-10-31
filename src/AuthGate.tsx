@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { clearSession, consumeAuthCallback, createAtelier, listMyAteliers, readSession, refreshSession, requestPasswordRecovery, signIn, signOut, signUp, supabaseReady, updatePassword, type YereSession } from "./lib/supabaseAuth";
 import { acceptAtelierInvitation, declineAtelierInvitation, listMyAtelierInvitations, type AtelierInvitation } from "./lib/atelierTeam";
+import { resolvePersistentStorageKey } from "./usePersistentState";
 import "./auth-gate.css";
 
 type Atelier = { id: string; nom: string; telephone: string | null; ville: string | null };
@@ -10,7 +11,7 @@ function seedLocalProfile(userId: string, atelier: Atelier) {
   const suffix = `::${userId}`;
   window.sessionStorage.setItem("yere-user-scope", userId);
   window.sessionStorage.setItem("yere-active-atelier", atelier.id);
-  window.localStorage.setItem(`yere-demo-atelier-v1${suffix}`, JSON.stringify({
+  window.localStorage.setItem(resolvePersistentStorageKey("yere-demo-atelier-v1", userId, atelier.id, "atelier"), JSON.stringify({
     name: atelier.nom, phone: atelier.telephone ?? "", city: atelier.ville ?? "", activity: "tailleur", workMode: "independent", secondaryActivities: []
   }));
   window.localStorage.setItem(`yere-demo-onboarding-complete-v1${suffix}`, "true");
