@@ -123,13 +123,25 @@ function App() {
     const atelierId = window.sessionStorage.getItem("yere-active-atelier");
     if (!session || !atelierId) return;
     let active = true;
-    void Promise.all([
-      listAtelierClients(session, atelierId), listAtelierOrders(session, atelierId),
-      listAtelierExpenses(session, atelierId), listAtelierStock(session, atelierId),
-      listAtelierSuppliers(session, atelierId), listAtelierSupplierPurchases(session, atelierId), getAtelierSupplierProfile(session, atelierId),
-      listAtelierMembers(session, atelierId), listAtelierInvitations(session, atelierId)
-    ])
-      .then(([serverClients, serverOrders, serverExpenses, serverStock, serverSuppliers, serverPurchases, serverSupplierProfile, serverMembers, serverInvitations]) => {
+    void (async () => {
+      try {
+        // Load membership first: financial requests must never start before the role is known.
+        const [serverMembers, serverInvitations] = await Promise.all([
+          listAtelierMembers(session, atelierId), listAtelierInvitations(session, atelierId)
+        ]);
+        if (!active) return;
+        const currentMember = serverMembers.find((member) => member.userId === session.user.id && member.active);
+        const ownerAccess = currentMember?.role === "proprietaire";
+        const [serverClients, serverOrders, serverStock, serverSuppliers, serverSupplierProfile,
+          serverExpenses, serverPurchases] = await Promise.all([
+          listAtelierClients(session, atelierId),
+          listAtelierOrders(session, atelierId, ownerAccess),
+          listAtelierStock(session, atelierId),
+          listAtelierSuppliers(session, atelierId),
+          getAtelierSupplierProfile(session, atelierId),
+          ownerAccess ? listAtelierExpenses(session, atelierId) : Promise.resolve([]),
+          ownerAccess ? listAtelierSupplierPurchases(session, atelierId) : Promise.resolve([])
+        ]);
         if (!active) return;
         setClients(serverClients);
         setOrders((current) => [...serverOrders, ...current.filter((order) => !order.serverId)]);
@@ -166,12 +178,12 @@ function App() {
           ...mappedPurchases,
           ...current.filter((purchase) => purchase.id.startsWith("ACH-") && !mappedPurchases.some((serverPurchase) => serverPurchase.id === purchase.id))
         ]);
-      })
-      .catch((cause) => {
+      } catch (cause) {
         if (active) setNotice(cause instanceof Error
           ? `Impossible de synchroniser les données de l'atelier : ${cause.message}`
           : "Impossible de synchroniser les données de l'atelier avec le serveur.");
-      });
+      }
+    })();
     return () => { active = false; };
   }, [setClients, setOrders, setSupplierPurchases]);
 
@@ -179,12 +191,12 @@ function App() {
   const currentUserId = readSession()?.user.id;
   const canManageTeam = teamMembers.some((member) => member.userId === currentUserId && member.active && (member.role === "proprietaire" || member.role === "gestionnaire"));
   const isAtelierOwner = teamMembers.some((member) => member.userId === currentUserId && member.active && member.role === "proprietaire");
-  const outstanding = orders.reduce((sum, order) => sum + balanceDue(order), 0);
-  const outstandingOrderCount = orders.filter((order) => balanceDue(order) > 0).length;
-  const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.voidedAt ? 0 : expense.amount), 0);
-  const totalSupplierPayments = supplierPurchasesPaidTotal(supplierPurchases);
+  const outstanding = isAtelierOwner ? orders.reduce((sum, order) => sum + balanceDue(order), 0) : 0;
+  const outstandingOrderCount = isAtelierOwner ? orders.filter((order) => balanceDue(order) > 0).length : 0;
+  const totalExpenses = isAtelierOwner ? expenses.reduce((sum, expense) => sum + (expense.voidedAt ? 0 : expense.amount), 0) : 0;
+  const totalSupplierPayments = isAtelierOwner ? supplierPurchasesPaidTotal(supplierPurchases) : 0;
   const totalCashOutflows = totalExpenses + totalSupplierPayments;
-  const totalCollected = orders.reduce((sum, order) => sum + totalPaid(order), 0);
+  const totalCollected = isAtelierOwner ? orders.reduce((sum, order) => sum + totalPaid(order), 0) : 0;
   const selected = clients.find((client) => client.id === selectedClient);
   const reminderSuggestions = useMemo(
     () => getClientReminderSuggestions(clients, orders, new Date().toISOString().slice(0, 10)),
@@ -988,6 +1000,8 @@ function App() {
     setMobileMoreOpen(false);
   }
 
+  if (!isAtelierOwner && view === "cash") setView("overview");
+
   if (onboardingOpen) {
     return <Onboarding
       atelier={atelier}
@@ -1037,10 +1051,11 @@ function App() {
             deliveryCount={orders.filter((order) => order.dueDate === todayKey && order.status !== "Livré").length}
             outstandingOrderCount={outstandingOrderCount}
             outstanding={outstanding}
+            showFinancials={isAtelierOwner}
             activeOrderCount={orders.filter((order) => order.status !== "Livré").length}
             inProductionOrder={orders.find((order) => order.status === "En confection")}
             onOpenDeliveries={() => { setOrderDeliveryFilter("all"); setView("orders"); }}
-            onOpenPayments={() => setView("cash")}
+            onOpenPayments={() => { if (isAtelierOwner) setView("cash"); }}
             onOpenProduction={() => { setOrderDeliveryFilter("all"); setView("orders"); }}
             onCreateOrder={createOrder}
             onOpenMeasurements={() => { setQuery(""); setSelectedClient(null); setView("clients"); setMobileMoreOpen(false); }}
@@ -1078,10 +1093,10 @@ function App() {
               </label>
               <p aria-live="polite">{filteredOrders.length} commande{filteredOrders.length === 1 ? "" : "s"} affichée{filteredOrders.length === 1 ? "" : "s"}</p>
             </div>
-            <OrderTable orders={filteredOrders} clients={clients} onStatusChange={updateStatus} onRetouchStageChange={updateRetouchStage} /></section>}
+            <OrderTable orders={filteredOrders} clients={clients} onStatusChange={updateStatus} onRetouchStageChange={updateRetouchStage} showFinancials={isAtelierOwner} /></section>}
 
 
-          {view === "cash" && <section className="cash-page">
+          {view === "cash" && isAtelierOwner && <section className="cash-page">
             <div className="cash-summary-grid">
               <article className="content-card cash-summary"><span>Reste à encaisser</span><strong>{formatXof(outstanding)}</strong><small>Soldes des commandes non réglées</small></article>
               <article className="content-card cash-summary"><span>Total encaissé</span><strong>{formatXof(totalCollected)}</strong><small>Versements enregistrés dans ce prototype</small></article>
