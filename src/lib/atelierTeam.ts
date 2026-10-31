@@ -47,7 +47,7 @@ export async function createAtelierInvitation(session:YereSession,atelierId:stri
   const response=await authenticatedFetch(session,"rest/v1/rpc/create_atelier_invitation",{method:"POST",body:JSON.stringify({p_atelier_id:atelierId,p_email:email.trim().toLowerCase(),p_role:role})});
   const data=await parse(response);const row=Array.isArray(data)?data[0] as InvitationRow|undefined:undefined;
   if(!row?.id)throw new Error("L’invitation n’a pas été confirmée par le serveur.");
-  return {id:row.id,atelierId:row.atelier_id,atelierName:row.atelier_nom,email:row.email,role:row.role as AtelierInvitation["role"],expiresAt:row.expires_at,acceptedAt:row.accepted_at,cancelledAt:row.cancelled_at,declinedAt:row.declined_at,createdAt:row.created_at};
+  return {id:row.id,atelierId:row.atelier_id,atelierName:row.atelier_nom,email:row.email,role:row.role as AtelierInvitation["role"],expiresAt:row.expires_at,acceptedAt:row.accepted_at,cancelledAt:row.cancelled_at,declinedAt:row.declined_at ?? null,createdAt:row.created_at};
 }
 export async function acceptAtelierInvitation(session:YereSession,invitationId:string):Promise<string>{
   const data=await parse(await authenticatedFetch(session,"rest/v1/rpc/accept_atelier_invitation",{method:"POST",body:JSON.stringify({p_invitation_id:invitationId})}));
