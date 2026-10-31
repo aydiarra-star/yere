@@ -23,6 +23,7 @@ export default function AuthGate({ children }: Props) {
   const [workspaces, setWorkspaces] = useState<Atelier[]>([]);
   const [creatingAtelier, setCreatingAtelier] = useState(false);
   const [pendingInvitations, setPendingInvitations] = useState<AtelierInvitation[]>([]);
+  const [inboxOpen, setInboxOpen] = useState(false);
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<"login" | "signup" | "recovery">("login");
   const [passwordRecovery, setPasswordRecovery] = useState(false);
@@ -312,6 +313,7 @@ export default function AuthGate({ children }: Props) {
       <div className="auth-session-bar">
         <span className="auth-session-identity"><strong>Connecté</strong> · {session.user.email}</span>
         {workspaces.length > 1 ? <label className="auth-workspace-switch"><span>Atelier actif</span><select aria-label="Choisir l’atelier actif" value={atelier.id} onChange={(event) => switchAtelier(event.target.value)}>{workspaces.map((item) => <option key={item.id} value={item.id}>{item.nom}{item.ville ? ` · ${item.ville}` : ""}</option>)}</select></label> : <span className="auth-session-workspace">{atelier.nom}</span>}
+        <button type="button" className="auth-inbox-toggle" aria-expanded={inboxOpen} aria-controls="auth-invitation-inbox" onClick={() => setInboxOpen((open) => !open)}>✉ Boîte de réception{pendingInvitations.length > 0 ? ` · ${pendingInvitations.length}` : ""}</button>
         <button type="button" onClick={() => { setCreatingAtelier((current) => !current); setAtelierName(""); setPhone(""); setCity(""); setError(""); setMessage(""); }}>{creatingAtelier ? "Annuler" : "+ Créer un atelier"}</button>
         <button type="button" onClick={() => void handleSignOut()}>Déconnexion</button>
       </div>
@@ -330,7 +332,7 @@ export default function AuthGate({ children }: Props) {
           </form>
         </section>
       </main>}
-      <section className="auth-invitation-inbox" aria-labelledby="auth-invitation-inbox-title">
+      {inboxOpen && <section id="auth-invitation-inbox" className="auth-invitation-inbox" aria-labelledby="auth-invitation-inbox-title">
         <div className="auth-invitation-inbox-heading">
           <div><p className="eyebrow">BOÎTE DE RÉCEPTION</p><h2 id="auth-invitation-inbox-title">Invitations reçues</h2><p>Les invitations envoyées à cette adresse apparaissent ici. Aucun e-mail n’est envoyé automatiquement.</p></div>
           <button type="button" className="secondary-button" disabled={busy} onClick={() => void refreshInvitationInbox()}>Actualiser</button>
@@ -347,7 +349,7 @@ export default function AuthGate({ children }: Props) {
         </div>}
         {error && <p className="auth-error" role="alert">{error}</p>}
         {message && <p className="auth-message" role="status">{message}</p>}
-      </section>
+      </section>}
       <div className="auth-local-warning" role="status">La connexion, les ateliers, les clients, les mensurations, les commandes, les versements, les dépenses, l’inventaire et les fournisseurs sont synchronisés sur le serveur. Les sauvegardes chiffrées sont opérationnelles ; leur restauration complète reste à tester. La marketplace publique est encore en développement : n’y saisissez pas de données réelles.</div>
       {children}
     </>
