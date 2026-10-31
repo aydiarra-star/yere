@@ -40,3 +40,26 @@
 .auth-invitation-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:10px}
 .auth-invitation-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
 .auth-invitation-actions .primary-button,.auth-invitation-actions .secondary-button{min-height:38px}
+
+
+/* Account controls are rendered inside the profile page, not in the workspace chrome. */
+.profile-account-controls-slot{display:grid;gap:14px;margin:0 0 24px}
+.profile-account-controls{display:grid;gap:12px;min-width:0}
+.profile-account-controls .auth-session-bar{position:static;z-index:auto;justify-content:flex-start;flex-wrap:wrap;gap:10px 14px;padding:14px 16px;border:1px solid rgba(32,47,114,.14);border-radius:14px;background:#202f72}
+.profile-account-controls .auth-session-identity{flex:1 1 220px}
+.profile-account-controls .auth-session-workspace{flex:0 1 auto}
+.profile-account-controls .auth-workspace-switch{flex:0 1 auto}
+.profile-account-controls .auth-session-bar button{min-height:34px}
+.profile-account-controls .auth-shell{min-height:0;display:block;padding:0;background:transparent}
+.profile-account-controls .auth-card{width:100%;max-width:none;padding:20px;border-radius:14px;box-shadow:none}
+.profile-account-controls .auth-brand{margin-bottom:18px}
+.profile-account-controls .auth-invitation-inbox{padding:18px;border:1px solid rgba(32,47,114,.14);border-radius:14px;background:#f5f7ff}
+.profile-account-controls .auth-invitation-inbox-heading{align-items:flex-start}
+.profile-account-controls .auth-invitation-inbox-heading .secondary-button{flex:0 0 auto}
+@media(max-width:560px){
+ .profile-account-controls .auth-session-bar{align-items:center}
+ .profile-account-controls .auth-session-identity{flex:1 1 100%}
+ .profile-account-controls .auth-workspace-switch{flex:1 1 100%}
+ .profile-account-controls .auth-workspace-switch select{max-width:100%}
+ .profile-account-controls .auth-card{padding:16px}
+}
