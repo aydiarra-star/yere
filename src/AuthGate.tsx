@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { clearSession, consumeAuthCallback, createAtelier, listMyAteliers, readSession, refreshSession, requestPasswordRecovery, signIn, signOut, signUp, supabaseReady, updatePassword, type YereSession } from "./lib/supabaseAuth";
-import { acceptAtelierInvitation, listMyAtelierInvitations, type AtelierInvitation } from "./lib/atelierTeam";
+import { acceptAtelierInvitation, declineAtelierInvitation, listMyAtelierInvitations, type AtelierInvitation } from "./lib/atelierTeam";
 import "./auth-gate.css";
 
 type Atelier = { id: string; nom: string; telephone: string | null; ville: string | null };
@@ -42,6 +42,7 @@ export default function AuthGate({ children }: Props) {
     setWorkspaces(workspaces);
     setPendingInvitations(invitations.filter((item) =>
       item.email.toLowerCase() === (activeSession.user.email ?? "").toLowerCase()
+      && !item.declinedAt
       && new Date(item.expiresAt).getTime() > Date.now()
     ));
     const savedAtelierId = window.sessionStorage.getItem("yere-active-atelier");
@@ -53,6 +54,32 @@ export default function AuthGate({ children }: Props) {
       window.sessionStorage.removeItem("yere-active-atelier");
       setAtelier(null);
     }
+  }
+
+  async function refreshInvitationInbox() {
+    if (!session) return;
+    try {
+      const invitations = await listMyAtelierInvitations(session);
+      setPendingInvitations(invitations.filter((item) =>
+        item.email.toLowerCase() === (session.user.email ?? "").toLowerCase()
+        && !item.declinedAt
+        && new Date(item.expiresAt).getTime() > Date.now()
+      ));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Impossible d’actualiser les invitations reçues.");
+    }
+  }
+
+  async function declineInvitation(invitation: AtelierInvitation) {
+    if (!session) return;
+    setBusy(true); setError(""); setMessage("");
+    try {
+      await declineAtelierInvitation(session, invitation.id);
+      setPendingInvitations((current) => current.filter((item) => item.id !== invitation.id));
+      setMessage("Invitation refusée. L’atelier qui vous a invité ne pourra plus utiliser cette invitation.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Impossible de refuser cette invitation.");
+    } finally { setBusy(false); }
   }
 
   async function acceptInvitation(invitation: AtelierInvitation) {
@@ -100,6 +127,32 @@ export default function AuthGate({ children }: Props) {
     void initialize();
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    let active = true;
+    const refresh = () => {
+      if (document.visibilityState !== "hidden") {
+        void listMyAtelierInvitations(session).then((invitations) => {
+          if (!active) return;
+          setPendingInvitations(invitations.filter((item) =>
+            item.email.toLowerCase() === (session.user.email ?? "").toLowerCase()
+            && !item.declinedAt
+            && new Date(item.expiresAt).getTime() > Date.now()
+          ));
+        }).catch((cause) => {
+          if (active) setError(cause instanceof Error ? cause.message : "Impossible d’actualiser les invitations reçues.");
+        });
+      }
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [session]);
 
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -225,7 +278,7 @@ export default function AuthGate({ children }: Props) {
           {pendingInvitations.map((invitation) => <article key={invitation.id} className="auth-invitation-item">
             <strong>{invitation.atelierName}</strong><span>{invitation.email} · {invitation.role === "gestionnaire" ? "Gestionnaire" : "Employé"}</span>
             <small>Expire le {new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(invitation.expiresAt))}</small>
-            <button className="primary-button auth-submit" type="button" disabled={busy} onClick={() => void acceptInvitation(invitation)}>{busy ? "Acceptation…" : "Accepter l’invitation"}</button>
+            <div className="auth-invitation-actions"><button className="primary-button auth-submit" type="button" disabled={busy} onClick={() => void acceptInvitation(invitation)}>{busy ? "Traitement…" : "Accepter l’invitation"}</button><button className="secondary-button" type="button" disabled={busy} onClick={() => void declineInvitation(invitation)}>Refuser</button></div>
           </article>)}
           {error && <p className="auth-error" role="alert">{error}</p>}
           {message && <p className="auth-message" role="status">{message}</p>}
@@ -254,7 +307,24 @@ export default function AuthGate({ children }: Props) {
         {workspaces.length > 1 ? <label className="auth-workspace-switch"><span>Atelier actif</span><select aria-label="Choisir l’atelier actif" value={atelier.id} onChange={(event) => switchAtelier(event.target.value)}>{workspaces.map((item) => <option key={item.id} value={item.id}>{item.nom}{item.ville ? ` · ${item.ville}` : ""}</option>)}</select></label> : <span className="auth-session-workspace">{atelier.nom}</span>}
         <button type="button" onClick={() => void handleSignOut()}>Déconnexion</button>
       </div>
-      {pendingInvitations.length > 0 && <div className="auth-invitation-banner"><div><strong>Vous avez {pendingInvitations.length} invitation(s) d’atelier.</strong>{pendingInvitations.map((item) => <span key={item.id}>{item.atelierName} · {item.role}</span>)}</div><div>{pendingInvitations.map((item) => <button key={item.id} className="secondary-button" type="button" disabled={busy} onClick={() => void acceptInvitation(item)}>Rejoindre {item.atelierName}</button>)}</div>{error && <p className="auth-error" role="alert">{error}</p>}</div>}
+      <section className="auth-invitation-inbox" aria-labelledby="auth-invitation-inbox-title">
+        <div className="auth-invitation-inbox-heading">
+          <div><p className="eyebrow">BOÎTE DE RÉCEPTION</p><h2 id="auth-invitation-inbox-title">Invitations reçues</h2><p>Les invitations envoyées à cette adresse apparaissent ici. Aucun e-mail n’est envoyé automatiquement.</p></div>
+          <button type="button" className="secondary-button" disabled={busy} onClick={() => void refreshInvitationInbox()}>Actualiser</button>
+        </div>
+        {pendingInvitations.length === 0 ? <p className="auth-invitation-empty">Aucune invitation en attente pour {session.user.email}.</p> : <div className="auth-invitation-cards">
+          {pendingInvitations.map((item) => <article key={item.id} className="auth-invitation-item">
+            <strong>{item.atelierName}</strong><span>{item.email} · {item.role === "gestionnaire" ? "Gestionnaire" : "Employé"}</span>
+            <small>Invitation reçue · expire le {new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(item.expiresAt))}</small>
+            <div className="auth-invitation-actions">
+              <button className="primary-button" type="button" disabled={busy} onClick={() => void acceptInvitation(item)}>{busy ? "Traitement…" : "Accepter l’invitation"}</button>
+              <button className="secondary-button" type="button" disabled={busy} onClick={() => void declineInvitation(item)}>Refuser</button>
+            </div>
+          </article>)}
+        </div>}
+        {error && <p className="auth-error" role="alert">{error}</p>}
+        {message && <p className="auth-message" role="status">{message}</p>}
+      </section>
       <div className="auth-local-warning" role="status">La connexion, les ateliers, les clients, les mensurations, les commandes, les versements, les dépenses, l’inventaire et les fournisseurs sont synchronisés sur le serveur. Les sauvegardes chiffrées sont opérationnelles ; leur restauration complète reste à tester. La marketplace publique est encore en développement : n’y saisissez pas de données réelles.</div>
       {children}
     </>
