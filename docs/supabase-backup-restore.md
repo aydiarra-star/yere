@@ -53,35 +53,35 @@ Ne jamais mettre le mot de passe PostgreSQL dans une variable publique, un fichi
 
 Le planning GitHub Actions ne s'exécutera qu'après intégration du workflow dans la branche par défaut `main`. Une fois cette PR fusionnée et les deux paramètres configurés, ouvrir **Actions → Sauvegarde Supabase YÉRÉ → Run workflow** pour effectuer le premier test manuel.
 
-## Déchiffrer une archive
+## Vérifier et déchiffrer une archive
 
-Après téléchargement de l'artefact depuis l'exécution GitHub Actions :
+Après téléchargement de l'artefact depuis l'exécution GitHub Actions, placer l'archive, son fichier `.sha256` et la clé privée age dans un dossier local protégé. Depuis la racine du dépôt :
 
 ```bash
-sha256sum -c yere-db-backup.tar.gz.age.sha256
-age --decrypt -i yere-backup-key.txt -o yere-db-backup.tar.gz yere-db-backup.tar.gz.age
-mkdir yere-db-backup
-tar -xzf yere-db-backup.tar.gz -C yere-db-backup
+chmod 700 scripts/verify-supabase-backup.sh
+scripts/verify-supabase-backup.sh \
+  /chemin/yere-db-backup.tar.gz.age \
+  /chemin/yere-backup-key.txt
+```
+
+Le script vérifie l'empreinte SHA-256, déchiffre dans un dossier temporaire privé et contrôle l'intégrité gzip/tar ainsi que la présence des exports SQL attendus. Il ne se connecte à aucune base et ne lance aucune restauration.
+
+Pour extraire les fichiers vérifiés dans un nouveau dossier (qui ne doit pas déjà exister) :
+
+```bash
+scripts/verify-supabase-backup.sh \
+  /chemin/yere-db-backup.tar.gz.age \
+  /chemin/yere-backup-key.txt \
+  --extract-to ./yere-db-backup-verified
 ```
 
 ## Restauration
 
-Ne jamais lancer une restauration sur la base de production existante sans procédure de reprise validée et sauvegarde préalable. La procédure de restauration logique Supabase est conçue pour une nouvelle base cible préparée à cet effet. Elle doit être testée sur un projet de récupération, avec vérification des extensions, rôles et privilèges.
+**Aucune restauration réelle n'est encore certifiée.** Ne jamais lancer une restauration sur la base de production existante. Le test doit se faire sur un projet Supabase de récupération distinct, avec une sauvegarde préalable de cette cible, puis vérification des extensions, rôles, privilèges, contraintes, données et fonctions métier.
 
-Exemple de restauration du schéma et des données dans une **nouvelle base cible** (adapter et vérifier l'URL de destination) :
+La restauration des rôles et du schéma peut nécessiter une adaptation au projet cible : les rôles intégrés Supabase et les extensions ne doivent pas être écrasés aveuglément. L'historique `supabase_migrations` se restaure séparément, après comparaison avec les migrations déjà présentes. Les comptes Auth et les fichiers Storage demandent une procédure distincte.
 
-```bash
-psql \
-  --single-transaction \
-  --variable ON_ERROR_STOP=1 \
-  --file yere-db-backup/roles.sql \
-  --file yere-db-backup/schema.sql \
-  --command 'SET session_replication_role = replica' \
-  --file yere-db-backup/data.sql \
-  --dbname "$NEW_DB_URL"
-```
-
-L'historique `supabase_migrations` se restaure séparément si nécessaire, après vérification de la cible et de l'état de ses migrations. Les comptes Auth et les fichiers Storage demandent une procédure distincte.
+Le script de pré-vérification fourni ne restaure volontairement rien. Il ne faut pas confondre un fichier déchiffrable avec une restauration complète et exploitable.
 
 ## Vérification opérationnelle
 
@@ -89,4 +89,5 @@ Une sauvegarde n'est considérée comme fiable qu'après :
 1. une exécution GitHub Actions réussie ;
 2. la présence de l'archive chiffrée et de son empreinte ;
 3. un test de déchiffrement avec la clé privée conservée ;
-4. un test de restauration sur un projet Supabase distinct, sans toucher à la production.
+4. un test de restauration sur un projet Supabase distinct ;
+5. une vérification fonctionnelle des données restaurées, sans toucher à la production.
