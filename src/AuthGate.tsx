@@ -328,7 +328,7 @@ export default function AuthGate({ children }: Props) {
         <button type="button" onClick={() => { setCreatingAtelier((current) => !current); setAtelierName(""); setPhone(""); setCity(""); setError(""); setMessage(""); }}>{creatingAtelier ? "Annuler" : "+ Créer un atelier"}</button>
         <button type="button" onClick={() => void handleSignOut()}>Déconnexion</button>
       </div>
-{creatingAtelier && <main className="auth-shell">
+{creatingAtelier && <section className="auth-shell">
         <section className="auth-card auth-workspace-card">
           <div className="auth-brand"><span className="auth-mark">Y</span><span><strong>YÉRÉ</strong><small>ATELIER</small></span></div>
           <p className="eyebrow">NOUVEL ESPACE PROFESSIONNEL</p>
@@ -342,7 +342,7 @@ export default function AuthGate({ children }: Props) {
             <button className="primary-button auth-submit" disabled={busy} type="submit">{busy ? "Création en cours…" : "Créer et ouvrir cet atelier"} <span>→</span></button>
           </form>
         </section>
-      </main>}
+      </section>}
 {inboxOpen && <section id="auth-invitation-inbox" className="auth-invitation-inbox" aria-labelledby="auth-invitation-inbox-title">
         <div className="auth-invitation-inbox-heading">
           <div><p className="eyebrow">BOÎTE DE RÉCEPTION</p><h2 id="auth-invitation-inbox-title">Invitations reçues</h2><p>Les invitations envoyées à cette adresse apparaissent ici. Aucun e-mail n’est envoyé automatiquement.</p></div>
