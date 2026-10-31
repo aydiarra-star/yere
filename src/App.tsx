@@ -7,7 +7,7 @@ import { isMarketplaceListingListValid, type MarketplaceListing } from "./market
 import { usePersistentState } from "./usePersistentState";
 import { createAtelierClient, createAtelierOrder, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
 import { readSession } from "./lib/supabaseAuth";
-import { cancelAtelierInvitation, createAtelierInvitation, listAtelierInvitations, listAtelierMembers, type AtelierInvitation, type AtelierMember } from "./lib/atelierTeam";
+import { cancelAtelierInvitation, createAtelierInvitation, deactivateAtelierMember, listAtelierInvitations, listAtelierMembers, updateAtelierMemberRole, type AtelierInvitation, type AtelierMember } from "./lib/atelierTeam";
 import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, getAtelierSupplierProfile, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, saveAtelierSupplierProfile, type AtelierSupplier } from "./lib/atelierSuppliers";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
@@ -178,6 +178,7 @@ function App() {
   const visibleClients = useMemo(() => clients.filter((client) => matchesClient(client, query)), [clients, query]);
   const currentUserId = readSession()?.user.id;
   const canManageTeam = teamMembers.some((member) => member.userId === currentUserId && member.active && (member.role === "proprietaire" || member.role === "gestionnaire"));
+  const isAtelierOwner = teamMembers.some((member) => member.userId === currentUserId && member.active && member.role === "proprietaire");
   const outstanding = orders.reduce((sum, order) => sum + balanceDue(order), 0);
   const outstandingOrderCount = orders.filter((order) => balanceDue(order) > 0).length;
   const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.voidedAt ? 0 : expense.amount), 0);
@@ -589,6 +590,42 @@ function App() {
       setNotice("Invitation révoquée. Le destinataire ne peut plus la réclamer.");
     } catch (cause) {
       setNotice(cause instanceof Error ? "Révocation impossible : " + cause.message : "Impossible de révoquer l’invitation.");
+    } finally { setTeamBusy(false); }
+  }
+
+  async function changeTeamMemberRole(member: AtelierMember) {
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!isAtelierOwner || !session || !atelierId || member.role === "proprietaire") {
+      setNotice("Seul le propriétaire peut modifier le rôle d'un collaborateur.");
+      return;
+    }
+    const nextRole = member.role === "gestionnaire" ? "employe" : "gestionnaire";
+    setTeamBusy(true);
+    try {
+      await updateAtelierMemberRole(session, atelierId, member.userId, nextRole);
+      setTeamMembers((current) => current.map((item) => item.userId === member.userId ? { ...item, role: nextRole } : item));
+      setNotice("Rôle du collaborateur mis à jour.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? "Modification refusée : " + cause.message : "Impossible de modifier ce rôle.");
+    } finally { setTeamBusy(false); }
+  }
+
+  async function deactivateTeamMember(member: AtelierMember) {
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!isAtelierOwner || !session || !atelierId || member.role === "proprietaire") {
+      setNotice("Seul le propriétaire peut retirer un collaborateur.");
+      return;
+    }
+    if (!window.confirm("Désactiver ce membre ? Son accès à l'atelier sera retiré, mais son historique sera conservé.")) return;
+    setTeamBusy(true);
+    try {
+      await deactivateAtelierMember(session, atelierId, member.userId);
+      setTeamMembers((current) => current.map((item) => item.userId === member.userId ? { ...item, active: false } : item));
+      setNotice("Accès du collaborateur désactivé. Son historique est conservé.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? "Désactivation refusée : " + cause.message : "Impossible de désactiver ce membre.");
     } finally { setTeamBusy(false); }
   }
 
@@ -1071,7 +1108,7 @@ function App() {
             </form>
             <section className="content-card team-panel" aria-labelledby="team-title">
               <div className="section-heading"><div><h3 id="team-title">Équipe et accès à l’atelier</h3><p>Les droits sont contrôlés sur le serveur et chaque membre reste limité à cet atelier.</p></div><span className="marketplace-listing-count">{teamMembers.filter((member) => member.active).length} membre(s)</span></div>
-              <div className="table-wrap"><table><thead><tr><th>Identifiant du compte</th><th>Rôle</th><th>État</th><th>Depuis</th></tr></thead><tbody>{teamMembers.map((member) => <tr key={member.userId}><td><code>{member.userId.slice(0,8)}…{member.userId.slice(-4)}</code>{member.userId === currentUserId ? <small>Votre compte</small> : null}</td><td>{member.role === "proprietaire" ? "Propriétaire" : member.role === "gestionnaire" ? "Gestionnaire" : "Employé"}</td><td>{member.active ? "Actif" : "Désactivé"}</td><td>{new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(member.createdAt))}</td></tr>)}</tbody></table></div>
+              <div className="table-wrap"><table><thead><tr><th>Identifiant du compte</th><th>Rôle</th><th>État</th><th>Depuis</th>{isAtelierOwner ? <th>Actions</th> : null}</tr></thead><tbody>{teamMembers.map((member) => <tr key={member.userId}><td><code>{member.userId.slice(0,8)}…{member.userId.slice(-4)}</code>{member.userId === currentUserId ? <small>Votre compte</small> : null}</td><td>{member.role === "proprietaire" ? "Propriétaire" : member.role === "gestionnaire" ? "Gestionnaire" : "Employé"}</td><td>{member.active ? "Actif" : "Désactivé"}</td><td>{new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(member.createdAt))}</td>{isAtelierOwner ? <td>{member.role !== "proprietaire" ? <div className="team-member-actions"><button type="button" className="text-button" disabled={teamBusy || !member.active} onClick={() => void changeTeamMemberRole(member)}>{member.role === "gestionnaire" ? "Rétablir employé" : "Nommer gestionnaire"}</button>{member.active ? <button type="button" className="text-button" disabled={teamBusy} onClick={() => void deactivateTeamMember(member)}>Désactiver</button> : <span className="privacy-note">Accès retiré</span>}</div> : <span className="privacy-note">Compte propriétaire protégé</span>}</td> : null}</tr>)}</tbody></table></div>
               {canManageTeam ? <>
                 <form className="new-order-form team-invite-form" onSubmit={inviteTeamMember}>
                   <h4>Inviter un collaborateur</h4>

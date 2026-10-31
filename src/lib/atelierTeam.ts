@@ -64,3 +64,18 @@ export async function cancelAtelierInvitation(session:YereSession,invitationId:s
   const data=await parse(await authenticatedFetch(session,"rest/v1/rpc/cancel_atelier_invitation",{method:"POST",body:JSON.stringify({p_invitation_id:invitationId})}));
   if(data!==true)throw new Error("La révocation de l’invitation n’a pas été confirmée.");
 }
+
+export async function updateAtelierMemberRole(
+  session:YereSession,atelierId:string,userId:string,role:"gestionnaire"|"employe"
+):Promise<void>{
+  const data=await parse(await authenticatedFetch(session,"rest/v1/rpc/update_atelier_member_role",{
+    method:"POST",body:JSON.stringify({p_atelier_id:atelierId,p_user_id:userId,p_role:role})
+  }));
+  if(data!==true)throw new Error("La modification du rôle n’a pas été confirmée par le serveur.");
+}
+export async function deactivateAtelierMember(session:YereSession,atelierId:string,userId:string):Promise<void>{
+  const data=await parse(await authenticatedFetch(session,"rest/v1/rpc/deactivate_atelier_member",{
+    method:"POST",body:JSON.stringify({p_atelier_id:atelierId,p_user_id:userId})
+  }));
+  if(data!==true)throw new Error("La désactivation du membre n’a pas été confirmée par le serveur.");
+}
