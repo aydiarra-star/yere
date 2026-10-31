@@ -57,8 +57,11 @@ begin
       raise exception 'Seul le propriétaire ou le gestionnaire peut enregistrer un acompte initial'
         using errcode = '42501';
     end if;
-    if nullif(btrim(p_payment_key), '') is null then
-      raise exception 'Clé de paiement requise pour un acompte initial' using errcode = '23514';
+    if p_payment_key is null
+       or length(btrim(p_payment_key)) < 8
+       or length(btrim(p_payment_key)) > 200 then
+      raise exception 'La clé de paiement doit contenir entre 8 et 200 caractères'
+        using errcode = '23514';
     end if;
   end if;
 
