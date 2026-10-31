@@ -156,10 +156,12 @@ export async function listMyAteliers(session: YereSession): Promise<Array<{ id: 
 }
 
 export async function createAtelier(session: YereSession, input: { nom: string; telephone: string; ville: string }): Promise<string> {
-  // Do not ask PostgREST to RETURNING the inserted row: the SELECT policy on
-  // atelier is membership-based, and the owner membership is attached by an
-  // AFTER INSERT trigger. Read the row in a separate request after that trigger
-  // has completed instead.
+  // Capture existing tenant IDs first so duplicate workshop names/details never
+  // cause the app to select an older atelier after the owner trigger runs.
+  const before = await listMyAteliers(session);
+  const existingIds = new Set(before.map((item) => item.id));
+  // Do not request RETURNING: the owner membership is attached by an AFTER
+  // INSERT trigger, so the row is read only after that trigger has completed.
   const response = await authenticatedFetch(session, "rest/v1/atelier", {
     method: "POST",
     headers: { Prefer: "return=minimal" },
@@ -167,11 +169,10 @@ export async function createAtelier(session: YereSession, input: { nom: string; 
   });
   await parseResponse(response);
   const workspaces = await listMyAteliers(session);
-  const created = workspaces.find((item) =>
-    item.nom === input.nom
+  const created = workspaces.find((item) => !existingIds.has(item.id)
+    && item.nom === input.nom
     && item.telephone === (input.telephone || null)
-    && item.ville === (input.ville || null)
-  );
+    && item.ville === (input.ville || null));
   if (!created) throw new Error("Atelier créé, mais non visible après son rattachement. Vérifiez les droits du compte avant de poursuivre.");
   return created.id;
 }

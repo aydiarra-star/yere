@@ -20,6 +20,7 @@ export default function AuthGate({ children }: Props) {
   const [session, setSession] = useState<YereSession | null>(null);
   const [atelier, setAtelier] = useState<Atelier | null>(null);
   const [workspaces, setWorkspaces] = useState<Atelier[]>([]);
+  const [creatingAtelier, setCreatingAtelier] = useState(false);
   const [pendingInvitations, setPendingInvitations] = useState<AtelierInvitation[]>([]);
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<"login" | "signup" | "recovery">("login");
@@ -210,6 +211,11 @@ export default function AuthGate({ children }: Props) {
       if (!created) throw new Error("Atelier créé, mais impossible de le relire avec les droits du compte. Contactez l'assistance avant de poursuivre.");
       seedLocalProfile(session.user.id, created);
       setAtelier(created);
+      setCreatingAtelier(false);
+      setAtelierName(""); setPhone(""); setCity("");
+      // Reload the app under the newly selected atelier so every module and cache
+      // is initialized with the new tenant ID and its owner role.
+      window.location.reload();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Création de l'atelier impossible.");
     } finally { setBusy(false); }
@@ -305,8 +311,24 @@ export default function AuthGate({ children }: Props) {
       <div className="auth-session-bar">
         <span className="auth-session-identity"><strong>Connecté</strong> · {session.user.email}</span>
         {workspaces.length > 1 ? <label className="auth-workspace-switch"><span>Atelier actif</span><select aria-label="Choisir l’atelier actif" value={atelier.id} onChange={(event) => switchAtelier(event.target.value)}>{workspaces.map((item) => <option key={item.id} value={item.id}>{item.nom}{item.ville ? ` · ${item.ville}` : ""}</option>)}</select></label> : <span className="auth-session-workspace">{atelier.nom}</span>}
+        <button type="button" onClick={() => { setCreatingAtelier((current) => !current); setAtelierName(""); setPhone(""); setCity(""); setError(""); setMessage(""); }}>{creatingAtelier ? "Annuler" : "+ Créer un atelier"}</button>
         <button type="button" onClick={() => void handleSignOut()}>Déconnexion</button>
       </div>
+      {creatingAtelier && <main className="auth-shell">
+        <section className="auth-card auth-workspace-card">
+          <div className="auth-brand"><span className="auth-mark">Y</span><span><strong>YÉRÉ</strong><small>ATELIER</small></span></div>
+          <p className="eyebrow">NOUVEL ESPACE PROFESSIONNEL</p>
+          <h1>Créez un autre atelier.</h1>
+          <p className="auth-intro">Vous gardez le même compte. Vous serez propriétaire de ce nouvel atelier, indépendamment de vos rôles dans les autres ateliers.</p>
+          <form className="auth-form" onSubmit={submitAtelier}>
+            <label>Nom de l'atelier<input required maxLength={120} value={atelierName} onChange={(event) => setAtelierName(event.target.value)} placeholder="Ex. Atelier Démé Couture" /></label>
+            <label>Téléphone<input type="tel" maxLength={40} value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+221…" /></label>
+            <label>Ville<input maxLength={100} value={city} onChange={(event) => setCity(event.target.value)} placeholder="Dakar, Thiès…" /></label>
+            {error && <p className="auth-error" role="alert">{error}</p>}
+            <button className="primary-button auth-submit" disabled={busy} type="submit">{busy ? "Création en cours…" : "Créer et ouvrir cet atelier"} <span>→</span></button>
+          </form>
+        </section>
+      </main>}
       <section className="auth-invitation-inbox" aria-labelledby="auth-invitation-inbox-title">
         <div className="auth-invitation-inbox-heading">
           <div><p className="eyebrow">BOÎTE DE RÉCEPTION</p><h2 id="auth-invitation-inbox-title">Invitations reçues</h2><p>Les invitations envoyées à cette adresse apparaissent ici. Aucun e-mail n’est envoyé automatiquement.</p></div>
