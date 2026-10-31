@@ -24,6 +24,7 @@ Les tests ont été exécutés dans des transactions annulées ensuite ; aucune 
 - Le gestionnaire peut inviter un employé mais ne peut pas promouvoir/inviter un autre gestionnaire : réussi en transaction annulée.
 - Le propriétaire ne peut pas inviter dans un atelier dont il n'est ni membre ni gestionnaire : refusé en transaction annulée.
 - Une adresse e-mail mal formée est refusée par la fonction SQL : réussi.
+- La boîte de réception RLS ne montre l'invitation qu'à l'adresse invitée ; une autre adresse ne la voit pas : réussi en transaction annulée avec une identité JWT simulée.
 - Simulation temporaire du rôle employé : l'acompte initial est refusé, la modification du prix d'une commande est refusée, la création d'une commande sans acompte est autorisée ; transaction annulée et rôle restauré ensuite.
 
 Ces contrôles SQL valident des règles RLS et des fonctions en contexte PostgreSQL simulé. Ils ne remplacent pas encore les tests navigateur avec les vrais jetons Auth ni le parcours d'invitation complet. Aucun compte employé permanent n'est encore disponible pour un test utilisateur réel.
