@@ -288,6 +288,10 @@ function App() {
       setNotice("Votre session ou votre atelier n'est plus disponible. Reconnectez-vous.");
       return;
     }
+    if (deposit > 0 && !canManageTeam) {
+      setNotice("Un employé peut créer une commande sans acompte. Le versement initial doit être enregistré par le propriétaire ou le gestionnaire.");
+      return;
+    }
     const orderedAt = new Date().toISOString().slice(0, 10);
     const orderClient = clients.find((client) => client.id === newOrderClientId);
     if (!orderClient) {
