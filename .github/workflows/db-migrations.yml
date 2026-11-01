@@ -38,3 +38,6 @@ jobs:
 
       - name: Verify owner, manager and tailor permissions against PostgreSQL
         run: psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f supabase/tests/roles.integration.sql
+
+      - name: Run marketplace and subscription integration checks
+        run: psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f supabase/tests/marketplace_subscription.integration.sql
