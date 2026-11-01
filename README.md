@@ -2,83 +2,114 @@
 
 **La couture, mieux organisée.**
 
-YÉRÉ est conçu d’abord et exclusivement pour les tailleurs au Sénégal : clients, mensurations, commandes, confection, paiements, caisse, dépenses et stocks. Les autres métiers de la mode et la marketplace sont hors du périmètre du lancement.
+YÉRÉ est une application web mobile-first destinée aux ateliers de tailleurs au Sénégal. Son cœur métier couvre les clients, les mensurations, les commandes, le suivi de confection, les paiements, la caisse, les dépenses, les stocks, les achats fournisseurs et l'organisation du travail en équipe.
 
-## Version applicative en chantier — YÉRÉ Atelier
+La marketplace est une évolution séparée : elle ne doit pas retarder la gestion quotidienne de l'atelier.
 
-Le premier socle est une application web React + TypeScript + Vite, conçue mobile-first. Au premier lancement, l’accueil affiche un **aperçu fictif** clairement identifié (aucune de ces valeurs d’exemple n’est enregistrée). Configurez l’atelier ou créez un premier client pour afficher les données réelles, initialement vides. Cette version permet de parcourir les fonctions disponibles pour l'atelier :
-- tableau de bord alimenté par les données saisies dans l'application ;
-- recherche de clients par nom ou téléphone ;
-- création de fiches client conservées dans le stockage local du navigateur ;
-- édition des mensurations et notes client, conservées localement ;
-- commandes, statut de confection et calcul du reste dû en FCFA ;
+## Architecture actuelle
 
-**Limites importantes :** les données saisies sont conservées uniquement dans le stockage local de ce navigateur ; aucune authentification réelle, base de données serveur, sauvegarde distante ou isolation multi-atelier n'est encore intégrée. L'export JSON et la restauration locale sont disponibles, mais ne remplacent pas une sauvegarde serveur. N'utilisez pas encore de données réelles de clients. Cette version n'est pas prête pour la production.
+- **Frontend :** React 18, TypeScript et Vite.
+- **Authentification et données :** Supabase Auth et PostgreSQL via l'API Supabase.
+- **Hébergement :** site statique Render, dépôt GitHub `aydiarra-star/yere`, branche `main`.
+- **URL du service :** https://yere-main-preview.onrender.com
+- **Région Supabase :** `eu-west-3` (Europe).
 
-### Démarrer en local
+Les données métier principales sont synchronisées avec Supabase : clients, mensurations, commandes, paiements, dépenses, stock, fournisseurs, achats fournisseurs, membres, invitations et tâches d'atelier. Les données financières sont chargées à travers des fonctions RPC contrôlées côté base ; l'interface masque les informations financières aux rôles qui ne doivent pas y accéder.
 
-Prérequis : Node.js 20+ et npm.
+## Authentification, rôles et isolation
 
-```bash
-npm install
-npm run dev
-```
+L'accès aux données est protégé par les politiques PostgreSQL Row Level Security (RLS). À la dernière vérification de la base de production, les 17 tables du schéma public avaient RLS activé et des politiques associées.
 
-### Compiler et publier les illustrations
+Les rôles métier sont :
+- **Propriétaire :** contrôle complet de son atelier, de l'équipe et des données financières.
+- **Gestionnaire :** gestion opérationnelle selon les permissions définies, sans accès aux données financières réservées au propriétaire.
+- **Employé / tailleur :** accès aux informations nécessaires au travail et aux tâches qui lui sont attribuées, selon les règles de l'atelier.
+
+Les fonctions privilégiées utilisées pour certaines opérations sensibles sont placées dans le schéma non exposé `private`, avec des contrôles d'identité et de rôle. Les fonctions RPC exposées dans `public` sont réservées au rôle authentifié ; l'accès anonyme aux RPC métier a été contrôlé.
+
+**Important :** l'activation de RLS et la présence de politiques ne remplacent pas les essais réels avec plusieurs comptes. Avant une ouverture commerciale large, exécuter les scénarios d'acceptation décrits plus bas.
+
+## Persistance locale et précautions
+
+Le navigateur conserve également un cache local isolé par utilisateur et par atelier pour certaines données, ainsi que des données de compatibilité héritées. Le serveur reste la source distante pour les opérations métier synchronisées, mais toutes les préférences et fonctions périphériques ne sont pas encore centralisées.
+
+- Les données de marketplace et certaines informations d'onboarding restent locales au navigateur.
+- Des enregistrements hérités identifiés par leurs anciens préfixes peuvent encore être conservés localement lors de la synchronisation.
+- Le cache local ne constitue **pas** une sauvegarde serveur.
+
+**Ne videz pas les données du navigateur et ne désinstallez pas l'application pour forcer une mise à jour sans avoir d'abord exporté et vérifié les données locales.** Cela pourrait supprimer des éléments hérités qui ne sont pas encore présents sur le serveur.
+
+## Développement et vérifications
+
+Prérequis : Node.js 20 ou supérieur et npm.
 
 ```bash
 npm ci
-npm run build
-```
-
-Publiez **tout le contenu** du dossier `dist/`, y compris `images/`, `manifest.webmanifest` et `sw.js` ; publier seulement le JavaScript ne suffit pas. Le build utilise des chemins relatifs afin de fonctionner à la racine d’un domaine ou dans un sous-dossier. Les illustrations et la page sont mises en cache lors de l’installation, avec une mise à jour réseau pour éviter de conserver une ancienne version.
-
-La commande `npm run build` contrôle automatiquement que les quatre images sont présentes dans `dist/`, référencées par l’application et prévues pour le cache. On peut relancer ce contrôle seul avec `npm run verify:build`.
-
-### Préparation pour Render (déploiement non effectué)
-
-Le fichier `render.yaml` propose **un site statique optionnel**, mais ne prouve pas qu’un site est déployé. Si un Blueprint est connecté à une branche, sa synchronisation peut appliquer les changements et déclencher un déploiement : examinez ses effets avant de l’activer. `.node-version` fixe la version Node utilisée si le service ne définit pas déjà `NODE_VERSION`. La configuration locale proposée est ([référence officielle des Blueprints Render](https://render.com/docs/blueprint-spec)) :
-
-- dépôt : `aydiarra-star/yere` et branche contenant ce correctif (sur `main` après intégration) ;
-- racine du projet : racine du dépôt ;
-- commande de build : `npm ci --include=dev && npm test && npm run build` ;
-- répertoire à publier : `dist` ;
-- en-têtes `Cache-Control: no-store` pour l’accueil, `sw.js`, le manifeste et les illustrations, afin de ne pas retenir une version périmée.
-
-**Si un service Render existe déjà**, vérifiez d’abord son type, sa branche, son répertoire racine, ses domaines, ses variables et son mode de déploiement. Si c’est déjà un *Static Site*, ses réglages peuvent être corrigés dans le tableau de bord sans créer une copie. N’associez pas le Blueprint à un service existant et ne changez pas son type sans examiner la liste des changements proposés : sa synchronisation peut modifier les réglages. Le nom `yere-atelier` est indicatif pour un éventuel nouveau Blueprint ; il n’identifie pas nécessairement votre service actuel.
-
-Après un déploiement **effectivement terminé**, vérifiez le commit affiché dans les journaux Render, puis ouvrez l’accueil et les URL `/images/delivery-reference.webp`, `/images/payment-reference.webp` et `/images/production-reference.webp` sur le domaine du site : elles doivent renvoyer des images WebP, et non une page HTML. Vérifiez ensuite l’affichage dans l’application en ligne. N’effacez pas les données du site et ne désinstallez pas l’application pour forcer la mise à jour sans avoir d’abord exporté les données locales : cela pourrait supprimer les fiches clients et commandes de ce navigateur.
-
-### Vérifications
-
-```bash
 npm test
 npm run build
 ```
 
-Ces commandes doivent être exécutées dans un environnement Node avant de considérer les tests et la compilation comme validés.
+Le build lance également `scripts/verify-build.mjs` en postbuild. Ce contrôle vérifie la présence, les références et la mise en cache des quatre illustrations requises.
 
-## Priorités produit
-1. **YÉRÉ Atelier** — clients, mensurations historisées, commandes et production.
-2. **Gestion financière** — acomptes, soldes, recettes, dépenses, dettes/créances.
-3. **Stocks et achats** — fournitures, consommables et fournisseurs.
-4. **Pilote terrain** — accompagnement porte-à-porte, retours et amélioration de l'expérience mobile.
-5. **Évolutions futures** — fournisseurs et marketplace uniquement après validation du cœur de gestion des tailleurs.
+La CI GitHub exécute l'audit des dépendances, les tests et le build. L'installation reproductible utilise `npm ci` avec le lockfile versionné.
 
-## Documentation
+## Déploiement Render
+
+Le service statique Render existant est `yere-main-preview`, relié au dépôt `aydiarra-star/yere` et à la branche `main`, avec publication du dossier `dist` et déploiement automatique sur commit.
+
+Commande de build recommandée pour ce dépôt :
+
+```bash
+npm ci && npm test && npm run build
+```
+
+Répertoire de publication : `dist`.
+
+Après chaque déploiement, contrôler :
+1. le commit réellement déployé et le statut `live` ;
+2. les journaux de build et les erreurs d'exécution ;
+3. l'accueil de l'application ;
+4. les ressources `/images/delivery-reference.webp`, `/images/payment-reference.webp` et `/images/production-reference.webp` ;
+5. l'authentification et les parcours métier avec des comptes de test.
+
+## Contrôles de mise en service
+
+Avant de déclarer l'application pleinement prête pour tous les ateliers, effectuer les essais de bout en bout avec des comptes distincts :
+- création de compte, connexion, déconnexion et récupération du mot de passe ;
+- création d'atelier et accès après reconnexion sur un autre appareil ;
+- invitation, réception dans la boîte de réception de l'application, acceptation et refus ;
+- création d'un client, ajout de plusieurs mensurations et historique ;
+- création d'une commande avec et sans acompte selon le rôle ;
+- ajout de paiement, calcul du solde et visibilité financière réservée au propriétaire ;
+- dépenses, annulation motivée, stock, mouvements et achats fournisseurs ;
+- attribution de tâches, mise à jour par le tailleur et historique ;
+- impossibilité pour un compte d'un autre atelier d'accéder aux données ;
+- vérification qu'un employé ne peut ni consulter ni modifier les données financières protégées.
+
+Les contrôles automatisés et les tests SQL d'intégration sont utiles, mais ne remplacent pas ces essais dans un navigateur avec de vrais comptes de test.
+
+## Sauvegardes et sécurité opérationnelle
+
+Les sauvegardes de la base doivent être vérifiées dans le tableau de bord Supabase selon le plan actif. Un export local ou un contrôle de fichier chiffré n'est pas, à lui seul, la preuve qu'une restauration complète a réussi. Ne lancez jamais une restauration sur la base de production pour un simple test.
+
+L'avis Supabase relevé lors du dernier audit indique que la protection contre les mots de passe compromis (Leaked Password Protection) est désactivée. Il est recommandé de l'activer dans les réglages Auth si cette option est disponible sur le plan utilisé. Les avis d'index inutilisés sont informatifs : ne supprimez pas ces index sans mesure et analyse de charge.
+
+## Documentation du produit
+
 - [Prompt maître](docs/PROMPT_MAITRE.md)
 - [Cahier des charges maître](docs/CAHIER_DES_CHARGES_MAITRE.md)
 - [Feuille de route](docs/FEUILLE_DE_ROUTE.md)
 - [Backlog MVP](docs/BACKLOG_MVP.md)
-- [Analyse concurrentielle et différenciation](docs/ANALYSE_CONCURRENTIELLE_ET_DIFFERENCIATION.md)
 - [Décision d'architecture](docs/DECISION_ARCHITECTURE.md)
 - [Modèle de données MVP](docs/MODELE_DONNEES_MVP.md)
 - [Plan de persistance serveur et sécurité](docs/PLAN_PERSISTENCE_ET_SECURITE.md)
-- [Charte graphique bleu et blanc](docs/CHARTE_GRAPHIQUE.md)
-- [Plan du mode hors ligne et critères de vérification](docs/PLAN_MODE_HORS_LIGNE.md)
+- [Charte graphique](docs/CHARTE_GRAPHIQUE.md)
+- [Plan du mode hors ligne](docs/PLAN_MODE_HORS_LIGNE.md)
 
 ## Principes
-- Produit mobile d'abord, simple à apprendre et utile dès la première utilisation.
-- Sécurité, confidentialité et isolation stricte des données entre ateliers.
-- Pas de promesse fonctionnelle sans vérification.
-- La marketplace ne doit pas retarder la gestion quotidienne des tailleurs.
+
+- Simplicité d'utilisation sur téléphone, y compris avec une connexion limitée.
+- Confidentialité et isolation stricte entre ateliers.
+- Les informations financières ne sont accessibles qu'aux rôles autorisés.
+- Préserver les données existantes avant toute migration ou modification de stockage.
+- Ne jamais annoncer une fonctionnalité comme opérationnelle sans vérification.
