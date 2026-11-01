@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   createMarketplaceOrder, createMarketplaceSeller, getMyMarketplaceSeller,
-  listMyMarketplaceOrders, listPublicMarketplaceListings, saveMarketplaceListing,
-  updateMarketplaceOrderStatus, uploadMarketplacePhotos, deleteMarketplacePhotos, type MarketplaceOrder, type MarketplaceSeller,
+  listMyMarketplaceOrders, listMyMarketplaceConversations, listMarketplaceMessages,
+  openMarketplaceConversation, sendMarketplaceMessage, listPublicMarketplaceListings, saveMarketplaceListing,
+  updateMarketplaceOrderStatus, uploadMarketplacePhotos, deleteMarketplacePhotos,
+  type MarketplaceConversation, type MarketplaceMessage, type MarketplaceOrder, type MarketplaceSeller,
   type PublicMarketplaceListing
 } from "./lib/marketplace";
 import {
@@ -21,6 +23,12 @@ export default function PublicMarket() {
   const [atelierChoices, setAtelierChoices] = useState<Array<{ id: string; nom: string; ville: string | null }>>([]);
   const [listings, setListings] = useState<PublicMarketplaceListing[]>([]);
   const [orders, setOrders] = useState<MarketplaceOrder[]>([]);
+  const [conversations, setConversations] = useState<MarketplaceConversation[]>([]);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<MarketplaceMessage[]>([]);
+  const [contactListing, setContactListing] = useState<PublicMarketplaceListing | null>(null);
+  const [contactMessage, setContactMessage] = useState("");
+  const [replyMessage, setReplyMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -45,9 +53,10 @@ export default function PublicMarket() {
   }
 
   async function loadAccount(active: YereSession) {
-    const [ownSeller, ownOrders, workspaces] = await Promise.all([
+    const [ownSeller, ownOrders, ownConversations, workspaces] = await Promise.all([
       getMyMarketplaceSeller(active),
       listMyMarketplaceOrders(active),
+      listMyMarketplaceConversations(active),
       listMyAteliers(active)
     ]);
     const owned = await Promise.all(workspaces.map(async (workspace) => {
@@ -58,6 +67,7 @@ export default function PublicMarket() {
     setAtelierChoices(owned.filter((item): item is NonNullable<typeof item> => item !== null));
     setSeller(ownSeller);
     setOrders(ownOrders);
+    setConversations(ownConversations);
   }
 
   useEffect(() => {
@@ -118,7 +128,7 @@ export default function PublicMarket() {
     setBusy(true);
     try {
       await signOut(session);
-      setSession(null); setSeller(null); setOrders([]);
+      setSession(null); setSeller(null); setOrders([]); setConversations([]); setMessages([]); setSelectedConversationId(null);
       setNotice("Vous êtes déconnecté du Market.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Déconnexion impossible.");
@@ -219,6 +229,57 @@ export default function PublicMarket() {
     } finally { setBusy(false); }
   }
 
+  async function refreshConversations() {
+    if (!session) return;
+    setConversations(await listMyMarketplaceConversations(session));
+  }
+
+  async function selectConversation(conversationId: string) {
+    if (!session) return;
+    setSelectedConversationId(conversationId);
+    setError("");
+    try {
+      setMessages(await listMarketplaceMessages(session, conversationId));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Impossible de charger les messages.");
+    }
+  }
+
+  async function submitContact(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!session || !contactListing) {
+      setShowAccount(true);
+      setNotice("Connectez-vous ou créez un compte Market pour contacter le vendeur.");
+      return;
+    }
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const conversationId = await openMarketplaceConversation(session, contactListing.id, contactMessage);
+      setContactListing(null);
+      setContactMessage("");
+      await refreshConversations();
+      await selectConversation(conversationId);
+      setNotice("Votre message a été envoyé au vendeur.");
+      document.getElementById("messages")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Impossible d'envoyer le message.");
+    } finally { setBusy(false); }
+  }
+
+  async function submitReply(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!session || !selectedConversationId || !replyMessage.trim()) return;
+    setBusy(true); setError("");
+    try {
+      await sendMarketplaceMessage(session, selectedConversationId, replyMessage);
+      setReplyMessage("");
+      setMessages(await listMarketplaceMessages(session, selectedConversationId));
+      await refreshConversations();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Le message n'a pas été envoyé.");
+    } finally { setBusy(false); }
+  }
+
   return (
     <main className="yere-market-app">
       <header className="pm-header">
@@ -245,7 +306,7 @@ export default function PublicMarket() {
         <div className="pm-section-heading"><div><span className="pm-eyebrow">LA SÉLECTION YÉRÉ</span><h2>Explorez le Market</h2><p>Des offres publiées par des vendeurs inscrits sur YÉRÉ.</p></div><label className="pm-search"><span>⌕</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un article, une ville…" /></label></div>
         <div className="pm-categories">{categories.map((item) => <button key={item} type="button" className={category === item ? "is-active" : ""} onClick={() => setCategory(item)}>{item}</button>)}</div>
         {loading ? <div className="pm-empty">Chargement du catalogue…</div> : visibleListings.length === 0 ? <div className="pm-empty"><span>✦</span><h3>Le catalogue se construit.</h3><p>Aucune annonce publiée ne correspond pour le moment. Revenez bientôt ou ouvrez votre boutique pour proposer vos articles.</p><a href="#vendeurs">Devenir vendeur →</a></div> :
-          <div className="pm-products">{visibleListings.map((item) => <article className="pm-product" key={item.id}><div className="pm-product-art">{item.photoUrls[0] ? <img className="pm-product-photo" src={item.photoUrls[0]} alt={item.title} loading="lazy" /> : <><span>{item.category.toLowerCase().includes("tissu") ? "TISSUS" : item.category.toUpperCase()}</span><b>Y</b></>}</div><div className="pm-product-copy"><small>{item.category}</small><h3>{item.title}</h3><p>{item.description || "Une offre proposée par un vendeur YÉRÉ."}</p><strong>{money(item.priceXof)}</strong><div className="pm-product-meta"><span>{item.sellerName}</span><span>{item.city || item.sellerCity}</span></div><button type="button" className="pm-buy" onClick={() => { setSelectedListing(item); setError(""); if (!session) setShowAccount(true); }}>Commander <span>→</span></button></div></article>)}</div>}
+          <div className="pm-products">{visibleListings.map((item) => <article className="pm-product" key={item.id}><div className="pm-product-art">{item.photoUrls[0] ? <img className="pm-product-photo" src={item.photoUrls[0]} alt={item.title} loading="lazy" /> : <><span>{item.category.toLowerCase().includes("tissu") ? "TISSUS" : item.category.toUpperCase()}</span><b>Y</b></>}</div><div className="pm-product-copy"><small>{item.category}</small><h3>{item.title}</h3><p>{item.description || "Une offre proposée par un vendeur YÉRÉ."}</p><strong>{money(item.priceXof)}</strong><div className="pm-product-meta"><span>{item.sellerName}</span><span>{item.city || item.sellerCity}</span></div><div className="pm-product-actions"><button type="button" className="pm-buy" onClick={() => { setSelectedListing(item); setError(""); if (!session) setShowAccount(true); }}>Commander <span>→</span></button><button type="button" className="pm-contact" onClick={() => { setContactListing(item); setContactMessage(""); setError(""); if (!session) setShowAccount(true); }}>Contacter le vendeur</button></div></div></article>)}</div>}
       </section>
 
       <section id="vendeurs" className="pm-seller-section">
@@ -257,9 +318,13 @@ export default function PublicMarket() {
 
       {showListingForm && seller && <section className="pm-panel"><div><span className="pm-eyebrow">NOUVELLE ANNONCE</span><h2>Publier une offre</h2><p>Les annonces sont immédiatement visibles après validation par la base.</p></div><form onSubmit={submitListing}><label>Nom de l’article<input required maxLength={140} value={listingForm.title} onChange={(e) => setListingForm({ ...listingForm, title: e.target.value })}/></label><label>Catégorie<select value={listingForm.category} onChange={(e) => setListingForm({ ...listingForm, category: e.target.value })}><option>Boubous & tenues</option><option>Mode femme</option><option>Tissus</option><option>Mercerie</option><option>Fournitures de couture</option></select></label><label>Prix (FCFA)<input type="number" min="1" step="1" required value={listingForm.price} onChange={(e) => setListingForm({ ...listingForm, price: e.target.value })}/></label><label>Stock (facultatif)<input type="number" min="0" step="1" value={listingForm.stock} onChange={(e) => setListingForm({ ...listingForm, stock: e.target.value })}/></label><label className="pm-wide">Description<textarea maxLength={1000} value={listingForm.description} onChange={(e) => setListingForm({ ...listingForm, description: e.target.value })}/></label><label className="pm-wide">Photos de l’article (cinq maximum)<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length > 5) { setError("Vous pouvez sélectionner cinq photos maximum."); e.target.value = ""; return; } const invalid = files.find((file) => !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024); if (invalid) { setError("Utilisez des photos JPG, PNG ou WebP de cinq mégaoctets maximum."); e.target.value = ""; return; } setError(""); setSelectedPhotos(files); }} /></label>{selectedPhotos.length > 0 && <p className="pm-form-note pm-wide">{selectedPhotos.length} photo(s) sélectionnée(s) : {selectedPhotos.map((file) => file.name).join(", ")}</p>}<p className="pm-form-note pm-wide">Photos stockées dans un espace privé. Les liens de consultation sont délivrés uniquement pour les annonces publiées de vendeurs actifs. Formats JPG, PNG ou WebP, cinq mégaoctets maximum par photo.</p><button className="pm-cta" disabled={busy}>{busy ? "Publication…" : "Publier dans le Market"}</button></form></section>}
 
+      {contactListing && <div className="pm-modal-backdrop" role="presentation" onClick={() => setContactListing(null)}><section className="pm-modal" role="dialog" aria-modal="true" aria-labelledby="pm-contact-title" onClick={(e) => e.stopPropagation()}><button className="pm-modal-close" type="button" onClick={() => setContactListing(null)} aria-label="Fermer">×</button><span className="pm-eyebrow">MESSAGERIE YÉRÉ</span><h2 id="pm-contact-title">Contacter {contactListing.sellerName}</h2><p>À propos de : {contactListing.title}. Votre numéro et votre adresse e-mail ne sont pas transmis au vendeur.</p>{session ? <form onSubmit={submitContact}><label className="pm-wide">Votre message<textarea required minLength={1} maxLength={2000} value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} placeholder="Bonjour, je souhaite avoir des précisions sur cet article…" /></label><button className="pm-cta" disabled={busy || !contactMessage.trim()}>{busy ? "Envoi…" : "Envoyer le message"}</button></form> : <p>Connectez-vous ou créez un compte pour envoyer un message privé au vendeur.</p>}</section></div>}
+
       {selectedListing && <div className="pm-modal-backdrop" role="presentation" onClick={() => setSelectedListing(null)}><section className="pm-modal" role="dialog" aria-modal="true" aria-labelledby="pm-order-title" onClick={(e) => e.stopPropagation()}><button className="pm-modal-close" type="button" onClick={() => setSelectedListing(null)} aria-label="Fermer">×</button><span className="pm-eyebrow">PASSER COMMANDE</span><h2 id="pm-order-title">{selectedListing.title}</h2><p>{money(selectedListing.priceXof)} · {selectedListing.sellerName}</p>{session ? <form onSubmit={submitOrder}><label>Quantité<input required type="number" min="1" step="1" value={orderForm.quantity} onChange={(e) => setOrderForm({ ...orderForm, quantity: e.target.value })}/></label><label>Votre nom<input required maxLength={120} value={orderForm.name} onChange={(e) => setOrderForm({ ...orderForm, name: e.target.value })}/></label><label>Téléphone<input required type="tel" maxLength={40} value={orderForm.phone} onChange={(e) => setOrderForm({ ...orderForm, phone: e.target.value })}/></label><label>Ville de livraison<input value={orderForm.city} maxLength={100} onChange={(e) => setOrderForm({ ...orderForm, city: e.target.value })}/></label><label>Note (facultative)<textarea maxLength={500} value={orderForm.note} onChange={(e) => setOrderForm({ ...orderForm, note: e.target.value })}/></label><button className="pm-cta" disabled={busy}>{busy ? "Enregistrement…" : "Confirmer la commande"}</button></form> : <p>Connectez-vous ou créez un compte pour commander. Aucun atelier n’est nécessaire.</p>}</section></div>}
 
       {session && <section id="commandes" className="pm-orders"><div className="pm-section-heading"><div><span className="pm-eyebrow">VOTRE ESPACE</span><h2>Commandes & suivi</h2><p>Vos achats et les commandes reçues par votre boutique.</p></div></div>{orders.length === 0 ? <div className="pm-empty">Aucune commande pour le moment.</div> : <div className="pm-order-list">{orders.map((order) => <article className="pm-order" key={order.id}><div><b>{order.reference}</b><span>{order.buyerName} · {order.quantity} article(s)</span><small>{new Date(order.createdAt).toLocaleDateString("fr-FR")}</small></div><strong>{money(order.totalXof)}</strong><span className="pm-order-status">{order.status}</span>{seller?.id === order.sellerId && <select aria-label={"Statut de la commande " + order.reference} value={order.status} disabled={busy} onChange={(e) => void moveOrder(order, e.target.value as MarketplaceOrder["status"])}><option value="recue">Reçue</option><option value="acceptee">Acceptée</option><option value="preparee">Préparée</option><option value="expediee">Expédiée</option><option value="livree">Livrée</option><option value="annulee">Annulée</option></select>}</article>)}</div>}</section>}
+
+      {session && <section id="messages" className="pm-orders pm-messages"><div className="pm-section-heading"><div><span className="pm-eyebrow">CONTACT DIRECT SÉCURISÉ</span><h2>Vos messages</h2><p>Discutez avec les vendeurs et acheteurs sans partager vos coordonnées privées.</p></div></div><div className="pm-messaging"><aside className="pm-conversation-list">{conversations.length === 0 ? <p className="pm-form-note">Aucune conversation pour le moment. Contactez un vendeur depuis une annonce.</p> : conversations.map((conversation) => <button type="button" key={conversation.id} className={selectedConversationId === conversation.id ? "is-active" : ""} onClick={() => void selectConversation(conversation.id)}><b>{conversation.listingTitle}</b><span>{conversation.buyerUserId === session.user.id ? conversation.sellerName : "Acheteur intéressé"}</span><small>{new Date(conversation.updatedAt).toLocaleDateString("fr-FR")}</small></button>)}</aside><div className="pm-chat-panel">{selectedConversationId ? <><div className="pm-chat-heading"><b>{conversations.find((item) => item.id === selectedConversationId)?.listingTitle ?? "Conversation"}</b><span>{conversations.find((item) => item.id === selectedConversationId)?.sellerName ?? ""}</span></div><div className="pm-chat-history">{messages.map((message) => <article key={message.id} className={message.senderUserId === session.user.id ? "pm-chat-message is-mine" : "pm-chat-message"}><span>{message.senderUserId === session.user.id ? "Vous" : conversations.find((item) => item.id === selectedConversationId)?.sellerName ?? "Interlocuteur"}</span><p>{message.content}</p><small>{new Date(message.createdAt).toLocaleString("fr-FR")}</small></article>)}</div><form className="pm-chat-reply" onSubmit={submitReply}><textarea required maxLength={2000} value={replyMessage} onChange={(e) => setReplyMessage(e.target.value)} placeholder="Écrire un message…" /><button className="pm-cta" disabled={busy || !replyMessage.trim()}>{busy ? "Envoi…" : "Envoyer"}</button></form></> : <div className="pm-chat-empty">Sélectionnez une conversation pour lire les messages et répondre.</div>}</div></div></section>}
 
       <footer className="pm-footer"><a className="pm-brand" href="/market"><span className="pm-mark">Y</span><span><b>YÉRÉ</b><small>MARKET</small></span></a><p>Le marché qui rapproche les artisans, les vendeurs et les passionnés de couture.</p><a href="/">Espace Atelier →</a></footer>
     </main>
