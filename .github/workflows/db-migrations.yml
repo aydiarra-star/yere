@@ -1,0 +1,38 @@
+name: YÉRÉ Database Migration Replay
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - ".github/workflows/db-migrations.yml"
+  push:
+    branches:
+      - "feat/**"
+    paths:
+      - "supabase/migrations/**"
+      - ".github/workflows/db-migrations.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  migration-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Initialize local Supabase configuration
+        run: supabase init
+
+      - name: Start isolated local Supabase stack
+        run: supabase start
+
+      - name: Replay every migration from an empty local database
+        run: supabase db reset --local
