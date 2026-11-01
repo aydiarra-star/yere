@@ -1,9 +1,9 @@
 /* YÉRÉ Market public storefront — shared indigo identity, independent of Atelier auth. */
-.public-market{--pm-ink:#171e49;--pm-blue:#283568;--pm-muted:#6f7892;--pm-line:#e5e8f1;--pm-soft:#f5f6fb;min-height:100vh;background:#fafbfe;color:var(--pm-ink);font-family:"Manrope Variable",Manrope,system-ui,sans-serif}
-.public-market *{box-sizing:border-box}
-.public-market a{color:inherit;text-decoration:none}
-.public-market button,.public-market input,.public-market select,.public-market textarea{font:inherit}
-.public-market button:focus-visible,.public-market a:focus-visible,.public-market input:focus-visible,.public-market select:focus-visible,.public-market textarea:focus-visible{outline:3px solid #aab5e3;outline-offset:2px}
+.yere-market-app{--pm-ink:#171e49;--pm-blue:#283568;--pm-muted:#6f7892;--pm-line:#e5e8f1;--pm-soft:#f5f6fb;min-height:100vh;background:#fafbfe;color:var(--pm-ink);font-family:"Manrope Variable",Manrope,system-ui,sans-serif}
+.yere-market-app *{box-sizing:border-box}
+.yere-market-app a{color:inherit;text-decoration:none}
+.yere-market-app button,.yere-market-app input,.yere-market-app select,.yere-market-app textarea{font:inherit}
+.yere-market-app button:focus-visible,.yere-market-app a:focus-visible,.yere-market-app input:focus-visible,.yere-market-app select:focus-visible,.yere-market-app textarea:focus-visible{outline:3px solid #aab5e3;outline-offset:2px}
 .pm-header{height:78px;padding:0 max(28px,calc((100vw - 1200px)/2));display:flex;align-items:center;gap:28px;background:#171e49;color:#fff;box-shadow:0 5px 22px #171e491f;position:relative;z-index:5}
 .pm-brand{display:inline-flex;align-items:center;gap:10px;flex:0 0 auto;color:#fff!important}
 .pm-mark{display:grid;place-items:center;width:38px;height:38px;border:1px solid #aab4dc;border-radius:50%;font-family:Georgia,serif;font-size:22px;color:#dce2fa}
