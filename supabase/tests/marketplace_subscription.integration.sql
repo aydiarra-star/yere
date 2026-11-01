@@ -78,7 +78,7 @@ begin
     null;
   end;
 end $$;
-do $
+do $$
 declare v_id uuid; v_total bigint; v_qty integer;
 begin
   select public.creer_commande_marketplace(
