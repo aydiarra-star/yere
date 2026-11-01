@@ -6,7 +6,10 @@ insert into auth.users (id, aud, role, email, encrypted_password, email_confirme
 values
  ('10000000-0000-4000-8000-000000000001','authenticated','authenticated','owner@yere.test','',now(),'{}','{}',now(),now()),
  ('10000000-0000-4000-8000-000000000002','authenticated','authenticated','manager@yere.test','',now(),'{}','{}',now(),now()),
- ('10000000-0000-4000-8000-000000000003','authenticated','authenticated','tailor@yere.test','',now(),'{}','{}',now(),now());
+ ('10000000-0000-4000-8000-000000000003','authenticated','authenticated','tailor@yere.test','',now(),'{}','{}',now(),now()),
+ ('10000000-0000-4000-8000-000000000004','authenticated','authenticated','owner2@yere.test','',now(),'{}','{}',now(),now()),
+ ('10000000-0000-4000-8000-000000000005','authenticated','authenticated','manager2@yere.test','',now(),'{}','{}',now(),now()),
+ ('10000000-0000-4000-8000-000000000006','authenticated','authenticated','tailor2@yere.test','',now(),'{}','{}',now(),now());
 
 -- Atelier creation must run as the authenticated owner: its trigger creates the owner membership.
 set local role authenticated;
@@ -18,6 +21,26 @@ reset role;
 insert into public.atelier_membre (atelier_id,user_id,role,actif) values
  ('20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000002','gestionnaire',true),
  ('20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000003','employe',true);
+
+-- A second, fully separate workshop has its own owner, manager, tailor and records.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000004',true);
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000004","role":"authenticated"}',true);
+insert into public.atelier (id, nom) values ('20000000-0000-4000-8000-000000000002','Atelier CI Deux');
+reset role;
+
+insert into public.atelier_membre (atelier_id,user_id,role,actif) values
+ ('20000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000005','gestionnaire',true),
+ ('20000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000006','employe',true);
+insert into public.client (id,atelier_id,nom) values
+ ('30000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000002','Client test atelier deux');
+insert into public.commande (id,atelier_id,client_id,reference,vetement,date_commande,statut,prix_fcfa,created_by)
+values
+ ('40000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000002','CI-002','Boubou test deux',current_date,'a_preparer',35000,'10000000-0000-4000-8000-000000000004');
+insert into public.depense (id,atelier_id,categorie,description,montant_fcfa,created_by)
+values ('50000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000002','Test','Fixture CI atelier deux',1500,'10000000-0000-4000-8000-000000000004');
+insert into public.paiement (atelier_id,commande_id,montant_fcfa,cle_idempotence,created_by)
+values ('20000000-0000-4000-8000-000000000002','40000000-0000-4000-8000-000000000002',7000,'ci-payment-0002','10000000-0000-4000-8000-000000000004');
 
 insert into public.client (id,atelier_id,nom) values
  ('30000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','Client test');
@@ -42,6 +65,14 @@ begin
   if v_count <> 0 then raise exception 'FAIL: manager can read payment rows'; end if;
   select count(*) into v_count from public.depense;
   if v_count <> 0 then raise exception 'FAIL: manager can read expense rows'; end if;
+  select count(*) into v_count from public.client where atelier_id='20000000-0000-4000-8000-000000000002';
+  if v_count <> 0 then raise exception 'FAIL: manager of workshop one can read workshop two clients'; end if;
+  begin
+    insert into public.client (atelier_id,nom) values ('20000000-0000-4000-8000-000000000002','Cross-tenant forbidden');
+    raise exception 'FAIL: manager inserted a client into another workshop';
+  exception when insufficient_privilege then
+    null;
+  end;
   begin
     select count(prix_fcfa) into v_count from public.commande;
     if v_count <> 0 then raise exception 'FAIL: manager can read order prices'; end if;
@@ -90,6 +121,9 @@ begin
   if (select count(*) from public.depense) <> 0 then
     raise exception 'FAIL: tailor can read expense rows';
   end if;
+  if (select count(*) from public.client where atelier_id='20000000-0000-4000-8000-000000000002') <> 0 then
+    raise exception 'FAIL: tailor of workshop one can read workshop two clients';
+  end if;
   begin
     if (select count(prix_fcfa) from public.commande) <> 0 then
       raise exception 'FAIL: tailor can read order prices';
@@ -114,6 +148,41 @@ update public.commande_tache set statut='terminee', note_avancement='Travail ter
 where id='60000000-0000-4000-8000-000000000001';
 reset role;
 
+-- The second workshop's manager and tailor are subject to the same restrictions.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000005',true);
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000005","role":"authenticated"}',true);
+do $manager_two$
+begin
+  if (select count(*) from public.client where atelier_id='20000000-0000-4000-8000-000000000001') <> 0 then
+    raise exception 'FAIL: workshop two manager can read workshop one clients';
+  end if;
+  if (select count(*) from public.paiement) <> 0 then
+    raise exception 'FAIL: workshop two manager can read payments';
+  end if;
+  if (select count(*) from public.depense) <> 0 then
+    raise exception 'FAIL: workshop two manager can read expenses';
+  end if;
+end $manager_two$;
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000006',true);
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000006","role":"authenticated"}',true);
+do $tailor_two$
+begin
+  if (select count(*) from public.client where atelier_id='20000000-0000-4000-8000-000000000001') <> 0 then
+    raise exception 'FAIL: workshop two tailor can read workshop one clients';
+  end if;
+  if (select count(*) from public.paiement) <> 0 then
+    raise exception 'FAIL: workshop two tailor can read payments';
+  end if;
+  if (select count(*) from public.depense) <> 0 then
+    raise exception 'FAIL: workshop two tailor can read expenses';
+  end if;
+end $tailor_two$;
+reset role;
+
 -- Owner alone can read financial details and manage tailor profiles.
 set local role authenticated;
 select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000001',true);
@@ -126,6 +195,9 @@ begin
      or (v_finance->0->>'prix_fcfa')::bigint <> 25000 then
     raise exception 'FAIL: owner financial RPC did not return expected order financials';
   end if;
+  if (select count(*) from public.client where atelier_id='20000000-0000-4000-8000-000000000002') <> 0 then
+    raise exception 'FAIL: owner of workshop one can read workshop two clients';
+  end if;
   if (select count(*) from public.commande_tache_historique where tache_id='60000000-0000-4000-8000-000000000001') < 3 then
     raise exception 'FAIL: task history did not record creation, status and note changes';
   end if;
@@ -134,6 +206,24 @@ select public.update_atelier_member_profile(
  '20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000003',
  'Tailleur CI',array['Couture','Broderie'], 'experimente','Profil de test'
 );
+reset role;
+
+-- The second owner can read only the second workshop's financials.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000004',true);
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000004","role":"authenticated"}',true);
+do $owner_two$
+declare v_finance jsonb;
+begin
+  v_finance := public.get_atelier_order_financials('20000000-0000-4000-8000-000000000002');
+  if jsonb_array_length(v_finance) <> 1
+     or (v_finance->0->>'prix_fcfa')::bigint <> 35000 then
+    raise exception 'FAIL: second owner cannot read own workshop financials';
+  end if;
+  if (select count(*) from public.client where atelier_id='20000000-0000-4000-8000-000000000001') <> 0 then
+    raise exception 'FAIL: owner of workshop two can read workshop one clients';
+  end if;
+end $owner_two$;
 reset role;
 
 rollback;
