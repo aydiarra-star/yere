@@ -33,7 +33,7 @@ values ('20000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-00000000
 set local role authenticated;
 select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000002',true);
 select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
-do $1
+do $
 begin
   -- Test effective row visibility, not raw table grants: RLS may intentionally
   -- allow SELECT while returning no financial rows to non-owners.
