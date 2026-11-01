@@ -12,27 +12,55 @@ values
 set local role authenticated;
 select set_config('request.jwt.claim.sub','71000000-0000-4000-8000-000000000001',true);
 select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
-insert into public.marketplace_vendeur(user_id,type_vendeur,atelier_id,nom_entreprise,nom_contact,telephone,ville,categorie)
-values ('71000000-0000-4000-8000-000000000001','fournisseur',null,'Mercerie Test','Contact Test','770000000','Dakar','Tissus');
-insert into public.marketplace_annonce(vendeur_id,titre,categorie,description,prix_fcfa,ville,mode_vente,statut,stock_disponible)
-select id,'Wax test','Tissus','Annonce synthétique',2500,'Dakar','les_deux','publiee',10
-from public.marketplace_vendeur where user_id='71000000-0000-4000-8000-000000000001';
+do $
+declare v_seller_id uuid;
+begin
+  insert into public.marketplace_vendeur(user_id,type_vendeur,atelier_id,nom_entreprise,nom_contact,telephone,ville,categorie)
+  values ('71000000-0000-4000-8000-000000000001','fournisseur',null,'Mercerie Test','Contact Test','770000000','Dakar','Tissus')
+  returning id into v_seller_id;
+  insert into public.marketplace_annonce(vendeur_id,titre,categorie,description,prix_fcfa,ville,mode_vente,statut,stock_disponible)
+  values (v_seller_id,'Wax test','Tissus','Annonce synthétique',2500,'Dakar','les_deux','publiee',10);
+end $;
 reset role;
 
 -- Public catalog can read published products; a separate authenticated buyer can place an order.
 set local role anon;
-do $$
+do $
 begin
   if (select count(*) from public.marketplace_annonce where titre='Wax test') <> 1 then
     raise exception 'FAIL: published marketplace listing is not public';
   end if;
-end $$;
+  begin
+    execute 'select telephone from public.marketplace_vendeur limit 1';
+    raise exception 'FAIL: anonymous role can read seller telephone';
+  exception when insufficient_privilege then
+    null;
+  end;
+  begin
+    execute 'select nom_contact from public.marketplace_vendeur limit 1';
+    raise exception 'FAIL: anonymous role can read seller contact name';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $;
 reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','71000000-0000-4000-8000-000000000002',true);
 select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
-do $$
+do $
+begin
+  if (select count(*) from public.get_my_marketplace_seller_contact()) <> 0 then
+    raise exception 'FAIL: buyer can read another seller contact';
+  end if;
+  begin
+    execute 'select telephone from public.marketplace_vendeur limit 1';
+    raise exception 'FAIL: authenticated buyer can read seller telephone';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $;
+do $
 declare v_id uuid; v_total bigint; v_qty integer;
 begin
   select public.creer_commande_marketplace(
