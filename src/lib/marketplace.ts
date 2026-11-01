@@ -1,5 +1,5 @@
 import type { YereSession } from "./supabaseAuth";
-import { authenticatedFetch } from "./supabaseAuth";
+import { authenticatedFetch, publicFetch } from "./supabaseAuth";
 
 export type MarketplaceSeller = {
   id: string;
@@ -191,4 +191,32 @@ export async function updateMarketplaceOrderStatus(session: YereSession, orderId
     method: "POST", body: JSON.stringify({ p_commande_id: orderId, p_statut: status })
   }));
   if (data !== true) throw new Error("Le changement de statut n'a pas été confirmé.");
+}
+
+
+export type PublicMarketplaceListing = MarketplaceListing & { sellerName: string; sellerCity: string };
+
+type PublicSellerRow = { id: string; nom_entreprise: string; ville: string; statut: "actif" | "suspendu" };
+
+/** Public catalogue: only published listings and non-sensitive seller fields are requested. */
+export async function listPublicMarketplaceListings(): Promise<PublicMarketplaceListing[]> {
+  const fields = "id,vendeur_id,titre,categorie,description,prix_fcfa,unite,ville,photos,mode_vente,statut,stock_disponible,created_at";
+  const response = await publicFetch(`rest/v1/marketplace_annonce?select=${fields}&statut=eq.publiee&order=created_at.desc`);
+  const data = await readJson(response);
+  if (!Array.isArray(data)) throw new Error("Catalogue public marketplace invalide.");
+  const rows = data as ListingRow[];
+  if (!rows.length) return [];
+  const sellerIds = [...new Set(rows.map((row) => row.vendeur_id))];
+  const sellerFilter = sellerIds.map((id) => encodeURIComponent(id)).join(",");
+  const sellersResponse = await publicFetch(
+    `rest/v1/marketplace_vendeur?select=id,nom_entreprise,ville,statut&id=in.(${sellerFilter})&statut=eq.actif`
+  );
+  const sellersData = await readJson(sellersResponse);
+  if (!Array.isArray(sellersData)) throw new Error("Informations publiques des vendeurs invalides.");
+  const sellers = new Map((sellersData as PublicSellerRow[]).map((seller) => [seller.id, seller]));
+  return rows.flatMap((row) => {
+    const seller = sellers.get(row.vendeur_id);
+    if (!seller) return [];
+    return [{ ...mapListing(row), sellerName: seller.nom_entreprise, sellerCity: seller.ville }];
+  });
 }
