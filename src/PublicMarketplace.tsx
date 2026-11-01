@@ -74,7 +74,7 @@ export default function PublicMarketplace({ onProfessionalLogin }: Props) {
     </section>
 
     <section className="public-catalogue" aria-labelledby="public-catalogue-title">
-      <div><span className="public-eyebrow">VITRINE PUBLIQUE</span><h2 id="public-catalogue-title">Les créations arrivent sur YÉRÉ</h2><p>Les articles réellement publiés par les vendeurs apparaîtront ici. Vous pourrez les consulter sans créer de compte.</p></div>
+      <div><span className="public-eyebrow">VITRINE PUBLIQUE</span><h2 id="public-catalogue-title">Les annonces publiées sur YÉRÉ</h2><p>Consultez le catalogue réel des offres disponibles, recherchez un article et passez commande depuis le Market.</p><a className="public-market-catalogue-link" href="/market/">Explorer les annonces publiées →</a></div>
       <div className="public-catalogue-mark"><span>✳</span><strong>YÉRÉ MARKET</strong><small>La vitrine des créateurs et fournisseurs</small></div>
     </section>
 
