@@ -150,7 +150,7 @@ export default function PublicMarket() {
       await saveMarketplaceListing(session, {
         sellerId: seller.id, title: listingForm.title, category: listingForm.category,
         description: listingForm.description, priceXof: price, unit: "piece",
-        city: seller.city, photos: [], saleMode: "les_deux", status: "publiee", stockAvailable: stock
+        city: seller.city, photos: [], saleMode: "commande_yere", status: "publiee", stockAvailable: stock
       });
       await refreshCatalogue();
       setShowListingForm(false);
