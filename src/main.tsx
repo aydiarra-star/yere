@@ -24,7 +24,7 @@ createRoot(document.getElementById("root")!).render(
 );
 
 // The service worker is enabled only for production builds served over HTTPS.
-if (import.meta.env.PROD && "serviceWorker" in navigator) {
+if (import.meta.env.PROD && "serviceWorker" in navigator && !window.location.pathname.startsWith("/market")) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL }).catch((error) => {
       console.error("YÉRÉ: impossible d’activer le mode hors ligne.", error);
