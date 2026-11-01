@@ -166,6 +166,70 @@ export async function saveMarketplaceListing(session: YereSession, input: {
   return String(data[0].id);
 }
 
+const MARKETPLACE_PHOTO_BUCKET = "yere-market-photos";
+const MAX_MARKETPLACE_PHOTOS = 5;
+const MAX_MARKETPLACE_PHOTO_BYTES = 5 * 1024 * 1024;
+const MARKETPLACE_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function storageObjectPath(path: string): string {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
+/** Uploads seller-owned images to the private bucket. Partial uploads are rolled back. */
+export async function uploadMarketplacePhotos(
+  session: YereSession,
+  sellerId: string,
+  files: File[]
+): Promise<string[]> {
+  if (files.length > MAX_MARKETPLACE_PHOTOS) throw new Error("Vous pouvez ajouter cinq photos maximum.");
+  const uploaded: string[] = [];
+  try {
+    for (const file of files) {
+      if (!MARKETPLACE_PHOTO_TYPES.has(file.type)) throw new Error("Format refusé : utilisez JPG, PNG ou WebP.");
+      if (file.size <= 0 || file.size > MAX_MARKETPLACE_PHOTO_BYTES) throw new Error("Chaque photo doit peser cinq mégaoctets maximum.");
+      const extension = file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
+      const path = `${session.user.id}/${sellerId}/${crypto.randomUUID()}.${extension}`;
+      const response = await authenticatedFetch(session,
+        `storage/v1/object/${MARKETPLACE_PHOTO_BUCKET}/${storageObjectPath(path)}`,
+        { method: "POST", headers: { "Content-Type": file.type, "x-upsert": "false" }, body: file });
+      await readJson(response);
+      uploaded.push(path);
+    }
+    return uploaded;
+  } catch (error) {
+    if (uploaded.length) {
+      try { await deleteMarketplacePhotos(session, uploaded); } catch { /* preserve the original upload error */ }
+    }
+    throw error;
+  }
+}
+
+export async function deleteMarketplacePhotos(session: YereSession, paths: string[]): Promise<void> {
+  if (!paths.length) return;
+  await readJson(await authenticatedFetch(session, `storage/v1/object/${MARKETPLACE_PHOTO_BUCKET}`, {
+    method: "DELETE", body: JSON.stringify({ prefixes: paths })
+  }));
+}
+
+async function createMarketplacePhotoSignedUrl(path: string): Promise<string | null> {
+  try {
+    const response = await publicFetch(
+      `storage/v1/object/sign/${MARKETPLACE_PHOTO_BUCKET}/${storageObjectPath(path)}`,
+      { method: "POST", body: JSON.stringify({ expiresIn: 3600 }) }
+    );
+    const data = await readJson(response) as { signedURL?: unknown };
+    if (typeof data.signedURL !== "string" || !projectUrl) return null;
+    const signedPath = data.signedURL;
+    if (/^https?:\\/\\//i.test(signedPath)) return signedPath;
+    const normalized = signedPath.startsWith("/") ? signedPath : `/${signedPath}`;
+    return normalized.startsWith("/storage/v1/")
+      ? `${projectUrl.replace(/\\/$/, "")}${normalized}`
+      : `${projectUrl.replace(/\\/$/, "")}/storage/v1${normalized}`;
+  } catch {
+    return null;
+  }
+}
+
 export async function createMarketplaceOrder(session: YereSession, input: {
   listingId: string; quantity: number; buyerName: string; buyerPhone: string; deliveryCity?: string; buyerNote?: string;
 }): Promise<string> {
@@ -194,7 +258,7 @@ export async function updateMarketplaceOrderStatus(session: YereSession, orderId
 }
 
 
-export type PublicMarketplaceListing = MarketplaceListing & { sellerName: string; sellerCity: string };
+export type PublicMarketplaceListing = MarketplaceListing & { sellerName: string; sellerCity: string; photoUrls: string[] };
 
 type PublicSellerRow = { id: string; nom_entreprise: string; ville: string; statut: "actif" | "suspendu" };
 
@@ -214,9 +278,14 @@ export async function listPublicMarketplaceListings(): Promise<PublicMarketplace
   const sellersData = await readJson(sellersResponse);
   if (!Array.isArray(sellersData)) throw new Error("Informations publiques des vendeurs invalides.");
   const sellers = new Map((sellersData as PublicSellerRow[]).map((seller) => [seller.id, seller]));
-  return rows.flatMap((row) => {
+  const publicListings = rows.flatMap((row) => {
     const seller = sellers.get(row.vendeur_id);
     if (!seller) return [];
     return [{ ...mapListing(row), sellerName: seller.nom_entreprise, sellerCity: seller.ville }];
   });
+  return Promise.all(publicListings.map(async (listing) => ({
+    ...listing,
+    photoUrls: (await Promise.all(listing.photos.map(createMarketplacePhotoSignedUrl)))
+      .filter((url): url is string => url !== null)
+  })));
 }
