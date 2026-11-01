@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import AuthGate from "./AuthGate";
+import PublicMarket from "./PublicMarket";
 import "@fontsource-variable/manrope";
 import "@fontsource/cormorant-garamond/700.css";
 import "./jotcolis-interface.css";
@@ -14,9 +15,11 @@ import "./home-priority-design.css";
 import "./indigo-design-system.css";
 import "./premium-atelier.css";
 
+const isPublicMarket = window.location.pathname === "/market" || window.location.pathname === "/market/";
+
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <AuthGate><App /></AuthGate>
+    {isPublicMarket ? <PublicMarket /> : <AuthGate><App /></AuthGate>}
   </React.StrictMode>
 );
 
