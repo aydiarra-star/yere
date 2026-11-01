@@ -624,3 +624,72 @@ body.yere-dialog-open { overflow: hidden !important; }
 /* Reprise rapide d'une version de mensurations sans écraser l'historique. */
 .measurement-history li .secondary-button{flex:0 0 auto;align-self:flex-start;white-space:nowrap;font-size:10px;padding:7px 10px}
 @media(max-width:760px){.measurement-history li .secondary-button{align-self:stretch;white-space:normal}}
+
+/* YÉRÉ Marketplace — identité bleue officielle, alignée sur la navigation Atelier. */
+.app-shell.yere-app .marketplace-page {
+  --marketplace-brand: #171e49;
+  --marketplace-brand-strong: #1c2558;
+  --marketplace-brand-soft: #eaeefa;
+  --marketplace-brand-pale: #f7f8fc;
+  --marketplace-brand-line: #c5cde6;
+}
+.app-shell.yere-app .marketplace-page .marketplace-hero {
+  background: linear-gradient(115deg, #eaeefa 0%, #f7f8fc 48%, #fff 100%) !important;
+  border-color: #c5cde6 !important;
+}
+.app-shell.yere-app .marketplace-page .marketplace-hero-copy h2,
+.app-shell.yere-app .marketplace-page .marketplace-listing-heading h2,
+.app-shell.yere-app .marketplace-page .marketplace-empty h3,
+.app-shell.yere-app .marketplace-page .marketplace-product-copy h3 {
+  color: #171e49 !important;
+}
+.app-shell.yere-app .marketplace-page .marketplace-category-card,
+.app-shell.yere-app .marketplace-page .marketplace-product-card,
+.app-shell.yere-app .marketplace-page .marketplace-listing-form,
+.app-shell.yere-app .marketplace-page .marketplace-empty {
+  border-color: #e2e6f1 !important;
+}
+.app-shell.yere-app .marketplace-page .marketplace-category-card.fashion-category,
+.app-shell.yere-app .marketplace-page .marketplace-category-card.supplies-category {
+  background: linear-gradient(145deg, #f7f8fc 0%, #fff 78%) !important;
+  border-color: #e2e6f1 !important;
+}
+.app-shell.yere-app .marketplace-page .marketplace-category-card:hover {
+  border-color: #c5cde6 !important;
+}
+.app-shell.yere-app .marketplace-page .marketplace-category-art,
+.app-shell.yere-app .marketplace-page .marketplace-empty-icon,
+.app-shell.yere-app .marketplace-page .marketplace-product-placeholder,
+.app-shell.yere-app .marketplace-page .marketplace-listing-count {
+  background: #eaeefa !important;
+  color: #171e49 !important;
+}
+.app-shell.yere-app .marketplace-page .fashion-category .marketplace-category-art,
+.app-shell.yere-app .marketplace-page .marketplace-product-placeholder.fashion,
+.app-shell.yere-app .marketplace-page .marketplace-product-placeholder.supplies {
+  background: #eaeefa !important;
+  color: #171e49 !important;
+}
+.app-shell.yere-app .marketplace-page .marketplace-category-card > strong,
+.app-shell.yere-app .marketplace-page .marketplace-category-link,
+.app-shell.yere-app .marketplace-page .marketplace-product-type,
+.app-shell.yere-app .marketplace-page .marketplace-product-type.supplies,
+.app-shell.yere-app .marketplace-page .marketplace-product-copy > strong,
+.app-shell.yere-app .marketplace-page .marketplace-listing-count {
+  color: #171e49 !important;
+}
+.app-shell.yere-app .marketplace-page .marketplace-product-type,
+.app-shell.yere-app .marketplace-page .marketplace-product-type.fashion,
+.app-shell.yere-app .marketplace-page .marketplace-product-type.supplies {
+  background: transparent !important;
+}
+.app-shell.yere-app .marketplace-page .marketplace-activity-tag {
+  background: #eaeefa !important;
+  color: #171e49 !important;
+}
+.app-shell.yere-app .marketplace-page .marketplace-form-grid input:focus,
+.app-shell.yere-app .marketplace-page .marketplace-form-grid select:focus,
+.app-shell.yere-app .marketplace-page .marketplace-form-grid textarea:focus {
+  border-color: #171e49 !important;
+  outline-color: #eaeefa !important;
+}
