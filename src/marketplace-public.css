@@ -117,3 +117,29 @@
 /* Product photos are served through short-lived signed URLs from the private bucket. */
 .yere-market-app .pm-product-photo{display:block;width:100%;height:100%;min-height:185px;object-fit:cover}
 @media(max-width:620px){.yere-market-app .pm-product-photo{min-height:160px}}
+
+.yere-market-app .pm-product-actions{display:grid;gap:7px;margin-top:14px}
+.yere-market-app .pm-product-actions .pm-buy{margin-top:0}
+.yere-market-app .pm-contact{width:100%;padding:9px 10px;border:1px solid #dfe4f1;border-radius:8px;background:#fff;color:#52618f;font-size:10px;font-weight:800;cursor:pointer}
+.yere-market-app .pm-contact:hover{background:#f4f6fc;border-color:#cbd3e9}
+.yere-market-app .pm-messaging{display:grid;grid-template-columns:minmax(220px,.36fr) minmax(0,1fr);min-height:390px;overflow:hidden;border:1px solid #e5e8f1;border-radius:13px;background:#fff}
+.yere-market-app .pm-conversation-list{display:grid;align-content:start;gap:5px;padding:10px;border-right:1px solid #e9ebf3;background:#fafbfe}
+.yere-market-app .pm-conversation-list>button{display:grid;gap:5px;width:100%;padding:13px;border:1px solid transparent;border-radius:9px;background:transparent;text-align:left;cursor:pointer}
+.yere-market-app .pm-conversation-list>button:hover,.yere-market-app .pm-conversation-list>button.is-active{border-color:#e0e5f3;background:#fff}
+.yere-market-app .pm-conversation-list>button b{color:#20294f;font-size:11px}
+.yere-market-app .pm-conversation-list>button span,.yere-market-app .pm-conversation-list>button small{color:#7d879e;font-size:9px}
+.yere-market-app .pm-chat-panel{display:grid;grid-template-rows:auto minmax(190px,1fr) auto;min-width:0}
+.yere-market-app .pm-chat-heading{display:grid;gap:4px;padding:15px 18px;border-bottom:1px solid #edf0f6}
+.yere-market-app .pm-chat-heading b{color:#20294f;font-size:12px}
+.yere-market-app .pm-chat-heading span{color:#818aa1;font-size:9px}
+.yere-market-app .pm-chat-history{display:grid;align-content:start;gap:12px;max-height:410px;overflow:auto;padding:16px;background:#fcfcfe}
+.yere-market-app .pm-chat-message{justify-self:start;max-width:min(82%,520px);padding:10px 12px;border:1px solid #e6e9f1;border-radius:10px 10px 10px 2px;background:#fff}
+.yere-market-app .pm-chat-message.is-mine{justify-self:end;border-color:#dfe5f7;border-radius:10px 10px 2px 10px;background:#f0f3fb}
+.yere-market-app .pm-chat-message>span{color:#52618f;font-size:9px;font-weight:850}
+.yere-market-app .pm-chat-message p{margin:5px 0;color:#303957;font-size:11px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.yere-market-app .pm-chat-message small{color:#8991a6;font-size:8px}
+.yere-market-app .pm-chat-reply{display:grid;grid-template-columns:1fr auto;gap:9px;padding:12px;border-top:1px solid #edf0f6}
+.yere-market-app .pm-chat-reply textarea{min-height:43px;max-height:110px;resize:vertical;padding:10px;border:1px solid #e1e5ef;border-radius:8px;font-size:10px}
+.yere-market-app .pm-chat-reply .pm-cta{align-self:end;min-height:42px}
+.yere-market-app .pm-chat-empty{display:grid;place-items:center;padding:30px;color:#818aa1;font-size:11px;text-align:center}
+@media(max-width:620px){.yere-market-app .pm-messaging{grid-template-columns:1fr}.yere-market-app .pm-conversation-list{max-height:210px;overflow:auto;border-right:0;border-bottom:1px solid #e9ebf3}.yere-market-app .pm-chat-panel{min-height:340px}.yere-market-app .pm-chat-reply{grid-template-columns:1fr}.yere-market-app .pm-chat-reply .pm-cta{width:100%}}
