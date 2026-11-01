@@ -260,4 +260,116 @@ create trigger commande_tache_audit_update
   after update on public.commande_tache
   for each row execute function private.log_commande_tache_change();
 
+
+
+-- Keep the global order status consistent with its detailed work tasks.
+-- Orders without detailed tasks retain the existing manual workflow.
+create or replace function private.guard_order_completion_requires_tasks()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  if new.statut in ('pret', 'livre')
+     and new.statut is distinct from old.statut
+     and exists (
+       select 1
+       from public.commande_tache t
+       where t.atelier_id = new.atelier_id
+         and t.commande_id = new.id
+         and t.statut <> 'terminee'
+     ) then
+    raise exception 'Cette commande ne peut pas être marquée prête ou livrée : des tâches restent à terminer'
+      using errcode = '23514';
+  end if;
+  return new;
+end;
+$function$;
+
+create or replace function private.sync_order_status_from_tasks()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_atelier_id uuid;
+  v_commande_id uuid;
+  v_all_done boolean;
+begin
+  if tg_op = 'DELETE' then
+    v_atelier_id := old.atelier_id;
+    v_commande_id := old.commande_id;
+  else
+    v_atelier_id := new.atelier_id;
+    v_commande_id := new.commande_id;
+  end if;
+
+  select bool_and(t.statut = 'terminee')
+    into v_all_done
+  from public.commande_tache t
+  where t.atelier_id = v_atelier_id
+    and t.commande_id = v_commande_id;
+
+  if v_all_done is true then
+    update public.commande c
+       set statut = 'pret'
+     where c.atelier_id = v_atelier_id
+       and c.id = v_commande_id
+       and c.statut <> 'livre'
+       and c.statut <> 'pret';
+  else
+    update public.commande c
+       set statut = 'en_confection'
+     where c.atelier_id = v_atelier_id
+       and c.id = v_commande_id
+       and c.statut in ('a_preparer', 'pret');
+  end if;
+
+  return coalesce(new, old);
+end;
+$function$;
+
+create or replace function private.guard_task_order_not_delivered()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_order_status text;
+begin
+  select c.statut into v_order_status
+  from public.commande c
+  where c.atelier_id = new.atelier_id
+    and c.id = new.commande_id;
+
+  if v_order_status = 'livre' then
+    raise exception 'Une commande déjà livrée ne peut plus recevoir de modification de tâche'
+      using errcode = '23514';
+  end if;
+  return new;
+end;
+$function$;
+
+revoke all on function private.guard_order_completion_requires_tasks() from public, anon, authenticated;
+revoke all on function private.sync_order_status_from_tasks() from public, anon, authenticated;
+revoke all on function private.guard_task_order_not_delivered() from public, anon, authenticated;
+
+drop trigger if exists commande_completion_requires_tasks on public.commande;
+create trigger commande_completion_requires_tasks
+  before update of statut on public.commande
+  for each row execute function private.guard_order_completion_requires_tasks();
+
+drop trigger if exists commande_task_order_not_delivered on public.commande_tache;
+create trigger commande_task_order_not_delivered
+  before insert or update on public.commande_tache
+  for each row execute function private.guard_task_order_not_delivered();
+
+drop trigger if exists commande_task_sync_order_status on public.commande_tache;
+create trigger commande_task_sync_order_status
+  after insert or update on public.commande_tache
+  for each row execute function private.sync_order_status_from_tasks();
+
 notify pgrst, 'reload schema';
