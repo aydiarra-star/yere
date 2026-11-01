@@ -20,7 +20,7 @@ export type AtelierInvitation = {
   declinedAt: string | null;
   createdAt: string;
 };
-type MemberRow = { atelier_id:string; user_id:string; role:string; actif:boolean; created_at:string };
+type MemberRow = { atelier_id:string; user_id:string; role:string; actif:boolean; created_at:string; nom_professionnel:string|null; specialites:string[]|null; niveau_experience:AtelierMember["experienceLevel"]; presentation:string|null };
 type InvitationRow = { id:string; atelier_id:string; atelier_nom:string; email:string; role:string; expires_at:string; accepted_at:string|null; cancelled_at:string|null; declined_at:string|null; created_at:string };
 
 async function parse(response:Response):Promise<unknown>{
@@ -29,9 +29,9 @@ async function parse(response:Response):Promise<unknown>{
   return body;
 }
 export async function listAtelierMembers(session:YereSession,atelierId:string):Promise<AtelierMember[]>{
-  const response=await authenticatedFetch(session,`rest/v1/atelier_membre?select=atelier_id,user_id,role,actif,created_at&atelier_id=eq.${encodeURIComponent(atelierId)}&order=created_at.asc`);
+  const response=await authenticatedFetch(session,`rest/v1/atelier_membre?select=atelier_id,user_id,role,actif,created_at,nom_professionnel,specialites,niveau_experience,presentation&atelier_id=eq.${encodeURIComponent(atelierId)}&order=created_at.asc`);
   const data=await parse(response);if(!Array.isArray(data))throw new Error("Réponse équipe invalide.");
-  return (data as MemberRow[]).map(row=>({atelierId:row.atelier_id,userId:row.user_id,role:row.role as AtelierMember["role"],active:row.actif,createdAt:row.created_at}));
+  return (data as MemberRow[]).map(row=>({atelierId:row.atelier_id,userId:row.user_id,role:row.role as AtelierMember["role"],active:row.actif,createdAt:row.created_at,professionalName:row.nom_professionnel??"",specialties:Array.isArray(row.specialites)?row.specialites:[],experienceLevel:row.niveau_experience??null,presentation:row.presentation??""}));
 }
 export async function listAtelierInvitations(session:YereSession,atelierId:string):Promise<AtelierInvitation[]>{
   const response=await authenticatedFetch(session,`rest/v1/invitation_atelier?select=id,atelier_id,atelier_nom,email,role,expires_at,accepted_at,cancelled_at,declined_at,created_at&atelier_id=eq.${encodeURIComponent(atelierId)}&order=created_at.desc`);
@@ -78,4 +78,24 @@ export async function deactivateAtelierMember(session:YereSession,atelierId:stri
     method:"POST",body:JSON.stringify({p_atelier_id:atelierId,p_user_id:userId})
   }));
   if(data!==true)throw new Error("La désactivation du membre n’a pas été confirmée par le serveur.");
+}
+
+export async function updateAtelierMemberProfile(
+  session:YereSession,
+  atelierId:string,
+  userId:string,
+  profile:{professionalName:string;specialties:string[];experienceLevel:AtelierMember["experienceLevel"];presentation:string}
+):Promise<void>{
+  const data=await parse(await authenticatedFetch(session,"rest/v1/rpc/update_atelier_member_profile",{
+    method:"POST",
+    body:JSON.stringify({
+      p_atelier_id:atelierId,
+      p_user_id:userId,
+      p_nom_professionnel:profile.professionalName.trim()||null,
+      p_specialites:profile.specialties,
+      p_niveau_experience:profile.experienceLevel,
+      p_presentation:profile.presentation.trim()||null
+    })
+  }));
+  if(data!==true)throw new Error("La sauvegarde du profil professionnel n’a pas été confirmée.");
 }
