@@ -1,0 +1,40 @@
+name: YÉRÉ Database Migration Replay
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - ".github/workflows/db-migrations.yml"
+
+concurrency:
+  group: yere-db-replay-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  migration-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Initialize local Supabase configuration
+        run: supabase init
+
+      - name: Start isolated local Supabase stack
+        run: supabase start
+
+      - name: Replay every migration from an empty local database
+        run: supabase db reset --local
+
+      - name: Verify owner, manager and tailor permissions against PostgreSQL
+        run: psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f supabase/tests/roles.integration.sql
