@@ -296,6 +296,7 @@ export default function AuthGate({ children }: Props) {
         </form>
         <>{mode === "login" && <p className="auth-recovery-link"><button type="button" onClick={() => { setMode("recovery"); setError(""); setMessage(""); setPassword(""); }}>Mot de passe oublié ?</button></p>}<p className="auth-switch">{mode === "login" ? "Vous n'avez pas encore de compte ?" : mode === "recovery" ? "Vous vous souvenez de votre mot de passe ?" : "Vous avez déjà un compte ?"} <button type="button" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); setMessage(""); }}>{mode === "login" ? "Créer un compte" : "Se connecter"}</button></p></>
         <p className="auth-footnote">Votre compte est protégé par Supabase Auth. Ne partagez jamais votre mot de passe.</p>
+        <a className="auth-market-link" href="/market">Accéder au catalogue complet →</a>
         <p className="auth-switch"><button type="button" onClick={() => { setShowProfessionalAuth(false); setMode("login"); setError(""); setMessage(""); }}>← Retour à YÉRÉ Market</button></p>
       </section>
     </main>

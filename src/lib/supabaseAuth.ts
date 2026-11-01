@@ -7,7 +7,7 @@ export type YereSession = {
 };
 
 const SESSION_KEY = "yere.auth.session.v1";
-const projectUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+export const projectUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 
 export const supabaseReady = Boolean(projectUrl && publishableKey);
@@ -101,9 +101,10 @@ async function parseResponse(response: Response): Promise<unknown> {
   return body;
 }
 
-export async function signUp(email: string, password: string): Promise<{ session: YereSession | null }> {
-  // Supabase's redirect_to parameter overrides any localhost Site URL for this signup.
-  const redirectTo = `${window.location.origin}/`;
+export async function signUp(email: string, password: string, redirectPath = "/"): Promise<{ session: YereSession | null }> {
+  // The redirect path keeps public-market signups on the public market after email confirmation.
+  const safePath = redirectPath.startsWith("/") && !redirectPath.startsWith("//") ? redirectPath : "/";
+  const redirectTo = `${window.location.origin}${safePath}`;
   const response = await fetch(apiUrl(`auth/v1/signup?redirect_to=${encodeURIComponent(redirectTo)}`), { method: "POST", headers: headers(), body: JSON.stringify({ email, password }) });
   const body = await parseResponse(response);
   const session = toSession(body);
@@ -133,6 +134,11 @@ export async function signOut(session: YereSession): Promise<void> {
   } finally {
     clearSession();
   }
+}
+
+export async function publicFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  // Uses only the publishable key; public reads remain constrained by Supabase grants and RLS.
+  return fetch(apiUrl(path), { ...init, headers: { ...headers(), ...(init.headers ?? {}) } });
 }
 
 export async function authenticatedFetch(session: YereSession, path: string, init: RequestInit = {}): Promise<Response> {
