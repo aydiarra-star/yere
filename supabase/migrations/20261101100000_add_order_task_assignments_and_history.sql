@@ -19,7 +19,7 @@ create table if not exists public.commande_tache (
   completed_at timestamptz,
   constraint commande_tache_atelier_commande_fkey
     foreign key (atelier_id, commande_id)
-    references public.commande (atelier_id, id) on delete cascade,
+    references public.commande (atelier_id, id) on delete restrict,
   constraint commande_tache_atelier_assignee_fkey
     foreign key (atelier_id, assigne_a)
     references public.atelier_membre (atelier_id, user_id) on delete restrict,
@@ -37,7 +37,7 @@ create index if not exists commande_tache_assignee_status_idx
 create table if not exists public.commande_tache_historique (
   id bigint generated always as identity primary key,
   atelier_id uuid not null,
-  tache_id uuid not null references public.commande_tache(id) on delete cascade,
+  tache_id uuid not null references public.commande_tache(id) on delete restrict,
   acteur_id uuid references auth.users(id) on delete set null,
   evenement text not null
     check (evenement in ('creation', 'attribution', 'changement_statut', 'note_avancement')),
@@ -315,6 +315,13 @@ begin
     v_atelier_id := new.atelier_id;
     v_commande_id := new.commande_id;
   end if;
+
+  -- Serialize completion/reopening for tasks belonging to the same order.
+  perform 1
+  from public.commande c
+  where c.atelier_id = v_atelier_id
+    and c.id = v_commande_id
+  for update;
 
   select bool_and(t.statut = 'terminee')
     into v_all_done
