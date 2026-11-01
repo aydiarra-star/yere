@@ -169,7 +169,6 @@ function App() {
         setTeamMembers(serverMembers);
         setTeamInvitations(serverInvitations);
         setAtelierTasks(serverTasks);
-        if (!taskOrderId) setTaskOrderId(serverOrders.find((order) => order.serverId)?.serverId ?? "");
         if (serverSupplierProfile) setSupplier(serverSupplierProfile);
         const supplierName = new Map(serverSuppliers.map((item) => [item.id, item.name]));
         const mappedPurchases: SupplierPurchase[] = serverPurchases.map((purchase) => ({
@@ -196,6 +195,10 @@ function App() {
     })();
     return () => { active = false; };
   }, [setClients, setOrders, setSupplierPurchases]);
+
+  useEffect(() => {
+    if (!taskOrderId) setTaskOrderId(orders.find((order) => order.serverId)?.serverId ?? "");
+  }, [taskOrderId, orders]);
 
   const visibleClients = useMemo(() => clients.filter((client) => matchesClient(client, query)), [clients, query]);
   const currentUserId = readSession()?.user.id;
