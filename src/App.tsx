@@ -8,7 +8,7 @@ import { usePersistentState } from "./usePersistentState";
 import { createAtelierClient, createAtelierOrder, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
 import { readSession } from "./lib/supabaseAuth";
 import { createAtelierTask, listAtelierTasks, updateAtelierTask, type AtelierTask, type AtelierTaskStatus } from "./lib/atelierTasks";
-import { cancelAtelierInvitation, createAtelierInvitation, deactivateAtelierMember, listAtelierInvitations, listAtelierMembers, updateAtelierMemberRole, type AtelierInvitation, type AtelierMember } from "./lib/atelierTeam";
+import { cancelAtelierInvitation, createAtelierInvitation, deactivateAtelierMember, listAtelierInvitations, listAtelierMembers, updateAtelierMemberRole, updateAtelierMemberProfile, type AtelierInvitation, type AtelierMember } from "./lib/atelierTeam";
 import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, getAtelierSupplierProfile, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, saveAtelierSupplierProfile, type AtelierSupplier } from "./lib/atelierSuppliers";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
@@ -664,6 +664,21 @@ function App() {
     } finally { setTeamBusy(false); }
   }
 
+  async function saveTailorProfessionalProfile(member: AtelierMember, profile: { professionalName: string; specialties: string[]; experienceLevel: AtelierMember["experienceLevel"]; presentation: string }) {
+    if (!isAtelierOwner) { setNotice("Seul le propriétaire peut modifier les profils professionnels."); return; }
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    setTeamBusy(true);
+    try {
+      await updateAtelierMemberProfile(session, atelierId, member.userId, profile);
+      setTeamMembers((current) => current.map((item) => item.userId === member.userId ? { ...item, professionalName: profile.professionalName.trim(), specialties: profile.specialties, experienceLevel: profile.experienceLevel, presentation: profile.presentation.trim() } : item));
+      setNotice("Profil professionnel enregistré.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? "Profil non enregistré : " + cause.message : "Impossible d’enregistrer ce profil.");
+    } finally { setTeamBusy(false); }
+  }
+
   async function inviteTeamMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const email = inviteEmail.trim().toLowerCase();
@@ -1150,7 +1165,7 @@ function App() {
                 <label>Commande<select required value={taskOrderId} onChange={(event) => setTaskOrderId(event.target.value)}><option value="">Choisir une commande</option>{orders.filter((order) => order.serverId).map((order) => <option key={order.serverId} value={order.serverId}>{order.id} · {order.garment}</option>)}</select></label>
                 <label>Travail à réaliser<input required maxLength={120} value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="Ex. Découpe du tissu, assemblage, broderie…" /></label>
                 <label>Consignes<textarea rows={2} value={taskDescription} onChange={(event) => setTaskDescription(event.target.value)} placeholder="Précisions utiles pour le tailleur" /></label>
-                <label>Attribuer à<select value={taskAssigneeId} onChange={(event) => setTaskAssigneeId(event.target.value)}><option value="">À attribuer plus tard</option>{teamMembers.filter((member) => member.active && member.role === "employe").map((member) => <option key={member.userId} value={member.userId}>Tailleur · {member.userId.slice(0,8)}…{member.userId.slice(-4)}</option>)}</select></label>
+                <label>Attribuer à<select value={taskAssigneeId} onChange={(event) => setTaskAssigneeId(event.target.value)}><option value="">À attribuer plus tard</option>{teamMembers.filter((member) => member.active && member.role === "employe").map((member) => <option key={member.userId} value={member.userId}>{member.professionalName || "Tailleur sans nom"}{member.specialties.length ? " · " + member.specialties.slice(0,2).join(", ") : ""}</option>)}</select></label>
                 <div className="form-actions"><button className="primary-button" type="submit" disabled={taskBusy || orders.every((order) => !order.serverId)}>{taskBusy ? "Enregistrement…" : "Créer la tâche"}</button></div>
               </form>}
               {atelierTasks.length === 0 ? <p className="empty-state">Aucune tâche détaillée n’a encore été attribuée. Le propriétaire ou le gestionnaire peut créer la première tâche à partir d’une commande.</p> : <div className="team-invitation-list">{atelierTasks.map((task) => {
@@ -1159,13 +1174,13 @@ function App() {
                 const canUpdateThisTask = canManageTeam || (task.assigneeId === currentUserId && !isAtelierOwner);
                 const statusLabels: Record<AtelierTaskStatus,string> = { a_faire: "À faire", en_cours: "En cours", bloquee: "Bloquée", terminee: "Terminée" };
                 return <article className="team-invitation-row" key={task.id}>
-                  <div><b>{task.title}</b><small>{order ? `${order.id} · ${order.garment}` : "Commande"} · {assignee ? `Responsable : ${assignee.userId.slice(0,8)}…${assignee.userId.slice(-4)}` : "Non attribuée"}</small>{task.description && <small>{task.description}</small>}{task.progressNote && <small>Avancement : {task.progressNote}</small>}
+                  <div><b>{task.title}</b><small>{order ? `${order.id} · ${order.garment}` : "Commande"} · {assignee ? `Responsable : ${assignee.professionalName || "Tailleur"}${assignee.specialties.length ? " · " + assignee.specialties.slice(0,3).join(", ") : ""}` : "Non attribuée"}</small>{task.description && <small>{task.description}</small>}{task.progressNote && <small>Avancement : {task.progressNote}</small>}
                     <details><summary>Historique ({task.history.length})</summary><ul>{task.history.map((entry) => <li key={entry.id}><small>{new Intl.DateTimeFormat("fr-FR",{dateStyle:"short",timeStyle:"short"}).format(new Date(entry.createdAt))} · {entry.event === "creation" ? "Tâche créée" : entry.event === "attribution" ? "Attribution modifiée" : entry.event === "changement_statut" ? "Statut modifié" : "Note actualisée"} · {entry.actorId === currentUserId ? "par vous" : entry.actorId ? `par ${entry.actorId.slice(0,8)}…` : "auteur inconnu"}</small></li>)}</ul></details>
                   </div>
                   <div className="team-member-actions">
                     {canUpdateThisTask && <select aria-label={`Statut de ${task.title}`} disabled={taskBusy} value={task.status} onChange={(event) => void changeAtelierTask(task,{status:event.target.value as AtelierTaskStatus})}>{Object.entries(statusLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select>}
                     {canUpdateThisTask && <input aria-label={`Note d’avancement de ${task.title}`} maxLength={500} placeholder="Note d’avancement" key={`${task.id}-${task.updatedAt}`} defaultValue={task.progressNote} disabled={taskBusy} onBlur={(event) => { if (event.target.value !== task.progressNote) void changeAtelierTask(task,{progressNote:event.target.value}); }} />}
-                    {canManageTeam && <select aria-label={`Réattribuer ${task.title}`} disabled={taskBusy} value={task.assigneeId ?? ""} onChange={(event) => void changeAtelierTask(task,{assigneeId:event.target.value || null})}><option value="">Non attribuée</option>{teamMembers.filter((member) => member.active && member.role === "employe").map((member) => <option key={member.userId} value={member.userId}>{member.userId.slice(0,8)}…{member.userId.slice(-4)}</option>)}</select>}
+                    {canManageTeam && <select aria-label={`Réattribuer ${task.title}`} disabled={taskBusy} value={task.assigneeId ?? ""} onChange={(event) => void changeAtelierTask(task,{assigneeId:event.target.value || null})}><option value="">Non attribuée</option>{teamMembers.filter((member) => member.active && member.role === "employe").map((member) => <option key={member.userId} value={member.userId}>{member.professionalName || "Tailleur sans nom"}{member.specialties.length ? " · " + member.specialties.slice(0,2).join(", ") : ""}</option>)}</select>}
                   </div>
                 </article>;
               })}</div>}
@@ -1205,7 +1220,7 @@ function App() {
             </form>
             <section className="content-card team-panel" aria-labelledby="team-title">
               <div className="section-heading"><div><h3 id="team-title">Équipe et accès à l’atelier</h3><p>Les droits sont contrôlés sur le serveur et chaque membre reste limité à cet atelier.</p></div><span className="marketplace-listing-count">{teamMembers.filter((member) => member.active).length} membre(s)</span></div>
-              <div className="table-wrap"><table><thead><tr><th>Identifiant du compte</th><th>Rôle</th><th>État</th><th>Depuis</th>{isAtelierOwner ? <th>Actions</th> : null}</tr></thead><tbody>{teamMembers.map((member) => <tr key={member.userId}><td><code>{member.userId.slice(0,8)}…{member.userId.slice(-4)}</code>{member.userId === currentUserId ? <small>Votre compte</small> : null}</td><td>{member.role === "proprietaire" ? "Propriétaire" : member.role === "gestionnaire" ? "Gestionnaire" : "Employé"}</td><td>{member.active ? "Actif" : "Désactivé"}</td><td>{new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(member.createdAt))}</td>{isAtelierOwner ? <td>{member.role !== "proprietaire" ? <div className="team-member-actions"><button type="button" className="text-button" disabled={teamBusy || !member.active} onClick={() => void changeTeamMemberRole(member)}>{member.role === "gestionnaire" ? "Rétablir employé" : "Nommer gestionnaire"}</button>{member.active ? <button type="button" className="text-button" disabled={teamBusy} onClick={() => void deactivateTeamMember(member)}>Désactiver</button> : <span className="privacy-note">Accès retiré</span>}</div> : <span className="privacy-note">Compte propriétaire protégé</span>}</td> : null}</tr>)}</tbody></table></div>
+              <div className="table-wrap"><table><thead><tr><th>Profil professionnel / compte</th><th>Rôle</th><th>État</th><th>Depuis</th>{isAtelierOwner ? <th>Actions</th> : null}</tr></thead><tbody>{teamMembers.map((member) => <tr key={member.userId}><td><strong>{member.professionalName || (member.role === "proprietaire" ? "Propriétaire de l’atelier" : member.role === "gestionnaire" ? "Gestionnaire" : "Profil à compléter")}</strong>{member.specialties.length ? <small>{member.specialties.join(" · ")}</small> : null}{member.experienceLevel ? <small>{({debutant:"Débutant",intermediaire:"Intermédiaire",experimente:"Expérimenté",maitre:"Maître tailleur"} as const)[member.experienceLevel]}</small> : null}{member.presentation ? <small>{member.presentation}</small> : null}<code>{member.userId.slice(0,8)}…{member.userId.slice(-4)}</code>{member.userId === currentUserId ? <small>Votre compte</small> : null}{isAtelierOwner && member.role === "employe" ? <TailorProfileEditor member={member} busy={teamBusy} onSave={saveTailorProfessionalProfile} /> : null}</td><td>{member.role === "proprietaire" ? "Propriétaire" : member.role === "gestionnaire" ? "Gestionnaire" : "Tailleur"}</td><td>{member.active ? "Actif" : "Désactivé"}</td><td>{new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(member.createdAt))}</td>{isAtelierOwner ? <td>{member.role !== "proprietaire" ? <div className="team-member-actions"><button type="button" className="text-button" disabled={teamBusy || !member.active} onClick={() => void changeTeamMemberRole(member)}>{member.role === "gestionnaire" ? "Rétablir employé" : "Nommer gestionnaire"}</button>{member.active ? <button type="button" className="text-button" disabled={teamBusy} onClick={() => void deactivateTeamMember(member)}>Désactiver</button> : <span className="privacy-note">Accès retiré</span>}</div> : <span className="privacy-note">Compte propriétaire protégé</span>}</td> : null}</tr>)}</tbody></table></div>
               {canManageTeam ? <>
                 <form className="new-order-form team-invite-form" onSubmit={inviteTeamMember}>
                   <h4>Inviter un collaborateur</h4>
@@ -1330,6 +1345,42 @@ function App() {
       <nav className={`app-dock ${isAtelierOwner ? "has-cash" : "without-cash"}`} aria-label="Navigation mobile">{mobileNavItems.map((item) => <button key={item.id} type="button" className={(item.id === "more" ? (mobileMoreOpen || ["stock", "account", "reminders", "suppliers", "marketplace"].includes(view)) : view === item.id) ? "dock-item is-active" : "dock-item"} onClick={() => { if (item.id === "more") setMobileMoreOpen((open) => !open); else { setView(item.id); setMobileMoreOpen(false); } }} aria-current={item.id !== "more" && view === item.id ? "page" : undefined} aria-expanded={item.id === "more" ? mobileMoreOpen : undefined}><span className="dock-icon"><NavIcon name={item.icon} /></span><small>{item.label}</small></button>)}</nav>
     </div>
   );
+}
+
+
+function TailorProfileEditor({ member, busy, onSave }: {
+  member: AtelierMember;
+  busy: boolean;
+  onSave: (member: AtelierMember, profile: { professionalName: string; specialties: string[]; experienceLevel: AtelierMember["experienceLevel"]; presentation: string }) => void;
+}) {
+  const [professionalName, setProfessionalName] = useState(member.professionalName);
+  const [specialties, setSpecialties] = useState(member.specialties.join(", "));
+  const [experienceLevel, setExperienceLevel] = useState<AtelierMember["experienceLevel"]>(member.experienceLevel);
+  const [presentation, setPresentation] = useState(member.presentation);
+  useEffect(() => {
+    setProfessionalName(member.professionalName);
+    setSpecialties(member.specialties.join(", "));
+    setExperienceLevel(member.experienceLevel);
+    setPresentation(member.presentation);
+  }, [member.professionalName, member.specialties, member.experienceLevel, member.presentation]);
+  return <details className="tailor-profile-editor">
+    <summary>{member.professionalName ? "Modifier le profil" : "Renseigner le profil professionnel"}</summary>
+    <form className="new-order-form" onSubmit={(event) => {
+      event.preventDefault();
+      onSave(member, {
+        professionalName,
+        specialties: specialties.split(/[,\n]/).map((item) => item.trim()).filter(Boolean).slice(0, 8),
+        experienceLevel,
+        presentation
+      });
+    }}>
+      <label>Nom professionnel<input maxLength={100} value={professionalName} onChange={(event) => setProfessionalName(event.target.value)} placeholder="Nom affiché du tailleur" /></label>
+      <label>Spécialités<input maxLength={500} value={specialties} onChange={(event) => setSpecialties(event.target.value)} placeholder="Broderie, coupe homme, boubou…" /></label>
+      <label>Niveau d’expérience<select value={experienceLevel ?? ""} onChange={(event) => setExperienceLevel((event.target.value || null) as AtelierMember["experienceLevel"])}><option value="">Non renseigné</option><option value="debutant">Débutant</option><option value="intermediaire">Intermédiaire</option><option value="experimente">Expérimenté</option><option value="maitre">Maître tailleur</option></select></label>
+      <label>Présentation<textarea rows={3} maxLength={600} value={presentation} onChange={(event) => setPresentation(event.target.value)} placeholder="Parcours, savoir-faire et types de vêtements maîtrisés…" /></label>
+      <button type="submit" className="primary-button" disabled={busy}>{busy ? "Enregistrement…" : "Enregistrer le profil"}</button>
+    </form>
+  </details>;
 }
 
 function NavIcon({ name }: { name: string }) {
