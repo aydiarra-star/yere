@@ -48,6 +48,12 @@ export default function AuthGate({ children }: Props) {
     return () => observer.disconnect();
   }, []);
 
+  // Make pending invitations visible immediately after sign-in or inbox refresh.
+  // Users with an existing atelier should not have to discover the hidden inbox button.
+  useEffect(() => {
+    if (pendingInvitations.length > 0) setInboxOpen(true);
+  }, [pendingInvitations.length]);
+
   async function loadWorkspace(activeSession: YereSession) {
     const [workspaces, invitations] = await Promise.all([
       listMyAteliers(activeSession), listMyAtelierInvitations(activeSession)
