@@ -252,6 +252,7 @@ export default function AuthGate({ children }: Props) {
   async function handleSignOut() {
     if (session) await signOut(session);
     setSession(null); setAtelier(null); setWorkspaces([]); setMessage(""); setError("");
+    setShowProfessionalAuth(false);
   }
 
   if (!ready) return <main className="auth-loading"><span className="auth-mark">Y</span><p>Préparation de votre espace YÉRÉ…</p></main>;
