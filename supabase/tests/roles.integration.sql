@@ -8,9 +8,14 @@ values
  ('10000000-0000-4000-8000-000000000002','authenticated','authenticated','manager@yere.test','',now(),'{}','{}',now(),now()),
  ('10000000-0000-4000-8000-000000000003','authenticated','authenticated','tailor@yere.test','',now(),'{}','{}',now(),now());
 
+-- Atelier creation must run as the authenticated owner: its trigger creates the owner membership.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000001',true);
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 insert into public.atelier (id, nom) values ('20000000-0000-4000-8000-000000000001','Atelier CI');
+reset role;
+
 insert into public.atelier_membre (atelier_id,user_id,role,actif) values
- ('20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001','proprietaire',true),
  ('20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000002','gestionnaire',true),
  ('20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000003','employe',true);
 
