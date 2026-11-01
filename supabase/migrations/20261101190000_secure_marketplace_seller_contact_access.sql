@@ -84,3 +84,12 @@ $$;
 
 revoke all on function public.get_my_marketplace_seller_contact() from public, anon;
 grant execute on function public.get_my_marketplace_seller_contact() to authenticated;
+
+-- La lecture des commandes ne doit pas contourner les droits limités du profil vendeur.
+drop policy if exists marketplace_commande_parties_read on public.marketplace_commande;
+create policy marketplace_commande_parties_read on public.marketplace_commande
+  for select to authenticated
+  using (
+    acheteur_user_id = (select auth.uid())
+    or public.marketplace_vendeur_est_moi(vendeur_id)
+  );
