@@ -220,11 +220,11 @@ async function createMarketplacePhotoSignedUrl(path: string): Promise<string | n
     const data = await readJson(response) as { signedURL?: unknown };
     if (typeof data.signedURL !== "string" || !projectUrl) return null;
     const signedPath = data.signedURL;
-    if (/^https?:\\/\\//i.test(signedPath)) return signedPath;
+    if (signedPath.startsWith("https://") || signedPath.startsWith("http://")) return signedPath;
     const normalized = signedPath.startsWith("/") ? signedPath : `/${signedPath}`;
     return normalized.startsWith("/storage/v1/")
-      ? `${projectUrl.replace(/\\/$/, "")}${normalized}`
-      : `${projectUrl.replace(/\\/$/, "")}/storage/v1${normalized}`;
+      ? `${projectUrl.endsWith("/") ? projectUrl.slice(0, -1) : projectUrl}${normalized}`
+      : `${projectUrl.endsWith("/") ? projectUrl.slice(0, -1) : projectUrl}/storage/v1${normalized}`;
   } catch {
     return null;
   }
