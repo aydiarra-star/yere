@@ -42,3 +42,20 @@ using (
   and (storage.foldername(name))[1] = (select auth.uid())::text
   and public.marketplace_vendeur_est_moi(((storage.foldername(name))[2])::uuid)
 );
+
+-- Les visiteurs ne peuvent obtenir un lien signé que pour une photo déjà liée
+-- à une annonce publiée d'un vendeur actif. Les brouillons restent privés.
+drop policy if exists yere_market_photos_read_published on storage.objects;
+create policy yere_market_photos_read_published
+on storage.objects for select to anon, authenticated
+using (
+  bucket_id = 'yere-market-photos'
+  and exists (
+    select 1
+    from public.marketplace_annonce a
+    join public.marketplace_vendeur v on v.id = a.vendeur_id
+    where a.statut = 'publiee'
+      and v.statut = 'actif'
+      and a.photos @> array[storage.objects.name]::text[]
+  )
+);
