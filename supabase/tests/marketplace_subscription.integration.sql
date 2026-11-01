@@ -112,8 +112,6 @@ begin
 end $$;
 reset role;
 
-rollback;
-
 -- Private marketplace photo storage: bucket remains private and has owner-scoped policies.
 do $$
 begin
@@ -188,3 +186,5 @@ begin
   end if;
 end $$;
 reset role;
+
+rollback;
