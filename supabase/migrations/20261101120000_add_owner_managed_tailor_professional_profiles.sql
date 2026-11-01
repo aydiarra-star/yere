@@ -72,8 +72,8 @@ begin
 
   select coalesce(array_agg(distinct left(trim(s), 60)), '{}'::text[])
     into v_specialites
-  from unnest(coalesce(p_specialites, '{}'::text[])) as s
-  where trim(s) <> '';
+  from unnest(coalesce(p_specialites, '{}'::text[])) as item(value)
+  where trim(value) <> '';
 
   update public.atelier_membre
   set nom_professionnel = nullif(trim(coalesce(p_nom_professionnel, '')), ''),
