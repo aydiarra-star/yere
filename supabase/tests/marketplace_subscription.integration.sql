@@ -20,7 +20,13 @@ begin
   returning id into v_seller_id;
   insert into public.marketplace_annonce(vendeur_id,titre,categorie,description,prix_fcfa,ville,mode_vente,statut,stock_disponible)
   values (v_seller_id,'Wax test','Tissus','Annonce synthétique',2500,'Dakar','les_deux','publiee',10);
-end $$;
+  if not exists (
+    select 1 from public.get_my_marketplace_seller_contact()
+    where nom_contact='Contact Test' and telephone='770000000'
+  ) then
+    raise exception 'FAIL: seller cannot read their own contact through the secure RPC';
+  end if;
+end $;
 reset role;
 
 -- Public catalog can read published products; a separate authenticated buyer can place an order.
