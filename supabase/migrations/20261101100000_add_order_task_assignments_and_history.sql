@@ -59,7 +59,7 @@ revoke all on table public.commande_tache from anon, authenticated;
 revoke all on table public.commande_tache_historique from anon, authenticated;
 grant select, insert, update on table public.commande_tache to authenticated;
 grant select on table public.commande_tache_historique to authenticated;
-grant usage, select on sequence public.commande_tache_historique_id_seq to authenticated;
+revoke all on sequence public.commande_tache_historique_id_seq from anon, authenticated;
 
 drop policy if exists commande_tache_select_member on public.commande_tache;
 create policy commande_tache_select_member
@@ -144,6 +144,13 @@ begin
     return new;
   end if;
 
+  if row(new.id, new.atelier_id, new.commande_id, new.created_by, new.created_at)
+       is distinct from
+     row(old.id, old.atelier_id, old.commande_id, old.created_by, old.created_at) then
+    raise exception 'Les identifiants et la création initiale d’une tâche sont immuables'
+      using errcode = '42501';
+  end if;
+
   if v_is_manager then
     if new.assigne_a is not null and not exists (
       select 1 from public.atelier_membre m
@@ -159,10 +166,12 @@ begin
        or old.assigne_a is distinct from auth.uid()
        or new.assigne_a is distinct from old.assigne_a
        or row(new.atelier_id, new.commande_id, new.titre, new.description,
-              new.ordre, new.created_by, new.created_at)
+              new.ordre, new.created_by, new.created_at,
+              new.started_at, new.completed_at)
           is distinct from
           row(old.atelier_id, old.commande_id, old.titre, old.description,
-              old.ordre, old.created_by, old.created_at) then
+              old.ordre, old.created_by, old.created_at,
+              old.started_at, old.completed_at) then
       raise exception 'Un tailleur peut uniquement actualiser une tâche qui lui est attribuée'
         using errcode = '42501';
     end if;
