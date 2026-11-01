@@ -2,15 +2,15 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const taskSql = readFileSync(
-  "supabase/migrations/20261101100000_add_order_task_assignments_and_history.sql",
+  "supabase/migrations/20261101100133_add_order_task_assignments_and_history.sql",
   "utf8"
 );
 const profileSql = readFileSync(
-  "supabase/migrations/20261101120000_add_owner_managed_tailor_professional_profiles.sql",
+  "supabase/migrations/20261101100136_add_owner_managed_tailor_professional_profiles.sql",
   "utf8"
 );
 const rosterSql = readFileSync(
-  "supabase/migrations/20261101090000_allow_team_members_to_view_workgroup.sql",
+  "supabase/migrations/20261101100126_allow_team_members_to_view_workgroup.sql",
   "utf8"
 );
 
