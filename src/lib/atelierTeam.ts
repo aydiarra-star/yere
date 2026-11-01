@@ -7,6 +7,10 @@ export type AtelierMember = {
   role: "proprietaire" | "gestionnaire" | "employe";
   active: boolean;
   createdAt: string;
+  professionalName: string;
+  specialties: string[];
+  experienceLevel: "debutant" | "intermediaire" | "experimente" | "maitre" | null;
+  presentation: string;
 };
 export type AtelierInvitation = {
   id: string;
