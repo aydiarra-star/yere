@@ -7,6 +7,7 @@ import { isMarketplaceListingListValid, type MarketplaceListing } from "./market
 import { usePersistentState } from "./usePersistentState";
 import { createAtelierClient, createAtelierOrder, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
 import { readSession } from "./lib/supabaseAuth";
+import { createAtelierTask, listAtelierTasks, updateAtelierTask, type AtelierTask, type AtelierTaskStatus } from "./lib/atelierTasks";
 import { cancelAtelierInvitation, createAtelierInvitation, deactivateAtelierMember, listAtelierInvitations, listAtelierMembers, updateAtelierMemberRole, type AtelierInvitation, type AtelierMember } from "./lib/atelierTeam";
 import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, getAtelierSupplierProfile, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, saveAtelierSupplierProfile, type AtelierSupplier } from "./lib/atelierSuppliers";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
@@ -97,6 +98,12 @@ function App() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"gestionnaire" | "employe">("employe");
   const [teamBusy, setTeamBusy] = useState(false);
+  const [atelierTasks, setAtelierTasks] = useState<AtelierTask[]>([]);
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskDescription, setTaskDescription] = useState("");
+  const [taskOrderId, setTaskOrderId] = useState("");
+  const [taskAssigneeId, setTaskAssigneeId] = useState("");
+  const [taskBusy, setTaskBusy] = useState(false);
   const [purchaseFormOpen, setPurchaseFormOpen] = useState(false);
   const [purchaseSupplierName, setPurchaseSupplierName] = useState("");
   const [purchaseStockItemId, setPurchaseStockItemId] = useState("");
@@ -133,14 +140,15 @@ function App() {
         const currentMember = serverMembers.find((member) => member.userId === session.user.id && member.active);
         const ownerAccess = currentMember?.role === "proprietaire";
         const [serverClients, serverOrders, serverStock, serverSuppliers, serverSupplierProfile,
-          serverExpenses, serverPurchases] = await Promise.all([
+          serverExpenses, serverPurchases, serverTasks] = await Promise.all([
           listAtelierClients(session, atelierId),
           listAtelierOrders(session, atelierId, ownerAccess),
           listAtelierStock(session, atelierId),
           listAtelierSuppliers(session, atelierId),
           getAtelierSupplierProfile(session, atelierId),
           ownerAccess ? listAtelierExpenses(session, atelierId) : Promise.resolve([]),
-          ownerAccess ? listAtelierSupplierPurchases(session, atelierId) : Promise.resolve([])
+          ownerAccess ? listAtelierSupplierPurchases(session, atelierId) : Promise.resolve([]),
+          listAtelierTasks(session, atelierId)
         ]);
         if (!active) return;
         setClients(serverClients);
@@ -160,6 +168,8 @@ function App() {
         setSupplierDirectory(serverSuppliers);
         setTeamMembers(serverMembers);
         setTeamInvitations(serverInvitations);
+        setAtelierTasks(serverTasks);
+        if (!taskOrderId) setTaskOrderId(serverOrders.find((order) => order.serverId)?.serverId ?? "");
         if (serverSupplierProfile) setSupplier(serverSupplierProfile);
         const supplierName = new Map(serverSuppliers.map((item) => [item.id, item.name]));
         const mappedPurchases: SupplierPurchase[] = serverPurchases.map((purchase) => ({
@@ -932,6 +942,34 @@ function App() {
     }
   }
 
+  async function addAtelierTask(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId || !taskOrderId || !taskTitle.trim()) { setNotice("Choisissez une commande et indiquez le travail à réaliser."); return; }
+    setTaskBusy(true);
+    try {
+      await createAtelierTask(session, atelierId, { orderId: taskOrderId, title: taskTitle, description: taskDescription, assigneeId: taskAssigneeId || null, order: atelierTasks.length });
+      setAtelierTasks(await listAtelierTasks(session, atelierId));
+      setTaskTitle(""); setTaskDescription(""); setTaskAssigneeId("");
+      setNotice("Tâche créée et attribuée dans l’atelier.");
+    } catch (cause) { setNotice(cause instanceof Error ? `Tâche non enregistrée : ${cause.message}` : "Impossible d’enregistrer la tâche."); }
+    finally { setTaskBusy(false); }
+  }
+
+  async function changeAtelierTask(task: AtelierTask, patch: { status?: AtelierTaskStatus; assigneeId?: string | null; progressNote?: string }) {
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    setTaskBusy(true);
+    try {
+      await updateAtelierTask(session, atelierId, task.id, patch);
+      setAtelierTasks(await listAtelierTasks(session, atelierId));
+      setNotice("Tâche et historique actualisés.");
+    } catch (cause) { setNotice(cause instanceof Error ? `Tâche non modifiée : ${cause.message}` : "Impossible de modifier cette tâche."); }
+    finally { setTaskBusy(false); }
+  }
+
   async function updateRetouchStage(orderId: string, retouchStage: RetouchStage) {
     const order = orders.find((item) => item.id === orderId && item.kind === "retouche");
     const session = readSession();
@@ -1097,7 +1135,35 @@ function App() {
               </label>
               <p aria-live="polite">{filteredOrders.length} commande{filteredOrders.length === 1 ? "" : "s"} affichée{filteredOrders.length === 1 ? "" : "s"}</p>
             </div>
-            <OrderTable orders={filteredOrders} clients={clients} onStatusChange={updateStatus} onRetouchStageChange={updateRetouchStage} showFinancials={isAtelierOwner} /></section>}
+            <OrderTable orders={filteredOrders} clients={clients} onStatusChange={updateStatus} onRetouchStageChange={updateRetouchStage} showFinancials={isAtelierOwner} />
+            <section className="content-card team-panel" aria-labelledby="atelier-tasks-title">
+              <div className="section-heading"><div><h3 id="atelier-tasks-title">Travaux et tâches de l’atelier</h3><p>Répartition du travail, responsables et historique des avancements. Aucune rémunération n’est suivie ici.</p></div><span className="marketplace-listing-count">{atelierTasks.length} tâche(s)</span></div>
+              {canManageTeam && <form className="new-order-form" onSubmit={addAtelierTask}>
+                <h4>Attribuer un travail</h4>
+                <label>Commande<select required value={taskOrderId} onChange={(event) => setTaskOrderId(event.target.value)}><option value="">Choisir une commande</option>{orders.filter((order) => order.serverId).map((order) => <option key={order.serverId} value={order.serverId}>{order.id} · {order.garment}</option>)}</select></label>
+                <label>Travail à réaliser<input required maxLength={120} value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="Ex. Découpe du tissu, assemblage, broderie…" /></label>
+                <label>Consignes<textarea rows={2} value={taskDescription} onChange={(event) => setTaskDescription(event.target.value)} placeholder="Précisions utiles pour le tailleur" /></label>
+                <label>Attribuer à<select value={taskAssigneeId} onChange={(event) => setTaskAssigneeId(event.target.value)}><option value="">À attribuer plus tard</option>{teamMembers.filter((member) => member.active && member.role === "employe").map((member) => <option key={member.userId} value={member.userId}>Tailleur · {member.userId.slice(0,8)}…{member.userId.slice(-4)}</option>)}</select></label>
+                <div className="form-actions"><button className="primary-button" type="submit" disabled={taskBusy || orders.every((order) => !order.serverId)}>{taskBusy ? "Enregistrement…" : "Créer la tâche"}</button></div>
+              </form>}
+              {atelierTasks.length === 0 ? <p className="empty-state">Aucune tâche détaillée n’a encore été attribuée. Le propriétaire ou le gestionnaire peut créer la première tâche à partir d’une commande.</p> : <div className="team-invitation-list">{atelierTasks.map((task) => {
+                const order = orders.find((item) => item.serverId === task.orderId);
+                const assignee = teamMembers.find((member) => member.userId === task.assigneeId);
+                const canUpdateThisTask = canManageTeam || (task.assigneeId === currentUserId && !isAtelierOwner);
+                const statusLabels: Record<AtelierTaskStatus,string> = { a_faire: "À faire", en_cours: "En cours", bloquee: "Bloquée", terminee: "Terminée" };
+                return <article className="team-invitation-row" key={task.id}>
+                  <div><b>{task.title}</b><small>{order ? `${order.id} · ${order.garment}` : "Commande"} · {assignee ? `Responsable : ${assignee.userId.slice(0,8)}…${assignee.userId.slice(-4)}` : "Non attribuée"}</small>{task.description && <small>{task.description}</small>}{task.progressNote && <small>Avancement : {task.progressNote}</small>}
+                    <details><summary>Historique ({task.history.length})</summary><ul>{task.history.map((entry) => <li key={entry.id}><small>{new Intl.DateTimeFormat("fr-FR",{dateStyle:"short",timeStyle:"short"}).format(new Date(entry.createdAt))} · {entry.event === "creation" ? "Tâche créée" : entry.event === "attribution" ? "Attribution modifiée" : entry.event === "changement_statut" ? "Statut modifié" : "Note actualisée"} · {entry.actorId === currentUserId ? "par vous" : entry.actorId ? `par ${entry.actorId.slice(0,8)}…` : "auteur inconnu"}</small></li>)}</ul></details>
+                  </div>
+                  <div className="team-member-actions">
+                    {canUpdateThisTask && <select aria-label={`Statut de ${task.title}`} disabled={taskBusy} value={task.status} onChange={(event) => void changeAtelierTask(task,{status:event.target.value as AtelierTaskStatus})}>{Object.entries(statusLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select>}
+                    {canUpdateThisTask && <input aria-label={`Note d’avancement de ${task.title}`} maxLength={500} placeholder="Note d’avancement" defaultValue={task.progressNote} disabled={taskBusy} onBlur={(event) => { if (event.target.value !== task.progressNote) void changeAtelierTask(task,{progressNote:event.target.value}); }} />}
+                    {canManageTeam && <select aria-label={`Réattribuer ${task.title}`} disabled={taskBusy} value={task.assigneeId ?? ""} onChange={(event) => void changeAtelierTask(task,{assigneeId:event.target.value || null})}><option value="">Non attribuée</option>{teamMembers.filter((member) => member.active && member.role === "employe").map((member) => <option key={member.userId} value={member.userId}>{member.userId.slice(0,8)}…{member.userId.slice(-4)}</option>)}</select>}
+                  </div>
+                </article>;
+              })}</div>}
+              <p className="privacy-note">Les tailleurs consultent les tâches de l’atelier, mais ne peuvent modifier que celles qui leur sont attribuées. Toute reprise par un collègue passe par une réattribution du propriétaire ou du gestionnaire.</p>
+            </section></section>}
 
 
           {view === "cash" && isAtelierOwner && <section className="cash-page">
