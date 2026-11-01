@@ -132,3 +132,59 @@ begin
     raise exception 'FAIL: marketplace photo ownership policies are incomplete';
   end if;
 end $$;
+
+-- In-app messaging: only the buyer and seller can read or send messages.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','71000000-0000-4000-8000-000000000002',true);
+select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
+do $$
+declare v_conversation uuid;
+begin
+  select id into v_conversation from public.marketplace_conversation
+  where annonce_id = (select id from public.marketplace_annonce where titre='Wax test')
+    and acheteur_user_id='71000000-0000-4000-8000-000000000002';
+  if v_conversation is not null then raise exception 'FAIL: conversation should not exist before first contact'; end if;
+  select public.ouvrir_conversation_marketplace(
+    (select id from public.marketplace_annonce where titre='Wax test'),
+    'Bonjour, cet article est-il disponible ?'
+  ) into v_conversation;
+  if (select count(*) from public.marketplace_message where conversation_id=v_conversation) <> 1 then
+    raise exception 'FAIL: initial message was not stored';
+  end if;
+  if public.envoyer_message_marketplace(v_conversation,'Merci pour votre réponse.') is not true then
+    raise exception 'FAIL: buyer could not send a follow-up';
+  end if;
+end $$;
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub','71000000-0000-4000-8000-000000000001',true);
+select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+do $$
+declare v_conversation uuid;
+begin
+  select id into v_conversation from public.marketplace_conversation
+  where annonce_id = (select id from public.marketplace_annonce where titre='Wax test')
+    and acheteur_user_id='71000000-0000-4000-8000-000000000002';
+  if v_conversation is null or (select count(*) from public.marketplace_message where conversation_id=v_conversation) <> 2 then
+    raise exception 'FAIL: seller cannot read buyer conversation history';
+  end if;
+  if public.envoyer_message_marketplace(v_conversation,'Bonjour, oui, cet article est disponible.') is not true then
+    raise exception 'FAIL: seller could not reply';
+  end if;
+end $$;
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub','71000000-0000-4000-8000-000000000003',true);
+select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
+do $$
+begin
+  if (select count(*) from public.marketplace_conversation) <> 0 then
+    raise exception 'FAIL: unrelated account can read marketplace conversations';
+  end if;
+  if (select count(*) from public.marketplace_message) <> 0 then
+    raise exception 'FAIL: unrelated account can read marketplace messages';
+  end if;
+end $$;
+reset role;
