@@ -1,5 +1,5 @@
 import type { YereSession } from "./supabaseAuth";
-import { authenticatedFetch, publicFetch } from "./supabaseAuth";
+import { authenticatedFetch, publicFetch, projectUrl } from "./supabaseAuth";
 
 export type MarketplaceSeller = {
   id: string;
