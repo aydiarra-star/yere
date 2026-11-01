@@ -33,7 +33,7 @@ values ('20000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-00000000
 set local role authenticated;
 select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000002',true);
 select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
-do $
+do $manager$
 begin
   -- Test effective row visibility, not raw table grants: RLS may intentionally
   -- allow SELECT while returning no financial rows to non-owners.
@@ -47,7 +47,7 @@ begin
   exception when insufficient_privilege then
     null;
   end;
-end $;
+end $manager$;
 insert into public.commande_tache (id,atelier_id,commande_id,titre,assigne_a,created_by)
 values ('60000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-000000000001','Assemblage','10000000-0000-4000-8000-000000000003',auth.uid());
 do $$
