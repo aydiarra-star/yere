@@ -161,7 +161,7 @@ begin
   end if;
   select * into v_annonce from public.marketplace_annonce
   where id = p_annonce_id and statut = 'publiee'
-  for share;
+  for update;
   if not found then raise exception 'Annonce indisponible' using errcode = 'P0002'; end if;
   if v_annonce.mode_vente not in ('commande_yere','les_deux') then
     raise exception 'Cette annonce accepte uniquement le contact direct' using errcode = '22023';
@@ -279,7 +279,8 @@ create policy marketplace_commande_parties_read on public.marketplace_commande
 
 grant select on public.abonnement_atelier, public.abonnement_paiement to authenticated;
 grant select on public.marketplace_vendeur, public.marketplace_annonce to anon, authenticated;
-grant insert, update on public.marketplace_vendeur to authenticated;
+grant insert on public.marketplace_vendeur to authenticated;
+grant update (nom_entreprise, nom_contact, telephone, ville, categorie, description) on public.marketplace_vendeur to authenticated;
 grant select, insert, update, delete on public.marketplace_annonce to authenticated;
 grant select on public.marketplace_commande to authenticated;
 grant execute on function public.creer_commande_marketplace(uuid, integer, text, text, text, text) to authenticated;
