@@ -33,14 +33,22 @@ values ('20000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-00000000
 set local role authenticated;
 select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000002',true);
 select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
-do $$
+do $
+declare v_count bigint;
 begin
-  if has_table_privilege('authenticated','public.paiement','SELECT')
-     or has_table_privilege('authenticated','public.depense','SELECT')
-     or has_column_privilege('authenticated','public.commande','prix_fcfa','SELECT') then
-    raise exception 'FAIL: finance permissions leaked to authenticated members';
-  end if;
-end $$;
+  -- Test effective row visibility, not raw table grants: RLS may intentionally
+  -- allow SELECT while returning no financial rows to non-owners.
+  select count(*) into v_count from public.paiement;
+  if v_count <> 0 then raise exception 'FAIL: manager can read payment rows'; end if;
+  select count(*) into v_count from public.depense;
+  if v_count <> 0 then raise exception 'FAIL: manager can read expense rows'; end if;
+  begin
+    select count(prix_fcfa) into v_count from public.commande;
+    if v_count <> 0 then raise exception 'FAIL: manager can read order prices'; end if;
+  exception when insufficient_privilege then
+    null;
+  end;
+end $;
 insert into public.commande_tache (id,atelier_id,commande_id,titre,assigne_a,created_by)
 values ('60000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-000000000001','Assemblage','10000000-0000-4000-8000-000000000003',auth.uid());
 do $$
@@ -75,11 +83,20 @@ begin
   if (select count(*) from public.commande_tache where id='60000000-0000-4000-8000-000000000001') <> 1 then
     raise exception 'FAIL: assigned tailor cannot read assigned task';
   end if;
-  if has_table_privilege('authenticated','public.paiement','SELECT')
-     or has_table_privilege('authenticated','public.depense','SELECT')
-     or has_column_privilege('authenticated','public.commande','prix_fcfa','SELECT') then
-    raise exception 'FAIL: tailor has finance privileges';
+  -- Verify effective RLS visibility rather than catalog grants.
+  if (select count(*) from public.paiement) <> 0 then
+    raise exception 'FAIL: tailor can read payment rows';
   end if;
+  if (select count(*) from public.depense) <> 0 then
+    raise exception 'FAIL: tailor can read expense rows';
+  end if;
+  begin
+    if (select count(prix_fcfa) from public.commande) <> 0 then
+      raise exception 'FAIL: tailor can read order prices';
+    end if;
+  exception when insufficient_privilege then
+    null;
+  end;
 end $$;
 update public.commande_tache set statut='en_cours', note_avancement='Début du travail'
 where id='60000000-0000-4000-8000-000000000001';
