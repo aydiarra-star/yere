@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - "supabase/migrations/**"
+      - "supabase/tests/**"
       - ".github/workflows/db-migrations.yml"
   push:
     branches:
       - "feat/**"
     paths:
       - "supabase/migrations/**"
+      - "supabase/tests/**"
       - ".github/workflows/db-migrations.yml"
 
 permissions:
