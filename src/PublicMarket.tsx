@@ -284,7 +284,7 @@ export default function PublicMarket() {
     <main className="yere-market-app">
       <header className="pm-header">
         <a className="pm-brand" href="/market" aria-label="YÉRÉ Market, accueil"><span className="pm-mark">Y</span><span><b>YÉRÉ</b><small>MARKET</small></span></a>
-        <nav className="pm-nav"><a href="#catalogue">Catalogue</a><a href="#vendeurs">Vendeurs</a>{session && <a href="#commandes">Mes commandes</a><a href="#messages">Messages</a>}</nav>
+        <nav className="pm-nav"><a href="#catalogue">Catalogue</a><a href="#vendeurs">Vendeurs</a>{session && <><a href="#commandes">Mes commandes</a><a href="#messages">Messages</a></>}</nav>
         <div className="pm-header-actions">
           {session ? <><span className="pm-user">{session.user.email}</span><button className="pm-outline" type="button" onClick={() => void handleSignOut()} disabled={busy}>Déconnexion</button></> :
             <button className="pm-outline" type="button" onClick={() => { setShowAccount((v) => !v); setError(""); }}>Se connecter</button>}
