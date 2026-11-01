@@ -127,7 +127,8 @@ begin
   end if;
   if not exists (select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='yere_market_photos_insert_own')
      or not exists (select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='yere_market_photos_read_own')
-     or not exists (select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='yere_market_photos_delete_own') then
+     or not exists (select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='yere_market_photos_delete_own')
+     or not exists (select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='yere_market_photos_read_published') then
     raise exception 'FAIL: marketplace photo ownership policies are incomplete';
   end if;
 end $$;
