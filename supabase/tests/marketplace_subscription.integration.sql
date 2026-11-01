@@ -26,7 +26,7 @@ begin
   ) then
     raise exception 'FAIL: seller cannot read their own contact through the secure RPC';
   end if;
-end $;
+end $$;
 reset role;
 
 -- Public catalog can read published products; a separate authenticated buyer can place an order.
@@ -88,7 +88,7 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub','71000000-0000-4000-8000-000000000003',true);
 select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
 insert into public.atelier(id,nom) values ('72000000-0000-4000-8000-000000000003','Atelier abonnement test');
-do $
+do $$
 declare v_price bigint; v_months integer; v_status text;
 begin
   select montant_mensuel_fcfa, extract(month from age(fin_essai,debut_essai))::integer, statut
