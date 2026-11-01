@@ -7,7 +7,7 @@ export type YereSession = {
 };
 
 const SESSION_KEY = "yere.auth.session.v1";
-const projectUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+export const projectUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 
 export const supabaseReady = Boolean(projectUrl && publishableKey);
