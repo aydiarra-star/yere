@@ -54,7 +54,7 @@ describe("contrat SQL des tâches YÉRÉ (contrôles statiques)", () => {
   });
 
   it("n’introduit aucun champ de rémunération, profit ou paiement individuel", () => {
-    expect(taskSql).not.toMatch(/^\\s*(?:remuneration|rémunération|profit_individuel|paiement_individuel)\\s+\\w+/im);
+    expect(taskSql).not.toMatch(/^\s*(?:remuneration|rémunération|profit_individuel|paiement_individuel)\s+\w+/im);
   });
 });
 
@@ -79,7 +79,7 @@ describe("contrat SQL des profils professionnels", () => {
     expect(profileSql).toMatch(/create or replace function public\.update_atelier_member_profile/i);
     expect(profileSql).toMatch(/language sql\s+security invoker/i);
     expect(profileSql).toMatch(/revoke all on function public\.update_atelier_member_profile[\s\S]*?from public, anon/i);
-    expect(profileSql).not.toMatch(/^\\s*(?:remuneration|rémunération|profit_individuel|paiement_individuel)\\s+\\w+/im);
+    expect(profileSql).not.toMatch(/^\s*(?:remuneration|rémunération|profit_individuel|paiement_individuel)\s+\w+/im);
   });
 
   it("permet la consultation du profil à tous les membres actifs sans élargir les droits d’écriture", () => {
