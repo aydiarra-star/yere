@@ -258,11 +258,11 @@ alter table public.marketplace_annonce enable row level security;
 alter table public.marketplace_commande enable row level security;
 
 create policy abonnement_atelier_owner_read on public.abonnement_atelier
-  for select to authenticated using (public.has_atelier_role(atelier_id, array['proprietaire']));
+  for select to authenticated using (private.has_atelier_role(atelier_id, array['proprietaire']));
 create policy abonnement_paiement_owner_read on public.abonnement_paiement
   for select to authenticated using (
     exists (select 1 from public.abonnement_atelier a
-      where a.id = abonnement_id and public.has_atelier_role(a.atelier_id, array['proprietaire']))
+      where a.id = abonnement_id and private.has_atelier_role(a.atelier_id, array['proprietaire']))
   );
 
 create policy marketplace_vendeur_public_read on public.marketplace_vendeur
@@ -273,7 +273,7 @@ create policy marketplace_vendeur_self_insert on public.marketplace_vendeur
   for insert to authenticated with check (
     user_id = (select auth.uid())
     and ((type_vendeur = 'fournisseur' and atelier_id is null)
-      or (type_vendeur = 'atelier' and public.has_atelier_role(atelier_id, array['proprietaire'])))
+      or (type_vendeur = 'atelier' and private.has_atelier_role(atelier_id, array['proprietaire'])))
   );
 create policy marketplace_vendeur_self_update on public.marketplace_vendeur
   for update to authenticated using (user_id = (select auth.uid()))
