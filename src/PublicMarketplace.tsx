@@ -31,7 +31,7 @@ export default function PublicMarketplace({ onProfessionalLogin }: Props) {
         <a href="#vendeurs">Vendre sur YÉRÉ</a>
       </nav>
       <div className="public-header-actions">
-        <button type="button" className="public-login-button" onClick={onProfessionalLogin}>Se connecter</button>
+        <button type="button" className="public-login-button" onClick={onProfessionalLogin}>Connexion pro</button>
         <button type="button" className="public-pro-button" onClick={onProfessionalLogin}>Espace professionnel <span aria-hidden="true">→</span></button>
       </div>
     </header>
