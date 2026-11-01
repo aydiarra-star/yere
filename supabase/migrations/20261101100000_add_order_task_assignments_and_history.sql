@@ -147,9 +147,11 @@ begin
     return new;
   end if;
 
-  if row(new.id, new.atelier_id, new.commande_id, new.created_by, new.created_at)
+  if row(new.id, new.atelier_id, new.commande_id, new.created_by, new.created_at,
+         new.updated_at, new.started_at, new.completed_at)
        is distinct from
-     row(old.id, old.atelier_id, old.commande_id, old.created_by, old.created_at) then
+     row(old.id, old.atelier_id, old.commande_id, old.created_by, old.created_at,
+         old.updated_at, old.started_at, old.completed_at) then
     raise exception 'Les identifiants et la création initiale d’une tâche sont immuables'
       using errcode = '42501';
   end if;
@@ -223,21 +225,32 @@ begin
   end if;
 
   if new.assigne_a is distinct from old.assigne_a then
-    v_event := 'attribution';
-  elsif new.statut is distinct from old.statut then
-    v_event := 'changement_statut';
-  elsif new.note_avancement is distinct from old.note_avancement then
-    v_event := 'note_avancement';
-  else
-    return new;
+    insert into public.commande_tache_historique
+      (atelier_id, tache_id, acteur_id, evenement, ancien_statut,
+       nouveau_statut, ancienne_attribution, nouvelle_attribution, note)
+    values
+      (new.atelier_id, new.id, auth.uid(), 'attribution', old.statut,
+       new.statut, old.assigne_a, new.assigne_a, new.note_avancement);
   end if;
 
-  insert into public.commande_tache_historique
-    (atelier_id, tache_id, acteur_id, evenement, ancien_statut,
-     nouveau_statut, ancienne_attribution, nouvelle_attribution, note)
-  values
-    (new.atelier_id, new.id, auth.uid(), v_event, old.statut,
-     new.statut, old.assigne_a, new.assigne_a, new.note_avancement);
+  if new.statut is distinct from old.statut then
+    insert into public.commande_tache_historique
+      (atelier_id, tache_id, acteur_id, evenement, ancien_statut,
+       nouveau_statut, ancienne_attribution, nouvelle_attribution, note)
+    values
+      (new.atelier_id, new.id, auth.uid(), 'changement_statut', old.statut,
+       new.statut, old.assigne_a, new.assigne_a, new.note_avancement);
+  end if;
+
+  if new.note_avancement is distinct from old.note_avancement then
+    insert into public.commande_tache_historique
+      (atelier_id, tache_id, acteur_id, evenement, ancien_statut,
+       nouveau_statut, ancienne_attribution, nouvelle_attribution, note)
+    values
+      (new.atelier_id, new.id, auth.uid(), 'note_avancement', old.statut,
+       new.statut, old.assigne_a, new.assigne_a, new.note_avancement);
+  end if;
+
   return new;
 end;
 $function$;
@@ -271,8 +284,7 @@ security definer
 set search_path = ''
 as $function$
 begin
-  if new.statut in ('pret', 'livre')
-     and new.statut is distinct from old.statut
+  if (new.statut in ('pret', 'livre') or new.etape_retouche = 'terminee')
      and exists (
        select 1
        from public.commande_tache t
@@ -314,14 +326,16 @@ begin
 
   if v_all_done is true then
     update public.commande c
-       set statut = 'pret'
+       set statut = 'pret',
+           etape_retouche = case when c.type_travail = 'retouche' then 'terminee' else c.etape_retouche end
      where c.atelier_id = v_atelier_id
        and c.id = v_commande_id
        and c.statut <> 'livre'
        and c.statut <> 'pret';
   else
     update public.commande c
-       set statut = 'en_confection'
+       set statut = 'en_confection',
+           etape_retouche = case when c.type_travail = 'retouche' and c.etape_retouche = 'terminee' then 'en_retouches' else c.etape_retouche end
      where c.atelier_id = v_atelier_id
        and c.id = v_commande_id
        and c.statut in ('a_preparer', 'pret');
@@ -359,7 +373,7 @@ revoke all on function private.guard_task_order_not_delivered() from public, ano
 
 drop trigger if exists commande_completion_requires_tasks on public.commande;
 create trigger commande_completion_requires_tasks
-  before update of statut on public.commande
+  before update of statut, etape_retouche on public.commande
   for each row execute function private.guard_order_completion_requires_tasks();
 
 drop trigger if exists commande_task_order_not_delivered on public.commande_tache;
