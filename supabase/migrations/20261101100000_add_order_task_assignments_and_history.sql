@@ -273,6 +273,32 @@ create trigger commande_tache_audit_update
 
 
 
+-- Employees must update their assigned work tasks, not the global order record.
+-- Internal task-status synchronization is the sole exception.
+create or replace function private.guard_employee_order_update()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+begin
+  if private.has_atelier_role(old.atelier_id, array['proprietaire', 'gestionnaire']::text[]) then
+    return new;
+  end if;
+
+  if current_setting('yere.task_status_sync', true) = 'on' then
+    return new;
+  end if;
+
+  if not private.has_atelier_role(old.atelier_id, array['employe']::text[]) then
+    raise exception 'Accès refusé pour modifier cette commande'
+      using errcode = '42501';
+  end if;
+
+  raise exception 'Un tailleur peut uniquement actualiser les tâches qui lui sont attribuées'
+    using errcode = '42501';
+end;
+$function$;
+
 -- Keep the global order status consistent with its detailed work tasks.
 -- Orders without detailed tasks retain the existing manual workflow.
 create or replace function private.guard_order_completion_requires_tasks()
@@ -329,6 +355,8 @@ begin
   where t.atelier_id = v_atelier_id
     and t.commande_id = v_commande_id;
 
+  perform set_config('yere.task_status_sync', 'on', true);
+
   if v_all_done is true then
     update public.commande c
        set statut = 'pret',
@@ -346,6 +374,7 @@ begin
        and c.statut in ('a_preparer', 'pret');
   end if;
 
+  perform set_config('yere.task_status_sync', 'off', true);
   return null;
 end;
 $function$;
