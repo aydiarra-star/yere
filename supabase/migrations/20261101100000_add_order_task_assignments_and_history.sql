@@ -393,8 +393,8 @@ begin
   where c.atelier_id = new.atelier_id
     and c.id = new.commande_id;
 
-  if v_order_status = 'livre' then
-    raise exception 'Une commande déjà livrée ne peut plus recevoir de modification de tâche'
+  if v_order_status in ('livre', 'annule') then
+    raise exception 'Une commande livrée ou annulée ne peut plus recevoir de modification de tâche'
       using errcode = '23514';
   end if;
   return new;
