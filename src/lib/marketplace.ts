@@ -50,7 +50,7 @@ export type MarketplaceOrder = {
 };
 
 type SellerRow = {
-  id: string; type_vendeur: MarketplaceSeller["sellerType"]; atelier_id: string | null;
+  id: string; type_vendeur: MarketplaceSeller["sellerType"];
   nom_entreprise: string; ville: string; categorie: string; description: string;
   statut: MarketplaceSeller["status"];
 };
@@ -77,7 +77,7 @@ async function readJson(response: Response): Promise<unknown> {
 }
 
 function mapSeller(row: SellerRow, userId: string, contact: SellerContactRow): MarketplaceSeller {
-  return { id: row.id, userId, sellerType: row.type_vendeur, atelierId: row.atelier_id,
+  return { id: row.id, userId, sellerType: row.type_vendeur, atelierId: null,
     businessName: row.nom_entreprise, contactName: contact.nom_contact, phone: contact.telephone, city: row.ville,
     category: row.categorie, description: row.description, status: row.statut };
 }
@@ -108,7 +108,7 @@ function mapOrder(row: OrderRow): MarketplaceOrder {
 }
 
 export async function getMyMarketplaceSeller(session: YereSession): Promise<MarketplaceSeller | null> {
-  const fields = "id,type_vendeur,atelier_id,nom_entreprise,ville,categorie,description,statut";
+  const fields = "id,type_vendeur,nom_entreprise,ville,categorie,description,statut";
   const response = await authenticatedFetch(session,
     `rest/v1/marketplace_vendeur?select=${fields}&id=not.is.null&limit=1`);
   const data = await readJson(response);
@@ -126,7 +126,7 @@ export async function createMarketplaceSeller(session: YereSession, input: Omit<
       ville: input.city.trim(), categorie: input.category.trim(), description: input.description.trim() })
   });
   await readJson(response);
-  const fields = "id,type_vendeur,atelier_id,nom_entreprise,ville,categorie,description,statut";
+  const fields = "id,type_vendeur,nom_entreprise,ville,categorie,description,statut";
   const profileResponse = await authenticatedFetch(session,
     `rest/v1/marketplace_vendeur?select=${fields}&id=not.is.null&order=created_at.desc&limit=1`);
   const data = await readJson(profileResponse);
