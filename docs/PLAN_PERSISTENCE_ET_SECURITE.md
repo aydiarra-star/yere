@@ -16,7 +16,7 @@ YÉRÉ utilise désormais :
 - des politiques RLS et des fonctions SQL/RPC pour appliquer les droits ;
 - Render Static Site pour publier le dossier `dist`.
 
-Le projet Supabase est actif et sain selon son statut de plateforme. L'historique de production comporte 36 migrations à la date de cette revue.
+Le projet Supabase est actif et sain selon son statut de plateforme. L'historique de production comporte 37 migrations à la date de cette revue.
 
 ## 2. Données persistées côté serveur
 
@@ -48,7 +48,7 @@ Les politiques principales appliquent l'appartenance active à l'atelier pour le
 
 ### Correction de durcissement identifiée
 
-La fonction `public.set_updated_at()` ne sert qu'à trois triggers `BEFORE UPDATE` (atelier, client et commande), mais son droit EXECUTE était encore accordé à `anon` et `authenticated`. Une migration dédiée retire ce droit inutile. Elle ne modifie ni les données, ni les politiques RLS, ni les droits sur les tables. La migration doit passer le replay CI avant son application sur la base de production.
+La fonction `public.set_updated_at()` ne sert qu'à trois triggers `BEFORE UPDATE` (atelier, client et commande). La migration `20261101110041_revoke_public_trigger_function_execute` a été appliquée à Supabase et alignée avec son nom de version dans Git (PR #121). La vérification SQL de production confirme `EXECUTE = false` pour `anon` et `authenticated`, et `EXECUTE = true` pour `postgres`. Les trois triggers sont toujours présents. Le replay de toutes les migrations depuis une base locale vide et les tests de permissions propriétaire/gestionnaire/tailleur ont réussi en CI.
 
 ### Alerte Auth à traiter
 
@@ -97,7 +97,7 @@ Le service Render existant est un site statique :
 - répertoire publié : `dist` ;
 - variables publiques Supabase déjà configurées (ne jamais copier leurs valeurs dans la documentation).
 
-Le dernier déploiement contrôlé pendant la revue était `live` sur le commit `fb72aac`. Le dépôt `main` avait ensuite avancé avec la fusion de la PR #116. Le décalage doit être résorbé en vérifiant le prochain déploiement et le commit effectivement publié.
+Le dernier déploiement Render observé reste `live` sur le commit `fb72aac` (10:29 UTC). Depuis, `main` a avancé jusqu'au commit `dcce1a9` (fusion de la PR #121). Bien que le service soit configuré avec `autoDeploy=yes` sur `main`, aucun nouvel événement de déploiement n'était visible après ces fusions lors du dernier contrôle. Le site Render est donc encore en retard sur le dépôt ; ne pas considérer les changements récents comme publiés avant de vérifier un nouveau déploiement.
 
 La CI GitHub utilise maintenant `npm ci`, un cache npm et exécute l'audit des dépendances, les tests et le build. Commande de build conseillée pour Render :
 
@@ -105,7 +105,7 @@ La CI GitHub utilise maintenant `npm ci`, un cache npm et exécute l'audit des d
 npm ci && npm test && npm run build
 ```
 
-La configuration actuelle du service Render indique encore `npm install && npm run build`. Le changement de cette commande dans le tableau de bord Render n'a pas été effectué par le connecteur disponible ; ne pas prétendre le contraire. Le build actuel a néanmoins réussi sur le service.
+La configuration actuelle du service Render indique encore `npm install && npm run build`. Le changement de cette commande dans le tableau de bord Render n'a pas été effectué par le connecteur disponible ; ne pas prétendre le contraire. Le dernier build observé a réussi, mais il porte sur l'ancien commit `fb72aac`.
 
 ## 7. Contrôles déjà réalisés
 
@@ -117,7 +117,12 @@ La configuration actuelle du service Render indique encore `npm install && npm r
 - Vérification des contrôles CI sur les branches de correction.
 - Vérification de la configuration Render, de son dernier déploiement et des journaux de build.
 - Vérification de la compilation Render et du contrôle des quatre illustrations.
-- Fusion de la PR #118 : installation reproductible avec `npm ci`, cache npm et concurrence CI.
+- PR #118 fusionnée : installation reproductible avec `npm ci`, cache npm et concurrence CI.
+- PR #119 fusionnée : README et plan de persistance/sécurité mis à jour.
+- PR #120 fusionnée : retrait du droit EXECUTE inutile de la fonction trigger.
+- PR #121 fusionnée : alignement du nom de migration Git sur la version déjà appliquée en production.
+- Replay complet des migrations et tests SQL de permissions propriétaire/gestionnaire/tailleur réussis en CI.
+- Contrôle SQL de production confirmant la révocation EXECUTE pour `anon` et `authenticated`.
 
 ## 8. Tests de mise en service restant à exécuter dans un navigateur
 
@@ -143,11 +148,11 @@ Ces essais exigent des comptes de test contrôlés et une intervention dans le n
 ## 9. Critères de clôture
 
 La mise en service complète pourra être déclarée lorsque :
-- les PR de documentation et de sécurité sont fusionnées après CI verte ;
+- les PR de documentation et de sécurité (#118 à #121) sont fusionnées après CI verte ;
 - la migration de durcissement est appliquée et vérifiée en production ;
 - Render publie le dernier commit de `main` et le site est contrôlé ;
 - les réglages et la procédure de sauvegarde sont confirmés dans Supabase ;
 - les tests navigateur multi-rôles, multi-ateliers et multi-appareils passent ;
 - la stratégie de récupération des données locales héritées est validée.
 
-**État honnête à cette date :** le socle cloud est actif et plusieurs contrôles automatisés sont en place. Le déploiement Render était en retard sur `main`, la protection des mots de passe compromis restait désactivée, les sauvegardes/restaurations n'étaient pas vérifiables via les outils connectés et les essais navigateur complets restaient à faire. Ces limites ne doivent pas être masquées par une simple compilation réussie.
+**État honnête à cette date :** le socle cloud est actif ; les quatre PR de ce chantier sont fusionnées ; les migrations rejouent depuis une base vide en CI ; les tests SQL de rôles passent ; le droit EXECUTE inutile est retiré et vérifié en production. En revanche, Render n'a pas encore publié le dernier commit `main`, la protection des mots de passe compromis reste désactivée, les sauvegardes/restaurations ne sont pas vérifiables via les outils connectés et les essais navigateur multi-comptes complets restent à faire. Ces limites ne doivent pas être masquées par une simple compilation réussie.
