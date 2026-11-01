@@ -195,7 +195,7 @@ export default function PublicMarket() {
   }
 
   return (
-    <main className="public-market">
+    <main className="yere-market-app">
       <header className="pm-header">
         <a className="pm-brand" href="/market" aria-label="YÉRÉ Market, accueil"><span className="pm-mark">Y</span><span><b>YÉRÉ</b><small>MARKET</small></span></a>
         <nav className="pm-nav"><a href="#catalogue">Catalogue</a><a href="#vendeurs">Vendeurs</a>{session && <a href="#commandes">Mes commandes</a>}</nav>
