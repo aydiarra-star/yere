@@ -70,7 +70,7 @@ begin
     raise exception 'Le profil ne peut être renseigné que pour un tailleur actif' using errcode = '42501';
   end if;
 
-  select coalesce(array_agg(distinct left(trim(s), 60)), '{}'::text[])
+  select coalesce(array_agg(distinct left(trim(value), 60)), '{}'::text[])
     into v_specialites
   from unnest(coalesce(p_specialites, '{}'::text[])) as item(value)
   where trim(value) <> '';
