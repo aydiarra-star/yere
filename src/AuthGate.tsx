@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { clearSession, consumeAuthCallback, createAtelier, listMyAteliers, readSession, refreshSession, requestPasswordRecovery, signIn, signOut, signUp, supabaseReady, updatePassword, type YereSession } from "./lib/supabaseAuth";
 import { acceptAtelierInvitation, declineAtelierInvitation, listMyAtelierInvitations, type AtelierInvitation } from "./lib/atelierTeam";
 import { resolvePersistentStorageKey } from "./usePersistentState";
+import PublicMarketplace from "./PublicMarketplace";
 import "./auth-gate.css";
 
 type Atelier = { id: string; nom: string; telephone: string | null; ville: string | null };
@@ -28,6 +29,7 @@ export default function AuthGate({ children }: Props) {
   const [profileControlsTarget, setProfileControlsTarget] = useState<HTMLElement | null>(null);
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<"login" | "signup" | "recovery">("login");
+  const [showProfessionalAuth, setShowProfessionalAuth] = useState(false);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -250,9 +252,13 @@ export default function AuthGate({ children }: Props) {
   async function handleSignOut() {
     if (session) await signOut(session);
     setSession(null); setAtelier(null); setWorkspaces([]); setMessage(""); setError("");
+    setShowProfessionalAuth(false);
   }
 
   if (!ready) return <main className="auth-loading"><span className="auth-mark">Y</span><p>Préparation de votre espace YÉRÉ…</p></main>;
+
+  // Public marketplace is the default entry point; authentication is only opened on request.
+  if (!session && !showProfessionalAuth && !passwordRecovery) return <PublicMarketplace onProfessionalLogin={() => setShowProfessionalAuth(true)} />;
 
   if (!supabaseReady) return <main className="auth-shell"><section className="auth-card"><span className="auth-mark">Y</span><p className="eyebrow">YÉRÉ · ATELIER</p><h1>Connexion indisponible</h1><p>La configuration Supabase manque sur ce déploiement. Aucun compte ne peut être créé pour le moment.</p></section></main>;
 
@@ -290,7 +296,8 @@ export default function AuthGate({ children }: Props) {
         </form>
         <>{mode === "login" && <p className="auth-recovery-link"><button type="button" onClick={() => { setMode("recovery"); setError(""); setMessage(""); setPassword(""); }}>Mot de passe oublié ?</button></p>}<p className="auth-switch">{mode === "login" ? "Vous n'avez pas encore de compte ?" : mode === "recovery" ? "Vous vous souvenez de votre mot de passe ?" : "Vous avez déjà un compte ?"} <button type="button" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); setMessage(""); }}>{mode === "login" ? "Créer un compte" : "Se connecter"}</button></p></>
         <p className="auth-footnote">Votre compte est protégé par Supabase Auth. Ne partagez jamais votre mot de passe.</p>
-        <a className="auth-market-link" href="/market">Découvrir le Market public de YÉRÉ →</a>
+        <a className="auth-market-link" href="/market">Accéder au catalogue complet →</a>
+        <p className="auth-switch"><button type="button" onClick={() => { setShowProfessionalAuth(false); setMode("login"); setError(""); setMessage(""); }}>← Retour à YÉRÉ Market</button></p>
       </section>
     </main>
   );
