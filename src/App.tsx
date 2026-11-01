@@ -931,6 +931,7 @@ function App() {
   }
 
   async function updateStatus(orderId: string, status: OrderStatus) {
+    if (!canManageTeam) { setNotice("Seul le propriétaire ou le gestionnaire peut modifier le statut global. Le tailleur actualise ses tâches attribuées."); return; }
     const order = orders.find((item) => item.id === orderId);
     const session = readSession();
     const atelierId = window.sessionStorage.getItem("yere-active-atelier");
@@ -976,6 +977,7 @@ function App() {
   }
 
   async function updateRetouchStage(orderId: string, retouchStage: RetouchStage) {
+    if (!canManageTeam) { setNotice("Le tailleur actualise ses tâches attribuées; le propriétaire ou le gestionnaire pilote l’étape globale."); return; }
     const order = orders.find((item) => item.id === orderId && item.kind === "retouche");
     const session = readSession();
     const atelierId = window.sessionStorage.getItem("yere-active-atelier");
@@ -1140,7 +1142,7 @@ function App() {
               </label>
               <p aria-live="polite">{filteredOrders.length} commande{filteredOrders.length === 1 ? "" : "s"} affichée{filteredOrders.length === 1 ? "" : "s"}</p>
             </div>
-            <OrderTable orders={filteredOrders} clients={clients} onStatusChange={updateStatus} onRetouchStageChange={updateRetouchStage} showFinancials={isAtelierOwner} />
+            <OrderTable orders={filteredOrders} clients={clients} onStatusChange={updateStatus} onRetouchStageChange={updateRetouchStage} showFinancials={isAtelierOwner} canEditWorkflow={canManageTeam} />
             <section className="content-card team-panel" aria-labelledby="atelier-tasks-title">
               <div className="section-heading"><div><h3 id="atelier-tasks-title">Travaux et tâches de l’atelier</h3><p>Répartition du travail, responsables et historique des avancements. Aucune rémunération n’est suivie ici.</p></div><span className="marketplace-listing-count">{atelierTasks.length} tâche(s)</span></div>
               {canManageTeam && <form className="new-order-form" onSubmit={addAtelierTask}>
@@ -1392,7 +1394,7 @@ function Onboarding({ atelier, onAtelierChange, onCancel, onFinish }: {
   </main>;
 }
 
-function OrderTable({ orders, clients, onStatusChange, onRetouchStageChange, onView, showFinancials = true }: { orders: Order[]; clients: Client[]; onStatusChange: (id: string, status: OrderStatus) => void; onRetouchStageChange: (id: string, stage: RetouchStage) => void; onView?: (order: Order) => void; showFinancials?: boolean }) {
+function OrderTable({ orders, clients, onStatusChange, onRetouchStageChange, onView, showFinancials = true, canEditWorkflow = true }: { orders: Order[]; clients: Client[]; onStatusChange: (id: string, status: OrderStatus) => void; onRetouchStageChange: (id: string, stage: RetouchStage) => void; onView?: (order: Order) => void; showFinancials?: boolean; canEditWorkflow?: boolean }) {
   const measurementLabel = (order: Order) => {
     const measurement = order.measurementSnapshot;
     if (!measurement) return "Non disponible pour cette ancienne commande";
@@ -1413,8 +1415,12 @@ function OrderTable({ orders, clients, onStatusChange, onRetouchStageChange, onV
   };
   const getStatusClass = (status: OrderStatus) => status === "Prêt" ? "ready" : status === "En confection" ? "progress" : status === "Livré" ? "delivered" : "todo";
   const formatDueDate = (date: string) => new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long" }).format(new Date(date + "T12:00:00"));
-  const statusControl = (order: Order) => <select className={"status-select status-" + getStatusClass(order.status)} value={order.status} aria-label={"Statut de " + order.id} onChange={(event) => onStatusChange(order.id, event.target.value as OrderStatus)}>{orderStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select>;
-  const retouchStageControl = (order: Order) => order.kind !== "retouche" ? null : <label className="retouch-stage-control">Étape retouche<select value={order.retouchStage ?? "À examiner"} aria-label={"Étape de retouche de " + order.id} onChange={(event) => onRetouchStageChange(order.id, event.target.value as RetouchStage)}>{retouchStages.map((stage) => <option key={stage} value={stage}>{stage}</option>)}</select></label>;
+  const statusControl = (order: Order) => canEditWorkflow
+    ? <select className={"status-select status-" + getStatusClass(order.status)} value={order.status} aria-label={"Statut de " + order.id} onChange={(event) => onStatusChange(order.id, event.target.value as OrderStatus)}>{orderStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select>
+    : <span className={"order-status-chip status-" + getStatusClass(order.status)}>{order.status}</span>;
+  const retouchStageControl = (order: Order) => order.kind !== "retouche" ? null : canEditWorkflow
+    ? <label className="retouch-stage-control">Étape retouche<select value={order.retouchStage ?? "À examiner"} aria-label={"Étape de retouche de " + order.id} onChange={(event) => onRetouchStageChange(order.id, event.target.value as RetouchStage)}>{retouchStages.map((stage) => <option key={stage} value={stage}>{stage}</option>)}</select></label>
+    : <span className="retouch-stage-readonly">Étape retouche : {order.retouchStage ?? "À examiner"}</span>;
 
   return <div className="orders-display">
     <div className="table-wrap orders-desktop"><table><thead><tr><th>COMMANDE</th><th>CLIENT</th><th>DATE DE LIVRAISON</th>{showFinancials ? <><th>PRIX</th><th>RESTE DÛ</th></> : null}<th>STATUT</th></tr></thead><tbody>{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <tr key={order.id}><td><b className="order-id">{order.id}</b><small className="table-secondary">{order.kind === "retouche" ? "Retouche · " : ""}{order.garment}</small><small className="table-secondary">{order.measurementSnapshotAt ? "Mesures du " + formatDueDate(order.measurementSnapshotAt) + " · " : ""}{measurementLabel(order)}</small></td><td><span className="table-client">{client?.name ?? "Client supprimé"}</span></td><td>{formatDueDate(order.dueDate)}</td>{showFinancials ? <><td>{formatXof(order.price)}</td><td><b className={balanceDue(order) === 0 ? "paid" : ""}>{formatXof(balanceDue(order))}</b></td></> : null}<td>{statusControl(order)}{retouchStageControl(order)}</td></tr>; })}</tbody></table></div>
