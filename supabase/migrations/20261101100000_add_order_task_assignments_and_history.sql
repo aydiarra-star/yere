@@ -125,6 +125,9 @@ begin
   );
 
   if tg_op = 'INSERT' then
+    if new.statut <> 'a_faire' then
+      raise exception 'Une tâche doit commencer au statut À faire' using errcode = '23514';
+    end if;
     if not v_is_manager then
       raise exception 'Seul le propriétaire ou le gestionnaire peut créer et attribuer une tâche'
         using errcode = '42501';
