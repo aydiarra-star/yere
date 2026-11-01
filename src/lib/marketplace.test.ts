@@ -26,7 +26,6 @@ function jsonResponse(value: unknown, status = 200): Response {
 const publicSellerRow = {
   id: "seller-123",
   type_vendeur: "fournisseur",
-  atelier_id: null,
   nom_entreprise: "Mercerie Test",
   ville: "Dakar",
   categorie: "Tissus",
@@ -52,8 +51,8 @@ describe("marketplace seller privacy boundary", () => {
       phone: "770000000"
     });
     const profileRequest = authenticatedFetch.mock.calls[0][1] as string;
-    expect(profileRequest).toContain("select=id,type_vendeur,atelier_id,nom_entreprise,ville,categorie,description,statut");
-    expect(profileRequest).not.toMatch(/nom_contact|telephone|user_id/);
+    expect(profileRequest).toContain("select=id,type_vendeur,nom_entreprise,ville,categorie,description,statut");
+    expect(profileRequest).not.toMatch(/atelier_id|nom_contact|telephone|user_id/);
     expect(authenticatedFetch.mock.calls[1][1]).toBe("rest/v1/rpc/get_my_marketplace_seller_contact");
     expect(authenticatedFetch.mock.calls[1][2]).toMatchObject({ method: "POST", body: "{}" });
   });
@@ -85,6 +84,6 @@ describe("marketplace seller privacy boundary", () => {
     expect(seller.contactName).toBe("Awa");
     expect(authenticatedFetch.mock.calls[0][1]).toBe("rest/v1/marketplace_vendeur");
     expect(authenticatedFetch.mock.calls[0][2]).toMatchObject({ method: "POST", headers: { Prefer: "return=minimal" } });
-    expect(String(authenticatedFetch.mock.calls[1][1])).not.toMatch(/nom_contact|telephone|user_id/);
+    expect(String(authenticatedFetch.mock.calls[1][1])).not.toMatch(/nom_contact|telephone|user_id|atelier_id/);
   });
 });
