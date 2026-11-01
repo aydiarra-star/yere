@@ -6,13 +6,10 @@ on:
       - "supabase/migrations/**"
       - "supabase/tests/**"
       - ".github/workflows/db-migrations.yml"
-  push:
-    branches:
-      - "feat/**"
-    paths:
-      - "supabase/migrations/**"
-      - "supabase/tests/**"
-      - ".github/workflows/db-migrations.yml"
+
+concurrency:
+  group: yere-db-replay-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
