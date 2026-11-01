@@ -65,7 +65,19 @@ begin
   exception when insufficient_privilege then
     null;
   end;
-end $$;
+  begin
+    execute 'select nom_contact from public.marketplace_vendeur limit 1';
+    raise exception 'FAIL: authenticated buyer can read seller contact name';
+  exception when insufficient_privilege then
+    null;
+  end;
+  begin
+    execute 'select user_id from public.marketplace_vendeur limit 1';
+    raise exception 'FAIL: authenticated buyer can read seller account identifier';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $;
 do $$
 declare v_id uuid; v_total bigint; v_qty integer;
 begin
