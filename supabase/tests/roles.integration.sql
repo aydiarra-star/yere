@@ -154,6 +154,9 @@ select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000005'
 select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000005","role":"authenticated"}',true);
 do $manager_two$
 begin
+  if (select count(*) from public.client where atelier_id='20000000-0000-4000-8000-000000000002') <> 1 then
+    raise exception 'FAIL: workshop two manager cannot read own workshop clients';
+  end if;
   if (select count(*) from public.client where atelier_id='20000000-0000-4000-8000-000000000001') <> 0 then
     raise exception 'FAIL: workshop two manager can read workshop one clients';
   end if;
@@ -171,6 +174,9 @@ select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000006'
 select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000006","role":"authenticated"}',true);
 do $tailor_two$
 begin
+  if (select count(*) from public.client where atelier_id='20000000-0000-4000-8000-000000000002') <> 1 then
+    raise exception 'FAIL: workshop two tailor cannot read own workshop clients';
+  end if;
   if (select count(*) from public.client where atelier_id='20000000-0000-4000-8000-000000000001') <> 0 then
     raise exception 'FAIL: workshop two tailor can read workshop one clients';
   end if;
@@ -216,6 +222,9 @@ do $owner_two$
 declare v_finance jsonb;
 begin
   v_finance := public.get_atelier_order_financials('20000000-0000-4000-8000-000000000002');
+  if (select count(*) from public.client where atelier_id='20000000-0000-4000-8000-000000000002') <> 1 then
+    raise exception 'FAIL: owner of workshop two cannot read own workshop clients';
+  end if;
   if jsonb_array_length(v_finance) <> 1
      or (v_finance->0->>'prix_fcfa')::bigint <> 35000 then
     raise exception 'FAIL: second owner cannot read own workshop financials';
