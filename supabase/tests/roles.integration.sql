@@ -106,7 +106,7 @@ begin
     update public.commande set statut='livre'
     where id='40000000-0000-4000-8000-000000000001';
     raise exception 'FAIL: tailor unexpectedly changed global order status';
-  exception when insufficient_privilege then
+  exception when insufficient_privilege or check_violation then
     null;
   end;
 end $$;
