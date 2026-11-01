@@ -77,7 +77,7 @@ begin
   exception when insufficient_privilege then
     null;
   end;
-end $;
+end $$;
 do $
 declare v_id uuid; v_total bigint; v_qty integer;
 begin
