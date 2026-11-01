@@ -258,6 +258,78 @@ export async function updateMarketplaceOrderStatus(session: YereSession, orderId
 }
 
 
+export type MarketplaceConversation = {
+  id: string;
+  listingId: string;
+  sellerId: string;
+  buyerUserId: string;
+  listingTitle: string;
+  sellerName: string;
+  updatedAt: string;
+};
+
+export type MarketplaceMessage = {
+  id: string;
+  conversationId: string;
+  senderUserId: string;
+  content: string;
+  createdAt: string;
+};
+
+type ConversationRow = {
+  id: string; annonce_id: string; vendeur_id: string; acheteur_user_id: string;
+  titre_annonce: string; nom_vendeur: string; updated_at: string;
+};
+type MessageRow = {
+  id: string; conversation_id: string; expediteur_user_id: string; contenu: string; created_at: string;
+};
+
+export async function listMyMarketplaceConversations(session: YereSession): Promise<MarketplaceConversation[]> {
+  const response = await authenticatedFetch(session,
+    "rest/v1/marketplace_conversation?select=id,annonce_id,vendeur_id,acheteur_user_id,titre_annonce,nom_vendeur,updated_at&order=updated_at.desc");
+  const data = await readJson(response);
+  if (!Array.isArray(data)) throw new Error("Liste des conversations invalide.");
+  return (data as ConversationRow[]).map((row) => ({
+    id: row.id, listingId: row.annonce_id, sellerId: row.vendeur_id,
+    buyerUserId: row.acheteur_user_id, listingTitle: row.titre_annonce,
+    sellerName: row.nom_vendeur, updatedAt: row.updated_at
+  }));
+}
+
+export async function listMarketplaceMessages(session: YereSession, conversationId: string): Promise<MarketplaceMessage[]> {
+  const response = await authenticatedFetch(session,
+    `rest/v1/marketplace_message?select=id,conversation_id,expediteur_user_id,contenu,created_at&conversation_id=eq.${encodeURIComponent(conversationId)}&order=created_at.asc`);
+  const data = await readJson(response);
+  if (!Array.isArray(data)) throw new Error("Historique des messages invalide.");
+  return (data as MessageRow[]).map((row) => ({
+    id: row.id, conversationId: row.conversation_id, senderUserId: row.expediteur_user_id,
+    content: row.contenu, createdAt: row.created_at
+  }));
+}
+
+export async function openMarketplaceConversation(
+  session: YereSession,
+  listingId: string,
+  initialMessage: string
+): Promise<string> {
+  const data = await readJson(await authenticatedFetch(session, "rest/v1/rpc/ouvrir_conversation_marketplace", {
+    method: "POST", body: JSON.stringify({ p_annonce_id: listingId, p_message_initial: initialMessage.trim() })
+  }));
+  if (typeof data !== "string") throw new Error("La conversation n'a pas été ouverte.");
+  return data;
+}
+
+export async function sendMarketplaceMessage(
+  session: YereSession,
+  conversationId: string,
+  content: string
+): Promise<void> {
+  const data = await readJson(await authenticatedFetch(session, "rest/v1/rpc/envoyer_message_marketplace", {
+    method: "POST", body: JSON.stringify({ p_conversation_id: conversationId, p_contenu: content.trim() })
+  }));
+  if (data !== true) throw new Error("Le message n'a pas été envoyé.");
+}
+
 export type PublicMarketplaceListing = MarketplaceListing & { sellerName: string; sellerCity: string; photoUrls: string[] };
 
 type PublicSellerRow = { id: string; nom_entreprise: string; ville: string; statut: "actif" | "suspendu" };
