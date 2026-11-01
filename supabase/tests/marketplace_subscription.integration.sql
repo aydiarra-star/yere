@@ -12,7 +12,7 @@ values
 set local role authenticated;
 select set_config('request.jwt.claim.sub','71000000-0000-4000-8000-000000000001',true);
 select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
-do $
+do $$
 declare v_seller_id uuid;
 begin
   insert into public.marketplace_vendeur(user_id,type_vendeur,atelier_id,nom_entreprise,nom_contact,telephone,ville,categorie)
@@ -20,12 +20,12 @@ begin
   returning id into v_seller_id;
   insert into public.marketplace_annonce(vendeur_id,titre,categorie,description,prix_fcfa,ville,mode_vente,statut,stock_disponible)
   values (v_seller_id,'Wax test','Tissus','Annonce synthétique',2500,'Dakar','les_deux','publiee',10);
-end $;
+end $$;
 reset role;
 
 -- Public catalog can read published products; a separate authenticated buyer can place an order.
 set local role anon;
-do $
+do $$
 begin
   if (select count(*) from public.marketplace_annonce where titre='Wax test') <> 1 then
     raise exception 'FAIL: published marketplace listing is not public';
@@ -42,13 +42,13 @@ begin
   exception when insufficient_privilege then
     null;
   end;
-end $;
+end $$;
 reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','71000000-0000-4000-8000-000000000002',true);
 select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
-do $
+do $$
 begin
   if (select count(*) from public.get_my_marketplace_seller_contact()) <> 0 then
     raise exception 'FAIL: buyer can read another seller contact';
@@ -59,8 +59,8 @@ begin
   exception when insufficient_privilege then
     null;
   end;
-end $;
-do $
+end $$;
+do $$
 declare v_id uuid; v_total bigint; v_qty integer;
 begin
   select public.creer_commande_marketplace(
@@ -82,7 +82,7 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub','71000000-0000-4000-8000-000000000003',true);
 select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
 insert into public.atelier(id,nom) values ('72000000-0000-4000-8000-000000000003','Atelier abonnement test');
-do $$
+do $$$
 declare v_price bigint; v_months integer; v_status text;
 begin
   select montant_mensuel_fcfa, extract(month from age(fin_essai,debut_essai))::integer, statut
