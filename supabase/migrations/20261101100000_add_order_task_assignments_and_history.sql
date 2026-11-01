@@ -327,7 +327,7 @@ begin
        and c.statut in ('a_preparer', 'pret');
   end if;
 
-  return coalesce(new, old);
+  return null;
 end;
 $function$;
 
