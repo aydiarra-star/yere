@@ -6,9 +6,10 @@ import {
   type PublicMarketplaceListing
 } from "./lib/marketplace";
 import {
-  consumeAuthCallback, readSession, refreshSession, signIn, signOut, signUp,
+  consumeAuthCallback, listMyAteliers, readSession, refreshSession, signIn, signOut, signUp,
   supabaseReady, type YereSession
 } from "./lib/supabaseAuth";
+import { listAtelierMembers } from "./lib/atelierTeam";
 import "./marketplace-public.css";
 
 const categories = ["Tout le Market", "Boubous & tenues", "Mode femme", "Tissus", "Mercerie"];
@@ -17,6 +18,7 @@ const money = (value: number) => new Intl.NumberFormat("fr-FR").format(value) + 
 export default function PublicMarket() {
   const [session, setSession] = useState<YereSession | null>(null);
   const [seller, setSeller] = useState<MarketplaceSeller | null>(null);
+  const [atelierChoices, setAtelierChoices] = useState<Array<{ id: string; nom: string; ville: string | null }>>([]);
   const [listings, setListings] = useState<PublicMarketplaceListing[]>([]);
   const [orders, setOrders] = useState<MarketplaceOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +34,7 @@ export default function PublicMarket() {
   const [selectedListing, setSelectedListing] = useState<PublicMarketplaceListing | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [sellerForm, setSellerForm] = useState({ businessName: "", contactName: "", phone: "", city: "", category: "Tissus & mercerie", description: "" });
+  const [sellerForm, setSellerForm] = useState({ sellerType: "fournisseur" as "fournisseur" | "atelier", atelierId: "", businessName: "", contactName: "", phone: "", city: "", category: "Tissus & mercerie", description: "" });
   const [listingForm, setListingForm] = useState({ title: "", category: "Tissus", description: "", price: "", stock: "" });
   const [orderForm, setOrderForm] = useState({ quantity: "1", name: "", phone: "", city: "", note: "" });
 
@@ -42,15 +44,17 @@ export default function PublicMarket() {
   }
 
   async function loadAccount(active: YereSession) {
-    const [ownSeller, ownOrders] = await Promise.all([
-      getMyMarketplaceSeller(active).catch((cause) => {
-        // A buyer account without a seller profile is a valid state.
-        const message = cause instanceof Error ? cause.message : "";
-        if (/permission|marketplace_vendeur|seller/i.test(message)) return null;
-        throw cause;
-      }),
-      listMyMarketplaceOrders(active)
+    const [ownSeller, ownOrders, workspaces] = await Promise.all([
+      getMyMarketplaceSeller(active),
+      listMyMarketplaceOrders(active),
+      listMyAteliers(active)
     ]);
+    const owned = await Promise.all(workspaces.map(async (workspace) => {
+      const members = await listAtelierMembers(active, workspace.id);
+      return members.some((member) => member.userId === active.user.id && member.active && member.role === "proprietaire")
+        ? workspace : null;
+    }));
+    setAtelierChoices(owned.filter((item): item is NonNullable<typeof item> => item !== null));
     setSeller(ownSeller);
     setOrders(ownOrders);
   }
@@ -125,8 +129,21 @@ export default function PublicMarket() {
     if (!session) { setShowAccount(true); setNotice("Connectez-vous ou créez un compte pour ouvrir votre boutique."); return; }
     setBusy(true); setError(""); setNotice("");
     try {
+      const selectedAtelier = sellerForm.sellerType === "atelier"
+        ? atelierChoices.find((item) => item.id === sellerForm.atelierId)
+        : null;
+      if (sellerForm.sellerType === "atelier" && !selectedAtelier) {
+        throw new Error("Sélectionnez un atelier dont vous êtes propriétaire.");
+      }
       const created = await createMarketplaceSeller(session, {
-        sellerType: "fournisseur", atelierId: null, ...sellerForm
+        sellerType: sellerForm.sellerType,
+        atelierId: selectedAtelier?.id ?? null,
+        businessName: sellerForm.businessName,
+        contactName: sellerForm.contactName,
+        phone: sellerForm.phone,
+        city: sellerForm.city || selectedAtelier?.ville || "",
+        category: sellerForm.category,
+        description: sellerForm.description
       });
       setSeller(created);
       setShowSellerForm(false);
@@ -224,11 +241,11 @@ export default function PublicMarket() {
       </section>
 
       <section id="vendeurs" className="pm-seller-section">
-        <div className="pm-seller-copy"><span className="pm-eyebrow">VOUS ÊTES FOURNISSEUR ?</span><h2>Votre boutique mérite<br/>sa place sur YÉRÉ.</h2><p>Créez votre vitrine indépendante, publiez vos tissus, fournitures et accessoires. Vous n’avez pas besoin de posséder un atelier de couture.</p><ul><li>Une boutique rattachée à votre compte</li><li>Des annonces visibles dans le catalogue public</li><li>Des commandes regroupées dans votre espace</li></ul></div>
+        <div className="pm-seller-copy"><span className="pm-eyebrow">VOUS ÊTES FOURNISSEUR ?</span><h2>Votre boutique mérite<br/>sa place sur YÉRÉ.</h2><p>Atelier de couture ou fournisseur indépendant : créez votre vitrine, publiez vos créations, tissus, fournitures et accessoires. Un fournisseur peut s’inscrire sans posséder d’atelier.</p><ul><li>Une boutique rattachée à votre compte</li><li>Des annonces visibles dans le catalogue public</li><li>Des commandes regroupées dans votre espace</li></ul></div>
         <div className="pm-seller-card"><span className="pm-seller-icon">✦</span><h3>{seller ? "Votre boutique est prête" : "Ouvrir une boutique"}</h3><p>{seller ? seller.businessName + " · " + seller.city : "Inscrivez-vous ou connectez-vous, puis renseignez les informations de votre activité."}</p>{seller ? <button className="pm-cta" type="button" onClick={() => setShowListingForm((v) => !v)}>＋ Publier une offre</button> : <button className="pm-cta" type="button" onClick={() => { setShowSellerForm((v) => !v); if (!session) setShowAccount(true); }}>Créer ma boutique indépendante</button>}</div>
       </section>
 
-      {showSellerForm && !seller && <section className="pm-panel"><div><span className="pm-eyebrow">INSCRIPTION VENDEUR</span><h2>Les informations de votre boutique</h2><p>Votre compte Market reste indépendant de tout atelier.</p></div><form onSubmit={submitSeller}><label>Nom de la boutique<input required maxLength={120} value={sellerForm.businessName} onChange={(e) => setSellerForm({ ...sellerForm, businessName: e.target.value })}/></label><label>Nom du responsable<input required maxLength={120} value={sellerForm.contactName} onChange={(e) => setSellerForm({ ...sellerForm, contactName: e.target.value })}/></label><label>Téléphone<input required type="tel" maxLength={40} value={sellerForm.phone} onChange={(e) => setSellerForm({ ...sellerForm, phone: e.target.value })}/></label><label>Ville<input required maxLength={100} value={sellerForm.city} onChange={(e) => setSellerForm({ ...sellerForm, city: e.target.value })}/></label><label>Activité<select value={sellerForm.category} onChange={(e) => setSellerForm({ ...sellerForm, category: e.target.value })}><option>Tissus & mercerie</option><option>Fournitures de couture</option><option>Accessoires de mode</option><option>Prêt-à-porter</option></select></label><label className="pm-wide">Présentation<textarea maxLength={500} value={sellerForm.description} onChange={(e) => setSellerForm({ ...sellerForm, description: e.target.value })}/></label><button className="pm-cta" disabled={busy || !session}>{busy ? "Création…" : "Créer ma boutique"}</button></form></section>}
+      {showSellerForm && !seller && <section className="pm-panel"><div><span className="pm-eyebrow">INSCRIPTION VENDEUR</span><h2>Les informations de votre boutique</h2><p>Votre compte Market reste indépendant de tout atelier.</p></div><form onSubmit={submitSeller}><label>Type de vendeur<select value={sellerForm.sellerType} onChange={(e) => setSellerForm({ ...sellerForm, sellerType: e.target.value as "fournisseur" | "atelier", atelierId: "", category: e.target.value === "atelier" ? "Mode & créations" : "Tissus & mercerie" })}><option value="fournisseur">Fournisseur indépendant</option>{atelierChoices.length > 0 && <option value="atelier">Atelier de couture</option>}</select></label>{sellerForm.sellerType === "atelier" && <label>Atelier<select required value={sellerForm.atelierId} onChange={(e) => { const item = atelierChoices.find((atelier) => atelier.id === e.target.value); setSellerForm({ ...sellerForm, atelierId: e.target.value, businessName: sellerForm.businessName || item?.nom || "", city: sellerForm.city || item?.ville || "" }); }}><option value="">Choisir un atelier</option>{atelierChoices.map((item) => <option key={item.id} value={item.id}>{item.nom}{item.ville ? " · " + item.ville : ""}</option>)}</select></label>}<label>Nom de la boutique<input required maxLength={120} value={sellerForm.businessName} onChange={(e) => setSellerForm({ ...sellerForm, businessName: e.target.value })}/></label><label>Nom du responsable<input required maxLength={120} value={sellerForm.contactName} onChange={(e) => setSellerForm({ ...sellerForm, contactName: e.target.value })}/></label><label>Téléphone<input required type="tel" maxLength={40} value={sellerForm.phone} onChange={(e) => setSellerForm({ ...sellerForm, phone: e.target.value })}/></label><label>Ville<input required maxLength={100} value={sellerForm.city} onChange={(e) => setSellerForm({ ...sellerForm, city: e.target.value })}/></label><label>Activité<select value={sellerForm.category} onChange={(e) => setSellerForm({ ...sellerForm, category: e.target.value })}><option>Tissus & mercerie</option><option>Fournitures de couture</option><option>Accessoires de mode</option><option>Prêt-à-porter</option></select></label><label className="pm-wide">Présentation<textarea maxLength={500} value={sellerForm.description} onChange={(e) => setSellerForm({ ...sellerForm, description: e.target.value })}/></label><button className="pm-cta" disabled={busy || !session}>{busy ? "Création…" : "Créer ma boutique"}</button></form></section>}
 
       {showListingForm && seller && <section className="pm-panel"><div><span className="pm-eyebrow">NOUVELLE ANNONCE</span><h2>Publier une offre</h2><p>Les annonces sont immédiatement visibles après validation par la base.</p></div><form onSubmit={submitListing}><label>Nom de l’article<input required maxLength={140} value={listingForm.title} onChange={(e) => setListingForm({ ...listingForm, title: e.target.value })}/></label><label>Catégorie<select value={listingForm.category} onChange={(e) => setListingForm({ ...listingForm, category: e.target.value })}><option>Boubous & tenues</option><option>Mode femme</option><option>Tissus</option><option>Mercerie</option><option>Fournitures de couture</option></select></label><label>Prix (FCFA)<input type="number" min="1" step="1" required value={listingForm.price} onChange={(e) => setListingForm({ ...listingForm, price: e.target.value })}/></label><label>Stock (facultatif)<input type="number" min="0" step="1" value={listingForm.stock} onChange={(e) => setListingForm({ ...listingForm, stock: e.target.value })}/></label><label className="pm-wide">Description<textarea maxLength={1000} value={listingForm.description} onChange={(e) => setListingForm({ ...listingForm, description: e.target.value })}/></label><p className="pm-form-note pm-wide">Les photos et le paiement en ligne seront activés après raccordement et vérification du stockage sécurisé. Ne publiez pas de données personnelles dans la description.</p><button className="pm-cta" disabled={busy}>{busy ? "Publication…" : "Publier dans le Market"}</button></form></section>}
 
