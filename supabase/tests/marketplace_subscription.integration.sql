@@ -113,3 +113,21 @@ end $$;
 reset role;
 
 rollback;
+
+-- Private marketplace photo storage: bucket remains private and has owner-scoped policies.
+do $$
+begin
+  if not exists (
+    select 1 from storage.buckets
+    where id = 'yere-market-photos' and public = false
+      and file_size_limit = 5242880
+      and allowed_mime_types = array['image/jpeg','image/png','image/webp']::text[]
+  ) then
+    raise exception 'FAIL: marketplace photo bucket is missing or not private/restricted';
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='yere_market_photos_insert_own')
+     or not exists (select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='yere_market_photos_read_own')
+     or not exists (select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='yere_market_photos_delete_own') then
+    raise exception 'FAIL: marketplace photo ownership policies are incomplete';
+  end if;
+end $$;
