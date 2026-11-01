@@ -169,6 +169,8 @@ function App() {
         setTeamMembers(serverMembers);
         setTeamInvitations(serverInvitations);
         setAtelierTasks(serverTasks);
+        setTaskOrderId(serverOrders.find((order) => order.serverId)?.serverId ?? "");
+        setTaskAssigneeId("");
         if (serverSupplierProfile) setSupplier(serverSupplierProfile);
         const supplierName = new Map(serverSuppliers.map((item) => [item.id, item.name]));
         const mappedPurchases: SupplierPurchase[] = serverPurchases.map((purchase) => ({
