@@ -211,8 +211,6 @@ language plpgsql
 security definer
 set search_path = ''
 as $function$
-declare
-  v_event text;
 begin
   if tg_op = 'INSERT' then
     insert into public.commande_tache_historique
