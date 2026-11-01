@@ -1164,7 +1164,7 @@ function App() {
                   </div>
                   <div className="team-member-actions">
                     {canUpdateThisTask && <select aria-label={`Statut de ${task.title}`} disabled={taskBusy} value={task.status} onChange={(event) => void changeAtelierTask(task,{status:event.target.value as AtelierTaskStatus})}>{Object.entries(statusLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select>}
-                    {canUpdateThisTask && <input aria-label={`Note d’avancement de ${task.title}`} maxLength={500} placeholder="Note d’avancement" defaultValue={task.progressNote} disabled={taskBusy} onBlur={(event) => { if (event.target.value !== task.progressNote) void changeAtelierTask(task,{progressNote:event.target.value}); }} />}
+                    {canUpdateThisTask && <input aria-label={`Note d’avancement de ${task.title}`} maxLength={500} placeholder="Note d’avancement" key={`${task.id}-${task.updatedAt}`} defaultValue={task.progressNote} disabled={taskBusy} onBlur={(event) => { if (event.target.value !== task.progressNote) void changeAtelierTask(task,{progressNote:event.target.value}); }} />}
                     {canManageTeam && <select aria-label={`Réattribuer ${task.title}`} disabled={taskBusy} value={task.assigneeId ?? ""} onChange={(event) => void changeAtelierTask(task,{assigneeId:event.target.value || null})}><option value="">Non attribuée</option>{teamMembers.filter((member) => member.active && member.role === "employe").map((member) => <option key={member.userId} value={member.userId}>{member.userId.slice(0,8)}…{member.userId.slice(-4)}</option>)}</select>}
                   </div>
                 </article>;
