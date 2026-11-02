@@ -7,26 +7,25 @@ import "@fontsource-variable/manrope";
 import "@fontsource/cormorant-garamond/700.css";
 import "./jotcolis-interface.css";
 import "./readable-type.css";
-// Load the canonical app stylesheet last so premium component rules win the cascade.
 import "./styles.css";
-// Final, scoped homepage styling overrides: visual only, no business logic changes.
 import "./home-priority-design.css";
-// Final shared design tokens: JotColis-style readable typography and strict indigo identity.
 import "./indigo-design-system.css";
 import "./premium-atelier.css";
-// Final marketplace-only override: navy identity, consistent type scale, crisp overlays.
 import "./marketplace-harmony.css";
+import "./yere-global-harmony.css";
 
-const isPublicMarket = window.location.pathname === "/market" || window.location.pathname === "/market/";
+// Public storefront is the default entry point. The professional atelier space
+// remains available explicitly at /atelier and keeps its existing authentication.
+const isAtelierApp = window.location.pathname === "/atelier" || window.location.pathname.startsWith("/atelier/");
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {isPublicMarket ? <PublicMarket /> : <AuthGate><App /></AuthGate>}
+    {isAtelierApp ? <AuthGate><App /></AuthGate> : <PublicMarket />}
   </React.StrictMode>
 );
 
-// The service worker is enabled only for production builds served over HTTPS.
-if (import.meta.env.PROD && "serviceWorker" in navigator && !window.location.pathname.startsWith("/market")) {
+// Offline caching is reserved for the authenticated atelier application.
+if (isAtelierApp && import.meta.env.PROD && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL }).catch((error) => {
       console.error("YÉRÉ: impossible d’activer le mode hors ligne.", error);
