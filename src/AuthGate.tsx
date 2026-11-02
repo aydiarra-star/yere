@@ -7,7 +7,7 @@ import PublicMarketplace from "./PublicMarketplace";
 import "./auth-gate.css";
 
 type Atelier = { id: string; nom: string; telephone: string | null; ville: string | null };
-type Props = { children: ReactNode };
+type Props = { children: ReactNode; initialProfessionalLogin?: boolean };
 
 function seedLocalProfile(userId: string, atelier: Atelier) {
   const suffix = `::${userId}`;
@@ -19,7 +19,7 @@ function seedLocalProfile(userId: string, atelier: Atelier) {
   window.localStorage.setItem(`yere-demo-onboarding-complete-v1${suffix}`, "true");
 }
 
-export default function AuthGate({ children }: Props) {
+export default function AuthGate({ children, initialProfessionalLogin = false }: Props) {
   const [session, setSession] = useState<YereSession | null>(null);
   const [atelier, setAtelier] = useState<Atelier | null>(null);
   const [workspaces, setWorkspaces] = useState<Atelier[]>([]);
@@ -29,7 +29,7 @@ export default function AuthGate({ children }: Props) {
   const [profileControlsTarget, setProfileControlsTarget] = useState<HTMLElement | null>(null);
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<"login" | "signup" | "recovery">("login");
-  const [showProfessionalAuth, setShowProfessionalAuth] = useState(false);
+  const [showProfessionalAuth, setShowProfessionalAuth] = useState(initialProfessionalLogin);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
