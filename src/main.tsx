@@ -16,11 +16,12 @@ import "./yere-global-harmony.css";
 
 // Public storefront is the default entry point. The professional atelier space
 // remains available explicitly at /atelier and keeps its existing authentication.
-const isAtelierApp = window.location.pathname === "/atelier" || window.location.pathname.startsWith("/atelier/");
+const isProfessionalEntry = window.location.pathname === "/atelier" || window.location.pathname.startsWith("/atelier/") || new URLSearchParams(window.location.search).get("espace") === "professionnel";
+const isAtelierApp = isProfessionalEntry;
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {isAtelierApp ? <AuthGate><App /></AuthGate> : <PublicMarket />}
+    {isAtelierApp ? <AuthGate initialProfessionalLogin><App /></AuthGate> : <PublicMarket />}
   </React.StrictMode>
 );
 
