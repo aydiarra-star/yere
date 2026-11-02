@@ -2,6 +2,22 @@
 -- All fixtures are synthetic and the transaction is rolled back.
 begin;
 
+-- Atelier profile writes are limited to editable fields; identity and currency stay server-controlled.
+do $
+begin
+  if not has_column_privilege('authenticated', 'public.atelier', 'nom', 'UPDATE') then
+    raise exception 'FAIL: authenticated owner/manager cannot update atelier name';
+  end if;
+  if has_column_privilege('authenticated', 'public.atelier', 'id', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.atelier', 'devise', 'UPDATE') then
+    raise exception 'FAIL: authenticated users can update protected atelier identity/currency fields';
+  end if;
+  if not has_column_privilege('authenticated', 'public.atelier', 'id', 'INSERT')
+     or has_column_privilege('authenticated', 'public.atelier', 'devise', 'INSERT') then
+    raise exception 'FAIL: atelier insert privileges are broader or narrower than intended';
+  end if;
+end $;
+
 insert into auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
  ('10000000-0000-4000-8000-000000000001','authenticated','authenticated','owner@yere.test','',now(),'{}','{}',now(),now()),
