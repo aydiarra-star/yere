@@ -26,6 +26,22 @@ begin
   ) then
     raise exception 'FAIL: seller cannot read their own contact through the secure RPC';
   end if;
+
+  update public.marketplace_vendeur set nom_entreprise='Mercerie Test Modifiée'
+  where id=v_seller_id;
+  begin
+    update public.marketplace_vendeur set statut='suspendu' where id=v_seller_id;
+    raise exception 'FAIL: seller can change moderation status';
+  exception when insufficient_privilege then
+    null;
+  end;
+  begin
+    update public.marketplace_vendeur set atelier_id='72000000-0000-4000-8000-000000000001'
+    where id=v_seller_id;
+    raise exception 'FAIL: supplier can attach itself to an atelier';
+  exception when insufficient_privilege then
+    null;
+  end;
 end $$;
 reset role;
 
