@@ -14,6 +14,8 @@ import "./home-priority-design.css";
 // Final shared design tokens: JotColis-style readable typography and strict indigo identity.
 import "./indigo-design-system.css";
 import "./premium-atelier.css";
+// Final marketplace-only override: navy identity, consistent type scale, crisp overlays.
+import "./marketplace-harmony.css";
 
 const isPublicMarket = window.location.pathname === "/market" || window.location.pathname === "/market/";
 
