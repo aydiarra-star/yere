@@ -23,7 +23,7 @@ export default function PublicMarketplace({ onProfessionalLogin }: Props) {
   return <main className="public-market">
     <header className="public-market-header">
       <a className="public-brand" href="#accueil" aria-label="YÉRÉ Market, accueil">
-        <img className="public-brand-mark" src="/images/yere-logo.svg" alt="" />
+        <img className="public-brand-mark" src="/images/yere-logo.png" alt="" />
         <span><strong>YÉRÉ</strong><small>MARKET</small></span>
       </a>
       <nav className="public-header-nav" aria-label="Navigation principale">
@@ -75,7 +75,7 @@ export default function PublicMarketplace({ onProfessionalLogin }: Props) {
 
     <section className="public-catalogue" aria-labelledby="public-catalogue-title">
       <div><span className="public-eyebrow">VITRINE PUBLIQUE</span><h2 id="public-catalogue-title">Les annonces publiées sur YÉRÉ</h2><p>Consultez le catalogue réel des offres disponibles, recherchez un article et passez commande depuis le Market.</p><a className="public-market-catalogue-link" href="/market/">Explorer les annonces publiées →</a></div>
-      <div className="public-catalogue-mark"><img className="public-catalogue-logo" src="/images/yere-logo.svg" alt="" /><strong className="public-catalogue-wordmark">YÉRÉ</strong><small>La vitrine des créateurs et fournisseurs</small></div>
+      <div className="public-catalogue-mark"><img className="public-catalogue-logo" src="/images/yere-logo.png" alt="" /><strong className="public-catalogue-wordmark">YÉRÉ</strong><small>La vitrine des créateurs et fournisseurs</small></div>
     </section>
 
     <section className="public-vendor-banner" id="vendeurs">
@@ -85,7 +85,7 @@ export default function PublicMarketplace({ onProfessionalLogin }: Props) {
     </section>
 
     <footer className="public-market-footer">
-      <a className="public-brand" href="#accueil"><span className="public-brand-mark">✳</span><span><strong>YÉRÉ</strong><small>MARKET & ATELIER</small></span></a>
+      <a className="public-brand" href="#accueil"><img className="public-brand-mark" src="/images/yere-logo.png" alt="" aria-hidden="true" /><span><strong>YÉRÉ</strong><small>MARKET & ATELIER</small></span></a>
       <p>Le savoir-faire, les créations et les métiers de la couture réunis.</p>
       <button type="button" onClick={onProfessionalLogin}>Connexion professionnelle</button>
     </footer>
