@@ -161,3 +161,16 @@
   color: #d8def0 !important;
   opacity: .7;
 }
+
+/* Market closing section: useful discovery actions instead of a large blank ending. */
+.yere-market-app .pm-market-benefits{padding:58px max(28px,calc((100vw - 1140px)/2));background:linear-gradient(135deg,#f0f2fa,#fafbfe)}
+.yere-market-app .pm-benefits-heading{max-width:650px;margin:0 auto 27px;text-align:center}
+.yere-market-app .pm-benefits-heading h2{margin:10px 0;color:#171e49;font-size:clamp(25px,3vw,34px);line-height:1.15;letter-spacing:-.04em}
+.yere-market-app .pm-benefits-heading p{margin:0;color:#77819a;font-size:12px;line-height:1.7}
+.yere-market-app .pm-benefits-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;max-width:1140px;margin:auto}
+.yere-market-app .pm-benefits-grid article{display:flex;flex-direction:column;align-items:flex-start;min-height:190px;padding:23px;border:1px solid #e3e7f2;border-radius:13px;background:#fff;box-shadow:0 10px 30px #202b5a08}
+.yere-market-app .pm-benefit-icon{display:grid;place-items:center;width:37px;height:37px;border-radius:10px;background:#eef1fa;color:#344477;font-size:20px}
+.yere-market-app .pm-benefits-grid h3{margin:14px 0 6px;color:#20294f;font-size:15px}
+.yere-market-app .pm-benefits-grid p{flex:1;margin:0 0 14px;color:#77819a;font-size:11px;line-height:1.7}
+.yere-market-app .pm-benefits-grid a,.yere-market-app .pm-benefits-grid button{padding:0;border:0;background:transparent;color:#3d4e86;font-size:10px;font-weight:850;cursor:pointer}
+@media(max-width:620px){.yere-market-app .pm-market-benefits{padding:40px 17px}.yere-market-app .pm-benefits-grid{grid-template-columns:1fr;gap:10px}.yere-market-app .pm-benefits-grid article{min-height:0;padding:19px}.yere-market-app .pm-benefits-heading{text-align:left;margin-bottom:20px}}
