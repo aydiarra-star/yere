@@ -1216,7 +1216,7 @@ function App() {
           {view === "account" && <section className="content-card account-page">
             <div className="section-heading account-section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div></div>
             <div id="yere-profile-account-controls" className="profile-account-controls-slot" />
-            <form className="account-form" onSubmit={async (event) => {
+            {canManageTeam && <form className="account-form" onSubmit={async (event) => {
               event.preventDefault();
               const session = readSession();
               const atelierId = window.sessionStorage.getItem("yere-active-atelier");
@@ -1244,7 +1244,8 @@ function App() {
               <label>Téléphone<input value={atelier.phone} onChange={(event) => setAtelier((current) => ({ ...current, phone: event.target.value }))} /></label>
               <label>Ville<input value={atelier.city} onChange={(event) => setAtelier((current) => ({ ...current, city: event.target.value }))} /></label>
               <button type="submit" className="primary-button">Enregistrer le profil</button>
-            </form>
+            </form>}
+            {!canManageTeam && <p className="privacy-note">Seuls le propriétaire et le gestionnaire peuvent modifier le profil de l’atelier.</p>}
             <p className="privacy-note">Le nom, le téléphone et la ville sont synchronisés. Le mode d’organisation reste une préférence locale à cet appareil.</p>
             {isAtelierOwner && <section className="content-card team-panel subscription-panel" aria-labelledby="subscription-title">
               <div className="section-heading"><div><h3 id="subscription-title">Abonnement YÉRÉ</h3><p>Un abonnement par atelier, toute l’équipe incluse.</p></div></div>
