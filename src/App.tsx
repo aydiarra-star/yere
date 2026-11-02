@@ -6,7 +6,7 @@ import { normalizeBackupOnboardingState, normalizeBackupMarketplaceListings } fr
 import { isMarketplaceListingListValid, type MarketplaceListing } from "./marketplace";
 import { usePersistentState } from "./usePersistentState";
 import { createAtelierClient, createAtelierOrder, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
-import { readSession } from "./lib/supabaseAuth";
+import { readSession, updateAtelierProfile } from "./lib/supabaseAuth";
 import { createAtelierTask, listAtelierTasks, updateAtelierTask, type AtelierTask, type AtelierTaskStatus } from "./lib/atelierTasks";
 import { cancelAtelierInvitation, createAtelierInvitation, deactivateAtelierMember, listAtelierInvitations, listAtelierMembers, updateAtelierMemberRole, updateAtelierMemberProfile, type AtelierInvitation, type AtelierMember } from "./lib/atelierTeam";
 import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, getAtelierSupplierProfile, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, saveAtelierSupplierProfile, type AtelierSupplier } from "./lib/atelierSuppliers";
@@ -1208,7 +1208,7 @@ function App() {
           {view === "account" && <section className="content-card account-page">
             <div className="section-heading account-section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div></div>
             <div id="yere-profile-account-controls" className="profile-account-controls-slot" />
-            <form className="account-form" onSubmit={(event) => { event.preventDefault(); setAtelier((current) => normalizeAtelierProfile(current)); setNotice("Profil d'atelier mis à jour localement. La synchronisation des champs de profil sera ajoutée dans un prochain chantier."); }}>
+            <form className="account-form" onSubmit={(event) => { event.preventDefault(); void (async () => { const session = readSession(); const atelierId = window.sessionStorage.getItem("yere-active-atelier"); const profile = normalizeAtelierProfile(atelier); if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; } if (!profile.name.trim()) { setNotice("Le nom de l’atelier est obligatoire."); return; } try { await updateAtelierProfile(session, atelierId, { nom: profile.name, telephone: profile.phone, ville: profile.city }); setAtelier(profile); setNotice("Profil de l’atelier enregistré et confirmé par Supabase."); } catch (cause) { setNotice(cause instanceof Error ? `Profil non enregistré : ${cause.message}` : "Impossible d’enregistrer le profil sur le serveur."); } })(); }}>
               <div className="profile-profession" aria-label="Métier YÉRÉ"><span>Métier</span><strong>Tailleur</strong><small>YÉRÉ est actuellement dédié aux tailleurs.</small></div>
               
               <label>Organisation du travail<select value={atelier.workMode ?? "independent"} onChange={(event) => setAtelier((current) => ({ ...current, workMode: event.target.value as WorkMode }))}>{workModes.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}</select></label>
