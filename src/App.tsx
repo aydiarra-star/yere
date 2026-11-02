@@ -7,6 +7,7 @@ import { isMarketplaceListingListValid, type MarketplaceListing } from "./market
 import { usePersistentState } from "./usePersistentState";
 import { createAtelierClient, createAtelierOrder, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
 import { readSession, updateAtelierProfile } from "./lib/supabaseAuth";
+import { getAtelierSubscription, listAtelierSubscriptionPayments, type AtelierSubscription, type SubscriptionPayment } from "./lib/atelierSubscription";
 import { createAtelierTask, listAtelierTasks, updateAtelierTask, type AtelierTask, type AtelierTaskStatus } from "./lib/atelierTasks";
 import { cancelAtelierInvitation, createAtelierInvitation, deactivateAtelierMember, listAtelierInvitations, listAtelierMembers, updateAtelierMemberRole, updateAtelierMemberProfile, type AtelierInvitation, type AtelierMember } from "./lib/atelierTeam";
 import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, getAtelierSupplierProfile, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, saveAtelierSupplierProfile, type AtelierSupplier } from "./lib/atelierSuppliers";
@@ -124,6 +125,10 @@ function App() {
     readSession() && typeof window !== "undefined" && window.sessionStorage.getItem("yere-active-atelier") ? "loading" : "idle"
   );
   const [serverSyncError, setServerSyncError] = useState("");
+  const [atelierSubscription, setAtelierSubscription] = useState<AtelierSubscription | null>(null);
+  const [subscriptionPayments, setSubscriptionPayments] = useState<SubscriptionPayment[]>([]);
+  const [subscriptionLoadError, setSubscriptionLoadError] = useState("");
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
   useEffect(() => {
     if (onboardingStartedAt === null) setOnboardingStartedAt(Date.now());
@@ -200,6 +205,35 @@ function App() {
     })();
     return () => { active = false; };
   }, [setClients, setOrders, setSupplierPurchases]);
+
+  useEffect(() => {
+    if (serverSyncStatus !== "ready" || !isAtelierOwner) {
+      setAtelierSubscription(null);
+      setSubscriptionPayments([]);
+      setSubscriptionLoadError("");
+      return;
+    }
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) return;
+    let active = true;
+    setSubscriptionLoading(true);
+    setSubscriptionLoadError("");
+    void (async () => {
+      try {
+        const subscription = await getAtelierSubscription(session, atelierId);
+        if (!active) return;
+        setAtelierSubscription(subscription);
+        const payments = subscription ? await listAtelierSubscriptionPayments(session, subscription.id) : [];
+        if (active) setSubscriptionPayments(payments);
+      } catch (cause) {
+        if (active) setSubscriptionLoadError(cause instanceof Error ? cause.message : "Impossible de lire l’abonnement.");
+      } finally {
+        if (active) setSubscriptionLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [serverSyncStatus, isAtelierOwner]);
 
   useEffect(() => {
     if (!taskOrderId) setTaskOrderId(orders.find((order) => order.serverId)?.serverId ?? "");
@@ -1217,6 +1251,21 @@ function App() {
               <label>Ville<input value={atelier.city} onChange={(event) => setAtelier((current) => ({ ...current, city: event.target.value }))} /></label>
               <button type="submit" className="primary-button">Enregistrer le profil</button>
             </form>
+            {isAtelierOwner && <section className="content-card team-panel" aria-labelledby="subscription-title">
+              <div className="section-heading"><div><h3 id="subscription-title">Abonnement YÉRÉ</h3><p>Un abonnement par atelier, toute l’équipe incluse.</p></div></div>
+              {subscriptionLoading ? <p role="status">Chargement du statut de l’abonnement…</p>
+                : subscriptionLoadError ? <p role="alert">Statut indisponible : {subscriptionLoadError}</p>
+                : atelierSubscription ? <>
+                  <div className="profile-profession"><span>Formule mensuelle</span><strong>{formatXof(atelierSubscription.monthlyPriceXof)} / mois</strong><small>Deux premiers mois d’essai gratuits, puis 5 000 FCFA par atelier et par mois.</small></div>
+                  <p><strong>Statut :</strong> {({essai:"Période d’essai",actif:"Actif",paiement_requis:"Paiement requis",en_retard:"Paiement en retard",suspendu:"Suspendu",resilie:"Résilié"} as Record<AtelierSubscription["status"],string>)[atelierSubscription.status]}</p>
+                  <p><strong>Fin de l’essai :</strong> {new Date(atelierSubscription.trialEndsAt).toLocaleDateString("fr-FR")}</p>
+                  {atelierSubscription.nextDueAt && <p><strong>Prochaine échéance :</strong> {new Date(atelierSubscription.nextDueAt).toLocaleDateString("fr-FR")}</p>}
+                  <h4>Historique des paiements</h4>
+                  {subscriptionPayments.length === 0 ? <p>Aucun paiement enregistré. Aucun paiement n’est demandé depuis cet écran pour le moment.</p>
+                    : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Montant</th><th>Statut</th><th>Moyen</th></tr></thead><tbody>{subscriptionPayments.map((payment) => <tr key={payment.id}><td>{new Date(payment.createdAt).toLocaleDateString("fr-FR")}</td><td>{formatXof(payment.amountXof)}</td><td>{({en_attente:"En attente",confirme:"Confirmé",echec:"Échec",rembourse:"Remboursé",annule:"Annulé"} as Record<SubscriptionPayment["status"],string>)[payment.status]}</td><td>{payment.method ?? "—"}</td></tr>)}</tbody></table></div>}
+                  <p className="privacy-note">Le paiement en ligne n’est pas encore activé. Ne versez pas d’argent depuis cet écran : le statut ne changera qu’après confirmation d’un paiement vérifié.</p>
+                </> : <p>Aucun abonnement n’est rattaché à cet atelier. Contactez l’assistance avant toute souscription.</p>}
+            </section>}
             <section className="content-card team-panel" aria-labelledby="team-title">
               <div className="section-heading"><div><h3 id="team-title">Équipe et accès à l’atelier</h3><p>Les droits sont contrôlés sur le serveur et chaque membre reste limité à cet atelier.</p></div><span className="marketplace-listing-count">{teamMembers.filter((member) => member.active).length} membre(s)</span></div>
               <div className="table-wrap"><table><thead><tr><th>Profil professionnel / compte</th><th>Rôle</th><th>État</th><th>Depuis</th>{isAtelierOwner ? <th>Actions</th> : null}</tr></thead><tbody>{teamMembers.map((member) => <tr key={member.userId}><td><strong>{member.professionalName || (member.role === "proprietaire" ? "Propriétaire de l’atelier" : member.role === "gestionnaire" ? "Gestionnaire" : "Profil à compléter")}</strong>{member.specialties.length ? <small>{member.specialties.join(" · ")}</small> : null}{member.experienceLevel ? <small>{({debutant:"Débutant",intermediaire:"Intermédiaire",experimente:"Expérimenté",maitre:"Maître tailleur"} as const)[member.experienceLevel]}</small> : null}{member.presentation ? <small>{member.presentation}</small> : null}<code>{member.userId.slice(0,8)}…{member.userId.slice(-4)}</code>{member.userId === currentUserId ? <small>Votre compte</small> : null}{isAtelierOwner && member.active && member.role === "employe" ? <TailorProfileEditor member={member} busy={teamBusy} onSave={saveTailorProfessionalProfile} /> : null}</td><td>{member.role === "proprietaire" ? "Propriétaire" : member.role === "gestionnaire" ? "Gestionnaire" : "Tailleur"}</td><td>{member.active ? "Actif" : "Désactivé"}</td><td>{new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(member.createdAt))}</td>{isAtelierOwner ? <td>{member.role !== "proprietaire" ? <div className="team-member-actions"><button type="button" className="text-button" disabled={teamBusy || !member.active} onClick={() => void changeTeamMemberRole(member)}>{member.role === "gestionnaire" ? "Rétablir employé" : "Nommer gestionnaire"}</button>{member.active ? <button type="button" className="text-button" disabled={teamBusy} onClick={() => void deactivateTeamMember(member)}>Désactiver</button> : <span className="privacy-note">Accès retiré</span>}</div> : <span className="privacy-note">Compte propriétaire protégé</span>}</td> : null}</tr>)}</tbody></table></div>
