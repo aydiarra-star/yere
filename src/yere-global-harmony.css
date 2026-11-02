@@ -81,5 +81,5 @@ body, button, input, select, textarea {
 @media (max-width: 620px) {
   .yere-market-app :is(p, li, label, input, select, textarea, button, a) { font-size: 14px !important; }
   .yere-market-app .pm-header-actions { gap: 8px; }
-  .yere-market-app .pm-atelier-link { display: none; }
+  .yere-market-app .pm-atelier-link { display: inline-flex !important; min-height: 36px; padding: 0 9px; font-size: 10px !important; white-space: nowrap; }
 }
