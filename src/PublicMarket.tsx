@@ -92,6 +92,12 @@ export default function PublicMarket() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    if (showAccount) {
+      document.querySelector(".pm-account-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [showAccount]);
+
   const visibleListings = useMemo(() => {
     const term = query.trim().toLocaleLowerCase("fr");
     return listings.filter((item) => {
@@ -107,7 +113,7 @@ export default function PublicMarket() {
     try {
       const next = authMode === "login"
         ? await signIn(email.trim().toLowerCase(), password)
-        : (await signUp(email.trim().toLowerCase(), password, "/market")).session;
+        : (await signUp(email.trim().toLowerCase(), password, "/")).session;
       if (!next) {
         setNotice("Compte créé. Consultez votre e-mail pour confirmer l’adresse, puis revenez sur le Market pour vous connecter.");
         setAuthMode("login");
@@ -283,12 +289,12 @@ export default function PublicMarket() {
   return (
     <main className="yere-market-app">
       <header className="pm-header">
-        <a className="pm-brand" href="/market" aria-label="YÉRÉ Market, accueil"><img className="pm-mark" src="/images/yere-logo.png" alt="" /><span><b>YÉRÉ</b><small>MARKET</small></span></a>
+        <a className="pm-brand" href="/" aria-label="YÉRÉ Market, accueil"><img className="pm-mark" src="/images/yere-logo.png" alt="" /><span><b>YÉRÉ</b><small>MARKET</small></span></a>
         <nav className="pm-nav"><a href="#catalogue">Catalogue</a><a href="#vendeurs">Vendeurs</a>{session && <><a href="#commandes">Mes commandes</a><a href="#messages">Messages</a></>}</nav>
         <div className="pm-header-actions">
           {session ? <><span className="pm-user">{session.user.email}</span><button className="pm-outline" type="button" onClick={() => void handleSignOut()} disabled={busy}>Déconnexion</button></> :
             <button className="pm-outline" type="button" onClick={() => { setShowAccount((v) => !v); setError(""); }}>Se connecter</button>}
-          <a className="pm-outline pm-atelier-link" href="/atelier">Compte professionnel</a><a className="pm-cta" href="#vendeurs">Vendre sur YÉRÉ</a>
+          <a className="pm-outline pm-atelier-link" href="/?espace=professionnel">Compte professionnel</a><a className="pm-cta" href="#vendeurs">Vendre sur YÉRÉ</a>
         </div>
       </header>
 
@@ -297,7 +303,7 @@ export default function PublicMarket() {
         <div className="pm-hero-art" aria-hidden="true"><div className="pm-art-circle"></div><div className="pm-art-card pm-art-card-one"><span>YÉRÉ</span><b>Le savoir-faire<br/>à l’honneur</b><small>MODE · TISSUS · MERCERIE</small></div><div className="pm-art-card pm-art-card-two"><span>✦</span><b>Créé avec soin</b><small>PAR LES ARTISANS</small></div></div>
       </section>
 
-      {showAccount && <section className="pm-panel pm-account-panel"><div><span className="pm-eyebrow">ESPACE CLIENT</span><h2>{authMode === "login" ? "Heureux de vous retrouver." : "Créer un compte Market"}</h2><p>Un compte est nécessaire pour passer commande et retrouver vos achats. Aucun atelier n’est requis.</p></div><form onSubmit={submitAuth}><label>E-mail<input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label><label>Mot de passe<input type="password" minLength={8} required autoComplete={authMode === "login" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} /></label><button className="pm-cta" disabled={busy}>{busy ? "Veuillez patienter…" : authMode === "login" ? "Se connecter" : "Créer mon compte"}</button><button type="button" className="pm-text-button" onClick={() => setAuthMode(authMode === "login" ? "signup" : "login")}>{authMode === "login" ? "Créer un compte" : "J’ai déjà un compte"}</button></form></section>}
+      {showAccount && <section className="pm-panel pm-account-panel"><div><span className="pm-eyebrow">ESPACE CLIENT</span><h2>{authMode === "login" ? "Heureux de vous retrouver." : "Créer un compte Market"}</h2><p>Un compte est nécessaire pour passer commande et retrouver vos achats. Aucun atelier n’est requis.</p></div><form onSubmit={submitAuth}><label>E-mail<input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label><label>Mot de passe<input type="password" minLength={8} required autoComplete={authMode === "login" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} /></label><button className="pm-cta" type="submit" disabled={busy}>{busy ? "Veuillez patienter…" : authMode === "login" ? "Se connecter" : "Créer mon compte"}</button><button type="button" className="pm-text-button" onClick={() => setAuthMode(authMode === "login" ? "signup" : "login")}>{authMode === "login" ? "Créer un compte" : "J’ai déjà un compte"}</button></form></section>}
 
       {error && <p className="pm-alert pm-error" role="alert">{error}</p>}
       {notice && <p className="pm-alert pm-notice" role="status">{notice}</p>}
