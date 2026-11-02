@@ -1,0 +1,85 @@
+/* YÉRÉ — charte globale bleu nuit et typographie unifiée.
+   Shared by the public Market and the professional atelier application. */
+:root {
+  --yere-navy: #171e49;
+  --yere-navy-strong: #11173b;
+  --yere-navy-hover: #283568;
+  --yere-indigo-soft: #eaeefa;
+  --yere-canvas: #f8f9fc;
+  --yere-ink: #202638;
+  --yere-muted: #5d6b8a;
+  --yere-border: #e2e6f1;
+  --yere-font: "Manrope Variable", Manrope, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+html, body, #root {
+  font-family: var(--yere-font) !important;
+  color: var(--yere-ink);
+}
+body, button, input, select, textarea {
+  font-family: var(--yere-font) !important;
+}
+.app-shell, .app-shell *, .yere-market-app, .yere-market-app * {
+  font-family: var(--yere-font) !important;
+}
+.app-shell { color: var(--yere-ink); }
+.app-shell :is(p, li, label, input, select, textarea, button, a, td, th) {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.app-shell :is(small, .eyebrow, .page-subtitle, .table-secondary, .mobile-nav-item small) {
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+}
+.app-shell :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--yere-font) !important;
+  color: var(--yere-navy) !important;
+  line-height: 1.3;
+}
+.app-shell :is(a, .text-button, .nav-item, .mobile-nav-item) { color: var(--yere-navy); }
+.app-shell :is(.primary-button, .welcome-action, .nav-item.active) {
+  background: var(--yere-navy) !important;
+  border-color: var(--yere-navy) !important;
+  color: #fff !important;
+}
+.app-shell :is(.primary-button, .welcome-action):hover { background: var(--yere-navy-hover) !important; }
+.app-shell :is(.sidebar, .mobile-bottom-nav) { background: var(--yere-navy) !important; }
+.app-shell :is(input, select, textarea):focus {
+  border-color: var(--yere-navy) !important;
+  outline-color: var(--yere-indigo-soft) !important;
+}
+.app-shell :is(.green-dot, .badge-green, .text-green, .success-text) {
+  color: var(--yere-navy) !important;
+  background-color: var(--yere-indigo-soft) !important;
+}
+.yere-market-app {
+  color: var(--yere-ink);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.yere-market-app :is(p, li, label, input, select, textarea, button, a) {
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+.yere-market-app :is(small, .pm-eyebrow, .pm-product-meta, .pm-form-note, .pm-footer p) {
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+}
+.yere-market-app :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--yere-font) !important;
+  line-height: 1.25;
+}
+.yere-market-app :is(.pm-header, .pm-seller-section, .pm-footer) { background-color: var(--yere-navy) !important; }
+.yere-market-app :is(.pm-cta, .pm-hero-button, .pm-buy) {
+  background: var(--yere-navy) !important;
+  border-color: var(--yere-navy) !important;
+  color: #fff !important;
+}
+.yere-market-app :is(.pm-outline, .pm-text-button, .pm-nav a, .pm-product-copy > strong) { color: var(--yere-navy) !important; }
+.yere-market-app .pm-outline { border-color: #9aa5ca !important; }
+.yere-market-app .pm-header .pm-cta { background: #fff !important; color: var(--yere-navy) !important; border-color: #fff !important; }
+.yere-market-app .pm-atelier-link { display: inline-flex; align-items: center; text-decoration: none; }
+@media (max-width: 620px) {
+  .yere-market-app :is(p, li, label, input, select, textarea, button, a) { font-size: 14px !important; }
+  .yere-market-app .pm-header-actions { gap: 8px; }
+  .yere-market-app .pm-atelier-link { display: none; }
+}
