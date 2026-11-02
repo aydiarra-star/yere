@@ -3,6 +3,11 @@ import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 
 type StorageReaderWriter = Pick<Storage, "getItem" | "setItem">;
 export type PersistenceScope = "user" | "atelier" | "server";
 
+/** Server-owned business records must never read from or write to browser storage. */
+export function isBrowserPersistenceEnabled(scope: PersistenceScope): boolean {
+  return scope !== "server";
+}
+
 export function resolvePersistentStorageKey(key: string, userId: string | null, atelierId: string | null, scope: PersistenceScope = "user"): string {
   const userScope = userId ?? "guest";
   return scope === "atelier" ? `${key}::${userScope}::${atelierId ?? "no-atelier"}` : `${key}::${userScope}`;
@@ -49,7 +54,7 @@ export function usePersistentState<T>(
     : key;
   const skipInitialWrite = useRef(false);
   const [value, setValue] = useState<T>(() => {
-    if (scope === "server" || typeof window === "undefined") return initialValue;
+    if (!isBrowserPersistenceEnabled(scope) || typeof window === "undefined") return initialValue;
 
     let saved: string | null;
     try {
@@ -79,7 +84,7 @@ export function usePersistentState<T>(
   });
 
   useEffect(() => {
-    if (scope === "server") return;
+    if (!isBrowserPersistenceEnabled(scope)) return;
     if (skipInitialWrite.current) {
       // Keep the rejected original value intact if a recovery copy could not be made.
       skipInitialWrite.current = false;

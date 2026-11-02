@@ -451,8 +451,9 @@ function App() {
       }
       // Business records from local backups remain in the selected file only.
       // They are not loaded into live state because Supabase is the sole operational source.
+      // Atelier identity/onboarding metadata may be restored locally.
+      // The supplier profile is server-owned and must only come from Supabase.
       setAtelier(data.atelier);
-      setSupplier(data.supplier !== undefined && isSupplierProfileValid(data.supplier) ? data.supplier : emptySupplier);
       setOnboardingComplete(onboardingState.onboardingComplete);
       setOnboardingStartedAt(onboardingState.onboardingStartedAt);
       setSelectedClient(null);
