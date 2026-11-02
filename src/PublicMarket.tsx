@@ -3,7 +3,7 @@ import {
   createMarketplaceOrder, createMarketplaceSeller, getMyMarketplaceSeller,
   listMyMarketplaceOrders, listMyMarketplaceConversations, listMarketplaceMessages,
   openMarketplaceConversation, sendMarketplaceMessage, listPublicMarketplaceListings, saveMarketplaceListing,
-  updateMarketplaceOrderStatus, uploadMarketplacePhotos, deleteMarketplacePhotos,
+  updateMarketplaceOrderStatus, uploadMarketplacePhotos, deleteMarketplacePhotos, updateMarketplaceSeller,
   type MarketplaceConversation, type MarketplaceMessage, type MarketplaceOrder, type MarketplaceSeller,
   type PublicMarketplaceListing
 } from "./lib/marketplace";
@@ -38,6 +38,8 @@ export default function PublicMarket() {
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [showAccount, setShowAccount] = useState(false);
   const [showSellerForm, setShowSellerForm] = useState(false);
+  const [showSellerEdit, setShowSellerEdit] = useState(false);
+  const [sellerPhotoFile, setSellerPhotoFile] = useState<File | null>(null);
   const [showListingForm, setShowListingForm] = useState(false);
   const [selectedListing, setSelectedListing] = useState<PublicMarketplaceListing | null>(null);
   const [email, setEmail] = useState("");
@@ -145,28 +147,53 @@ export default function PublicMarket() {
     event.preventDefault();
     if (!session) { setShowAccount(true); setNotice("Connectez-vous ou créez un compte pour ouvrir votre boutique."); return; }
     setBusy(true); setError(""); setNotice("");
+    let uploadedLogo: string[] = [];
     try {
-      const selectedAtelier = sellerForm.sellerType === "atelier"
-        ? atelierChoices.find((item) => item.id === sellerForm.atelierId)
-        : null;
-      if (sellerForm.sellerType === "atelier" && !selectedAtelier) {
-        throw new Error("Sélectionnez un atelier dont vous êtes propriétaire.");
+      if (seller) {
+        let logoPath = seller.logoPath;
+        if (sellerPhotoFile) {
+          uploadedLogo = await uploadMarketplacePhotos(session, seller.id, [sellerPhotoFile]);
+          logoPath = uploadedLogo[0];
+        }
+        const updated = await updateMarketplaceSeller(session, seller.id, {
+          businessName: sellerForm.businessName, contactName: sellerForm.contactName, phone: sellerForm.phone,
+          city: sellerForm.city, category: sellerForm.category, description: sellerForm.description, logoPath
+        });
+        if (uploadedLogo.length && seller.logoPath) {
+          try { await deleteMarketplacePhotos(session, [seller.logoPath]); } catch { /* new logo is already saved; old file cleanup can be retried */ }
+        }
+        setSeller(updated);
+        setShowSellerEdit(false);
+        setSellerPhotoFile(null);
+        setNotice("Les informations et la photo de votre boutique ont été mises à jour.");
+      } else {
+        const selectedAtelier = sellerForm.sellerType === "atelier"
+          ? atelierChoices.find((item) => item.id === sellerForm.atelierId) : null;
+        if (sellerForm.sellerType === "atelier" && !selectedAtelier) throw new Error("Sélectionnez un atelier dont vous êtes propriétaire.");
+        const created = await createMarketplaceSeller(session, {
+          sellerType: sellerForm.sellerType, atelierId: selectedAtelier?.id ?? null,
+          businessName: sellerForm.businessName, contactName: sellerForm.contactName, phone: sellerForm.phone,
+          city: sellerForm.city || selectedAtelier?.ville || "", category: sellerForm.category, description: sellerForm.description
+        });
+        let saved = created;
+        if (sellerPhotoFile) {
+          uploadedLogo = await uploadMarketplacePhotos(session, created.id, [sellerPhotoFile]);
+          saved = await updateMarketplaceSeller(session, created.id, {
+            businessName: sellerForm.businessName, contactName: sellerForm.contactName, phone: sellerForm.phone,
+            city: sellerForm.city || selectedAtelier?.ville || "", category: sellerForm.category,
+            description: sellerForm.description, logoPath: uploadedLogo[0]
+          });
+        }
+        setSeller(saved);
+        setShowSellerForm(false);
+        setSellerPhotoFile(null);
+        setNotice("Votre boutique indépendante est créée. Vous pouvez publier votre première offre.");
       }
-      const created = await createMarketplaceSeller(session, {
-        sellerType: sellerForm.sellerType,
-        atelierId: selectedAtelier?.id ?? null,
-        businessName: sellerForm.businessName,
-        contactName: sellerForm.contactName,
-        phone: sellerForm.phone,
-        city: sellerForm.city || selectedAtelier?.ville || "",
-        category: sellerForm.category,
-        description: sellerForm.description
-      });
-      setSeller(created);
-      setShowSellerForm(false);
-      setNotice("Votre boutique indépendante est créée. Vous pouvez publier votre première offre.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Création de la boutique impossible.");
+      if (uploadedLogo.length) {
+        try { await deleteMarketplacePhotos(session, uploadedLogo); } catch { /* preserve original error */ }
+      }
+      setError(cause instanceof Error ? cause.message : "Enregistrement de la boutique impossible.");
     } finally { setBusy(false); }
   }
 
@@ -294,7 +321,7 @@ export default function PublicMarket() {
         <div className="pm-header-actions">
           {session ? <><span className="pm-user">{session.user.email}</span><button className="pm-outline" type="button" onClick={() => void handleSignOut()} disabled={busy}>Déconnexion</button></> :
             <button className="pm-outline" type="button" onClick={() => { setShowAccount((v) => !v); setError(""); }}>Se connecter</button>}
-          <a className="pm-outline pm-atelier-link" href="/?espace=professionnel">Compte professionnel</a><a className="pm-cta" href="#vendeurs">Vendre sur YÉRÉ</a>
+          <a className="pm-outline pm-atelier-link" href="/?espace=professionnel">Espace tailleur</a><a className="pm-cta" href="#vendeurs">Vendre sur YÉRÉ</a>
         </div>
       </header>
 
@@ -317,10 +344,10 @@ export default function PublicMarket() {
 
       <section id="vendeurs" className="pm-seller-section">
         <div className="pm-seller-copy"><span className="pm-eyebrow">VOUS ÊTES FOURNISSEUR ?</span><h2>Votre boutique mérite<br/>sa place sur YÉRÉ.</h2><p>Atelier de couture ou fournisseur indépendant : créez votre vitrine, publiez vos créations, tissus, fournitures et accessoires. Un fournisseur peut s’inscrire sans posséder d’atelier.</p><ul><li>Une boutique rattachée à votre compte</li><li>Des annonces visibles dans le catalogue public</li><li>Des commandes regroupées dans votre espace</li></ul></div>
-        <div className="pm-seller-card"><span className="pm-seller-icon">✦</span><h3>{seller ? "Votre boutique est prête" : "Ouvrir une boutique"}</h3><p>{seller ? seller.businessName + " · " + seller.city : "Inscrivez-vous ou connectez-vous, puis renseignez les informations de votre activité."}</p>{seller ? <button className="pm-cta" type="button" onClick={() => setShowListingForm((v) => !v)}>＋ Publier une offre</button> : <button className="pm-cta" type="button" onClick={() => { setShowSellerForm((v) => !v); if (!session) setShowAccount(true); }}>Créer ma boutique indépendante</button>}</div>
+        <div className="pm-seller-card">{seller?.logoUrl ? <img className="pm-store-logo" src={seller.logoUrl} alt={"Photo de " + seller.businessName}/> : <span className="pm-seller-icon">✦</span>}<h3>{seller ? "Votre boutique est prête" : "Ouvrir une boutique"}</h3><p>{seller ? seller.businessName + " · " + seller.city : "Inscrivez-vous ou connectez-vous, puis renseignez les informations de votre activité."}</p>{seller ? <><button className="pm-cta" type="button" onClick={() => { setSellerForm({ sellerType: seller.sellerType, atelierId: seller.atelierId ?? "", businessName: seller.businessName, contactName: seller.contactName, phone: seller.phone, city: seller.city, category: seller.category, description: seller.description }); setSellerPhotoFile(null); setShowSellerEdit((v) => !v); }}>Modifier ma boutique</button><button className="pm-outline pm-seller-secondary" type="button" onClick={() => setShowListingForm((v) => !v)}>＋ Publier une offre</button></> : <button className="pm-cta" type="button" onClick={() => { setShowSellerForm((v) => !v); if (!session) setShowAccount(true); }}>Créer ma boutique indépendante</button>}</div>
       </section>
 
-      {showSellerForm && !seller && <section className="pm-panel"><div><span className="pm-eyebrow">INSCRIPTION VENDEUR</span><h2>Les informations de votre boutique</h2><p>Votre compte Market reste indépendant de tout atelier.</p></div><form onSubmit={submitSeller}><label>Type de vendeur<select value={sellerForm.sellerType} onChange={(e) => setSellerForm({ ...sellerForm, sellerType: e.target.value as "fournisseur" | "atelier", atelierId: "", category: e.target.value === "atelier" ? "Mode & créations" : "Tissus & mercerie" })}><option value="fournisseur">Fournisseur indépendant</option>{atelierChoices.length > 0 && <option value="atelier">Atelier de couture</option>}</select></label>{sellerForm.sellerType === "atelier" && <label>Atelier<select required value={sellerForm.atelierId} onChange={(e) => { const item = atelierChoices.find((atelier) => atelier.id === e.target.value); setSellerForm({ ...sellerForm, atelierId: e.target.value, businessName: sellerForm.businessName || item?.nom || "", city: sellerForm.city || item?.ville || "" }); }}><option value="">Choisir un atelier</option>{atelierChoices.map((item) => <option key={item.id} value={item.id}>{item.nom}{item.ville ? " · " + item.ville : ""}</option>)}</select></label>}<label>Nom de la boutique<input required maxLength={120} value={sellerForm.businessName} onChange={(e) => setSellerForm({ ...sellerForm, businessName: e.target.value })}/></label><label>Nom du responsable<input required maxLength={120} value={sellerForm.contactName} onChange={(e) => setSellerForm({ ...sellerForm, contactName: e.target.value })}/></label><label>Téléphone<input required type="tel" maxLength={40} value={sellerForm.phone} onChange={(e) => setSellerForm({ ...sellerForm, phone: e.target.value })}/></label><label>Ville<input required maxLength={100} value={sellerForm.city} onChange={(e) => setSellerForm({ ...sellerForm, city: e.target.value })}/></label><label>Activité<select value={sellerForm.category} onChange={(e) => setSellerForm({ ...sellerForm, category: e.target.value })}><option>Tissus & mercerie</option><option>Fournitures de couture</option><option>Accessoires de mode</option><option>Prêt-à-porter</option></select></label><label className="pm-wide">Présentation<textarea maxLength={500} value={sellerForm.description} onChange={(e) => setSellerForm({ ...sellerForm, description: e.target.value })}/></label><button className="pm-cta" disabled={busy || !session}>{busy ? "Création…" : "Créer ma boutique"}</button></form></section>}
+      {((showSellerForm && !seller) || (showSellerEdit && !!seller)) && <section className="pm-panel"><div><span className="pm-eyebrow">{seller ? "GESTION DE LA BOUTIQUE" : "INSCRIPTION VENDEUR"}</span><h2>{seller ? "Modifier les informations de votre boutique" : "Les informations de votre boutique"}</h2><p>Votre compte Market reste indépendant de tout atelier.</p>{seller?.logoUrl && <img className="pm-store-logo pm-store-logo-preview" src={seller.logoUrl} alt="Photo actuelle de la boutique"/>}</div><form onSubmit={submitSeller}><label>Type de vendeur<select value={sellerForm.sellerType} onChange={(e) => setSellerForm({ ...sellerForm, sellerType: e.target.value as "fournisseur" | "atelier", atelierId: "", category: e.target.value === "atelier" ? "Mode & créations" : "Tissus & mercerie" })}><option value="fournisseur">Fournisseur indépendant</option>{atelierChoices.length > 0 && <option value="atelier">Atelier de couture</option>}</select></label>{sellerForm.sellerType === "atelier" && <label>Atelier<select required value={sellerForm.atelierId} onChange={(e) => { const item = atelierChoices.find((atelier) => atelier.id === e.target.value); setSellerForm({ ...sellerForm, atelierId: e.target.value, businessName: sellerForm.businessName || item?.nom || "", city: sellerForm.city || item?.ville || "" }); }}><option value="">Choisir un atelier</option>{atelierChoices.map((item) => <option key={item.id} value={item.id}>{item.nom}{item.ville ? " · " + item.ville : ""}</option>)}</select></label>}<label>Nom de la boutique<input required maxLength={120} value={sellerForm.businessName} onChange={(e) => setSellerForm({ ...sellerForm, businessName: e.target.value })}/></label><label>Nom du responsable<input required maxLength={120} value={sellerForm.contactName} onChange={(e) => setSellerForm({ ...sellerForm, contactName: e.target.value })}/></label><label>Téléphone<input required type="tel" maxLength={40} value={sellerForm.phone} onChange={(e) => setSellerForm({ ...sellerForm, phone: e.target.value })}/></label><label>Ville<input required maxLength={100} value={sellerForm.city} onChange={(e) => setSellerForm({ ...sellerForm, city: e.target.value })}/></label><label>Activité<select value={sellerForm.category} onChange={(e) => setSellerForm({ ...sellerForm, category: e.target.value })}><option>Tissus & mercerie</option><option>Fournitures de couture</option><option>Accessoires de mode</option><option>Prêt-à-porter</option></select></label><label className="pm-wide">Présentation<textarea maxLength={500} value={sellerForm.description} onChange={(e) => setSellerForm({ ...sellerForm, description: e.target.value })}/></label><label className="pm-wide">Photo ou logo de la boutique<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { const file = e.target.files?.[0] ?? null; if (file && (!["image/jpeg","image/png","image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024)) { setError("Choisissez une image JPG, PNG ou WebP de cinq mégaoctets maximum."); e.target.value = ""; return; } setError(""); setSellerPhotoFile(file); }}/></label>{sellerPhotoFile && <p className="pm-form-note pm-wide">Nouvelle photo sélectionnée : {sellerPhotoFile.name}. Elle remplacera la photo actuelle après enregistrement.</p>}<p className="pm-form-note pm-wide">Vous pouvez ajouter une photo dès la création, puis la remplacer à tout moment. Formats JPG, PNG ou WebP, cinq mégaoctets maximum.</p><button className="pm-cta" disabled={busy || !session}>{busy ? "Enregistrement…" : seller ? "Enregistrer les modifications" : "Créer ma boutique"}</button></form></section>}
 
       {showListingForm && seller && <section className="pm-panel"><div><span className="pm-eyebrow">NOUVELLE ANNONCE</span><h2>Publier une offre</h2><p>Les annonces sont immédiatement visibles après validation par la base.</p></div><form onSubmit={submitListing}><label>Nom de l’article<input required maxLength={140} value={listingForm.title} onChange={(e) => setListingForm({ ...listingForm, title: e.target.value })}/></label><label>Catégorie<select value={listingForm.category} onChange={(e) => setListingForm({ ...listingForm, category: e.target.value })}><option>Boubous & tenues</option><option>Mode femme</option><option>Tissus</option><option>Mercerie</option><option>Fournitures de couture</option></select></label><label>Prix (FCFA)<input type="number" min="1" step="1" required value={listingForm.price} onChange={(e) => setListingForm({ ...listingForm, price: e.target.value })}/></label><label>Stock (facultatif)<input type="number" min="0" step="1" value={listingForm.stock} onChange={(e) => setListingForm({ ...listingForm, stock: e.target.value })}/></label><label className="pm-wide">Description<textarea maxLength={1000} value={listingForm.description} onChange={(e) => setListingForm({ ...listingForm, description: e.target.value })}/></label><label className="pm-wide">Photos de l’article (cinq maximum)<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length > 5) { setError("Vous pouvez sélectionner cinq photos maximum."); e.target.value = ""; return; } const invalid = files.find((file) => !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024); if (invalid) { setError("Utilisez des photos JPG, PNG ou WebP de cinq mégaoctets maximum."); e.target.value = ""; return; } setError(""); setSelectedPhotos(files); }} /></label>{selectedPhotos.length > 0 && <p className="pm-form-note pm-wide">{selectedPhotos.length} photo(s) sélectionnée(s) : {selectedPhotos.map((file) => file.name).join(", ")}</p>}<p className="pm-form-note pm-wide">Photos stockées dans un espace privé. Les liens de consultation sont délivrés uniquement pour les annonces publiées de vendeurs actifs. Formats JPG, PNG ou WebP, cinq mégaoctets maximum par photo.</p><button className="pm-cta" disabled={busy}>{busy ? "Publication…" : "Publier dans le Market"}</button></form></section>}
 
@@ -332,7 +359,16 @@ export default function PublicMarket() {
 
       {session && <section id="messages" className="pm-orders pm-messages"><div className="pm-section-heading"><div><span className="pm-eyebrow">CONTACT DIRECT SÉCURISÉ</span><h2>Vos messages</h2><p>Discutez avec les vendeurs et acheteurs sans partager vos coordonnées privées.</p></div></div><div className="pm-messaging"><aside className="pm-conversation-list">{conversations.length === 0 ? <p className="pm-form-note">Aucune conversation pour le moment. Contactez un vendeur depuis une annonce.</p> : conversations.map((conversation) => <button type="button" key={conversation.id} className={selectedConversationId === conversation.id ? "is-active" : ""} onClick={() => void selectConversation(conversation.id)}><b>{conversation.listingTitle}</b><span>{conversation.buyerUserId === session.user.id ? conversation.sellerName : "Acheteur intéressé"}</span><small>{new Date(conversation.updatedAt).toLocaleDateString("fr-FR")}</small></button>)}</aside><div className="pm-chat-panel">{selectedConversationId ? <><div className="pm-chat-heading"><b>{conversations.find((item) => item.id === selectedConversationId)?.listingTitle ?? "Conversation"}</b><span>{conversations.find((item) => item.id === selectedConversationId)?.sellerName ?? ""}</span></div><div className="pm-chat-history">{messages.map((message) => <article key={message.id} className={message.senderUserId === session.user.id ? "pm-chat-message is-mine" : "pm-chat-message"}><span>{message.senderUserId === session.user.id ? "Vous" : (seller?.id === conversations.find((item) => item.id === selectedConversationId)?.sellerId ? "Acheteur" : conversations.find((item) => item.id === selectedConversationId)?.sellerName ?? "Vendeur")}</span><p>{message.content}</p><small>{new Date(message.createdAt).toLocaleString("fr-FR")}</small></article>)}</div><form className="pm-chat-reply" onSubmit={submitReply}><textarea required maxLength={2000} value={replyMessage} onChange={(e) => setReplyMessage(e.target.value)} placeholder="Écrire un message…" /><button className="pm-cta" disabled={busy || !replyMessage.trim()}>{busy ? "Envoi…" : "Envoyer"}</button></form></> : <div className="pm-chat-empty">Sélectionnez une conversation pour lire les messages et répondre.</div>}</div></div></section>}
 
-      <footer className="pm-footer"><a className="pm-brand" href="/"><img className="pm-mark" src="/images/yere-logo.png" alt="" /><span><b>YÉRÉ</b><small>MARKET</small></span></a><p>Le marché qui rapproche les artisans, les vendeurs et les passionnés de couture.</p><a href="/?espace=professionnel">Espace tailleur →</a></footer>
+      <section className="pm-market-benefits" aria-labelledby="pm-benefits-title">
+        <div className="pm-benefits-heading"><span className="pm-eyebrow">YÉRÉ MARKET · COUTURE & CRÉATION</span><h2 id="pm-benefits-title">Tout l’univers de la couture, au même endroit.</h2><p>Un espace simple pour découvrir, vendre et faire grandir les savoir-faire.</p></div>
+        <div className="pm-benefits-grid">
+          <article><span className="pm-benefit-icon">⌕</span><h3>Découvrez</h3><p>Explorez les créations, tissus et fournitures proposés par les vendeurs.</p><a href="#catalogue">Voir le catalogue →</a></article>
+          <article><span className="pm-benefit-icon">✦</span><h3>Ouvrez votre boutique</h3><p>Présentez votre activité et publiez vos offres auprès de la communauté.</p><a href="#vendeurs">Devenir vendeur →</a></article>
+          <article><span className="pm-benefit-icon">↗</span><h3>Échangez en confiance</h3><p>Discutez et suivez vos commandes dans votre espace Market.</p><button type="button" onClick={() => { setShowAccount(true); setError(""); }}>Accéder à mon espace →</button></article>
+        </div>
+      </section>
+
+      <footer className="pm-footer"><a className="pm-brand" href="/"><img className="pm-mark" src="/images/yere-logo.png" alt="" /><span><b>YÉRÉ</b><small>MARKET</small></span></a><p>Le marché qui rapproche les artisans, les vendeurs et les passionnés de couture.</p></footer>
     </main>
   );
 }
