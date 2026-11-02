@@ -13,7 +13,7 @@ Contrôle en lecture seule effectué sur le projet YÉRÉ :
 - 49 migrations sont enregistrées dans l'historique Supabase.
 - 24 tables publiques sur 24 ont RLS activé.
 - Les versions appliquées comprenaient notamment les migrations `20261102083227`, `20261102085838`, `20261102093821`, `20261102094043`, `20261102124930` et `20261102133933`.
-- Le dépôt `main` avait des noms de fichiers qui ne correspondaient pas à quatre de ces versions et ne contenait pas les deux migrations de droits du profil atelier. Le chantier de réconciliation doit rétablir les noms et les fichiers exacts ; il ne faut pas réappliquer ces migrations à la base de production.
+- La branche de réconciliation contient maintenant 49 fichiers de migration dont les versions et noms correspondent exactement aux 49 entrées de l'historique Supabase. Les deux migrations de droits du profil atelier sont conservées dans le dépôt sous leurs versions déjà appliquées. Il ne faut pas les réappliquer à la base de production.
 
 ## 2. Droits du profil atelier — contrôle SQL exécuté
 
