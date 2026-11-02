@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { preserveRejectedStorageValue, resolvePersistentStorageKey } from "./usePersistentState";
+import { isBrowserPersistenceEnabled, preserveRejectedStorageValue, resolvePersistentStorageKey } from "./usePersistentState";
 
 describe("resolvePersistentStorageKey", () => {
   it("keeps account-level preferences scoped to the user", () => {
@@ -106,5 +106,17 @@ describe("preserveRejectedStorageValue", () => {
     expect(preserveRejectedStorageValue(storage, "yere-clients", "new damaged data")).toBe(false);
     expect(storage.values.size).toBe(100);
     expect(storage.values.get("yere-clients.recovery")).toBe("existing snapshot 1");
+  });
+});
+
+
+describe("isBrowserPersistenceEnabled", () => {
+  it("keeps browser persistence only for local preferences and legacy atelier caches", () => {
+    expect(isBrowserPersistenceEnabled("user")).toBe(true);
+    expect(isBrowserPersistenceEnabled("atelier")).toBe(true);
+  });
+
+  it("blocks browser reads and writes for server-owned business records", () => {
+    expect(isBrowserPersistenceEnabled("server")).toBe(false);
   });
 });
