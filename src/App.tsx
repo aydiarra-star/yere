@@ -47,14 +47,14 @@ function isNullableTimestamp(value: unknown): value is number | null {
 }
 
 function App() {
-  const [clients, setClients] = usePersistentState<Client[]>("yere-demo-clients-v1", [], isClientListValid, "atelier");
-  const [orders, setOrders] = usePersistentState<Order[]>("yere-demo-orders-v1", [], isOrderListValid, "atelier");
-  const [expenses, setExpenses] = usePersistentState<Expense[]>("yere-demo-expenses-v1", [], isExpenseListValid, "atelier");
-  const [stockItems, setStockItems] = usePersistentState<StockItem[]>("yere-demo-stock-items-v1", [], isStockItemListValid, "atelier");
-  const [stockMovements, setStockMovements] = usePersistentState<StockMovement[]>("yere-demo-stock-movements-v1", [], isStockMovementListValid, "atelier");
+  const [clients, setClients] = usePersistentState<Client[]>("yere-demo-clients-v1", [], isClientListValid, "server");
+  const [orders, setOrders] = usePersistentState<Order[]>("yere-demo-orders-v1", [], isOrderListValid, "server");
+  const [expenses, setExpenses] = usePersistentState<Expense[]>("yere-demo-expenses-v1", [], isExpenseListValid, "server");
+  const [stockItems, setStockItems] = usePersistentState<StockItem[]>("yere-demo-stock-items-v1", [], isStockItemListValid, "server");
+  const [stockMovements, setStockMovements] = usePersistentState<StockMovement[]>("yere-demo-stock-movements-v1", [], isStockMovementListValid, "server");
   const [atelier, setAtelier] = usePersistentState<AtelierProfile>("yere-demo-atelier-v1", emptyAtelier, isAtelierProfileValid, "atelier");
-  const [supplier, setSupplier] = usePersistentState<SupplierProfile>("yere-supplier-profile-v1", emptySupplier, isSupplierProfileValid, "atelier");
-  const [marketplaceListings, setMarketplaceListings] = usePersistentState<MarketplaceListing[]>("yere-marketplace-listings-v1", [], isMarketplaceListingListValid, "atelier");
+  const [supplier, setSupplier] = usePersistentState<SupplierProfile>("yere-supplier-profile-v1", emptySupplier, isSupplierProfileValid, "server");
+  const [marketplaceListings, setMarketplaceListings] = usePersistentState<MarketplaceListing[]>("yere-marketplace-listings-v1", [], isMarketplaceListingListValid, "server");
   const [listingDraft, setListingDraft] = useState<Omit<MarketplaceListing, "id">>({ ...emptyListing });
   const [listingFormOpen, setListingFormOpen] = useState(false);
   const [editingListingId, setEditingListingId] = useState<string | null>(null);
@@ -91,7 +91,7 @@ function App() {
   const [stockMovementType, setStockMovementType] = useState<"Entrée" | "Sortie">("Entrée");
   const [stockMovementQuantity, setStockMovementQuantity] = useState("");
   const [stockMovementNote, setStockMovementNote] = useState("");
-  const [supplierPurchases, setSupplierPurchases] = usePersistentState<SupplierPurchase[]>("yere-demo-supplier-purchases-v1", [], isSupplierPurchaseListValid, "atelier");
+  const [supplierPurchases, setSupplierPurchases] = usePersistentState<SupplierPurchase[]>("yere-demo-supplier-purchases-v1", [], isSupplierPurchaseListValid, "server");
   const [supplierDirectory, setSupplierDirectory] = useState<AtelierSupplier[]>([]);
   const [teamMembers, setTeamMembers] = useState<AtelierMember[]>([]);
   const [teamInvitations, setTeamInvitations] = useState<AtelierInvitation[]>([]);
@@ -152,19 +152,10 @@ function App() {
         ]);
         if (!active) return;
         setClients(serverClients);
-        setOrders(ownerAccess ? (current) => [...serverOrders, ...current.filter((order) => !order.serverId)] : serverOrders);
-        setExpenses(ownerAccess ? (current) => [
-          ...serverExpenses,
-          ...current.filter((expense) => expense.id.startsWith("EXP-") && !serverExpenses.some((item) => item.id === expense.id))
-        ] : []);
-        setStockItems((current) => [
-          ...serverStock.items,
-          ...current.filter((item) => item.id.startsWith("STK-") && !serverStock.items.some((serverItem) => serverItem.id === item.id))
-        ]);
-        setStockMovements((current) => [
-          ...serverStock.movements,
-          ...current.filter((movement) => movement.id.startsWith("MOV-") && !serverStock.movements.some((serverMovement) => serverMovement.id === movement.id))
-        ]);
+        setOrders(serverOrders);
+        setExpenses(ownerAccess ? serverExpenses : []);
+        setStockItems(serverStock.items);
+        setStockMovements(serverStock.movements);
         setSupplierDirectory(serverSuppliers);
         setTeamMembers(serverMembers);
         setTeamInvitations(serverInvitations);
@@ -185,10 +176,7 @@ function App() {
           ...(purchase.note ? { note: purchase.note } : {}),
           payments: purchase.payments
         }));
-        setSupplierPurchases(ownerAccess ? (current) => [
-          ...mappedPurchases,
-          ...current.filter((purchase) => purchase.id.startsWith("ACH-") && !mappedPurchases.some((serverPurchase) => serverPurchase.id === purchase.id))
-        ] : []);
+        setSupplierPurchases(ownerAccess ? mappedPurchases : []);
       } catch (cause) {
         if (active) setNotice(cause instanceof Error
           ? `Impossible de synchroniser les données de l'atelier : ${cause.message}`
@@ -409,30 +397,10 @@ function App() {
 
   function saveMarketplaceListing(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!listingDraft.title.trim()) { setNotice("Ajoutez le nom du produit ou de la création avant l’enregistrement."); return; }
-    if (!listingDraft.price.trim()) { setNotice("Ajoutez le prix affiché avant l’enregistrement."); return; }
-    if (!listingDraft.sellerName.trim()) { setNotice("Indiquez votre nom professionnel ou celui de la boutique."); return; }
-    const listing: MarketplaceListing = {
-      ...listingDraft,
-      sellerActivity: listingDraft.sellerType === "tailor" ? (listingDraft.sellerActivity ?? atelier.activity ?? "tailleur") : undefined,
-      id: editingListingId ?? `listing-${Date.now()}`,
-      title: listingDraft.title.trim(),
-      sellerName: listingDraft.sellerName.trim(),
-      description: listingDraft.description.trim(),
-      city: listingDraft.city.trim(),
-      price: listingDraft.price.trim(),
-      imageUrl: listingDraft.imageUrl.trim(),
-      imageUrls: (listingDraft.imageUrls ?? []).slice(0, 4)
-    };
-    setMarketplaceListings((current) => editingListingId
-      ? current.map((item) => item.id === editingListingId ? listing : item)
-      : [listing, ...current]);
+    setNotice("Cet ancien éditeur local est désactivé : il ne publie rien et ne peut plus enregistrer d’annonce dans le navigateur. Utilisez le profil vendeur et le catalogue Marketplace connectés au serveur.");
     setListingFormOpen(false);
     setEditingListingId(null);
     setListingDraft({ ...emptyListing, imageUrls: [] });
-    setNotice(editingListingId
-      ? "Annonce modifiée et enregistrée dans ce navigateur. Elle n’est pas encore publiée publiquement sur Internet."
-      : "Annonce enregistrée dans ce navigateur. Elle n’est pas encore publiée publiquement sur Internet.");
   }
 
   function exportLocalBackup() {
@@ -481,13 +449,8 @@ function App() {
         || !isNullableTimestamp(onboardingState.onboardingStartedAt)) {
         throw new Error("La sauvegarde est incomplète ou contient des données invalides. Aucune donnée n'a été modifiée.");
       }
-      setClients(data.clients);
-      setOrders(data.orders);
-      setExpenses(isExpenseListValid(data.expenses) ? data.expenses : []);
-      setStockItems(isStockItemListValid(data.stockItems) ? data.stockItems : []);
-      setStockMovements(isStockMovementListValid(data.stockMovements) ? data.stockMovements : []);
-      setSupplierPurchases(isSupplierPurchaseListValid(data.supplierPurchases) ? data.supplierPurchases : []);
-      setMarketplaceListings(isMarketplaceListingListValid(marketplaceListingsForRestore) ? marketplaceListingsForRestore : []);
+      // Business records from local backups remain in the selected file only.
+      // They are not loaded into live state because Supabase is the sole operational source.
       setAtelier(data.atelier);
       setSupplier(data.supplier !== undefined && isSupplierProfileValid(data.supplier) ? data.supplier : emptySupplier);
       setOnboardingComplete(onboardingState.onboardingComplete);
@@ -496,7 +459,7 @@ function App() {
       setShowForm(false);
       setShowOrderForm(false);
       setView("overview");
-      setNotice("Sauvegarde restaurée dans ce navigateur. Vérifiez les clients, les mensurations et les commandes. Cette restauration ne crée pas de copie serveur.");
+      setNotice("Sauvegarde locale vérifiée, mais ses anciennes données métier restent dans le fichier : elles ne sont pas mélangées aux données officielles de l’atelier. Une importation contrôlée vers le serveur sera nécessaire.");
     }).catch((error: unknown) => {
       const message = error instanceof Error ? error.message : "Fichier impossible à lire.";
       setNotice(`Restauration refusée : ${message}`);
@@ -547,8 +510,8 @@ function App() {
         name, unit: stockUnit.trim(), minimumQuantity, initialQuantity,
         createdAt: new Date().toISOString().slice(0, 10)
       });
-      setStockItems((current) => [...created.items, ...current.filter((item) => item.id.startsWith("STK-"))]);
-      setStockMovements((current) => [...created.movements, ...current.filter((movement) => movement.id.startsWith("MOV-"))]);
+      setStockItems(created.items);
+      setStockMovements(created.movements);
       setStockName("");
       setStockInitialQuantity("0");
       setStockMinimumQuantity("0");
@@ -583,8 +546,8 @@ function App() {
     try {
       await createAtelierStockMovement(session, atelierId, movement);
       const refreshed = await listAtelierStock(session, atelierId);
-      setStockItems((current) => [...refreshed.items, ...current.filter((item) => item.id.startsWith("STK-"))]);
-      setStockMovements((current) => [...refreshed.movements, ...current.filter((item) => item.id.startsWith("MOV-"))]);
+      setStockItems(refreshed.items);
+      setStockMovements(refreshed.movements);
       setStockMovementItemId(null);
       setStockMovementQuantity("");
       setStockMovementNote("");
@@ -752,7 +715,7 @@ function App() {
         ...(purchase.cancelReason ? { cancelReason: purchase.cancelReason } : {}),
         ...(purchase.note ? { note: purchase.note } : {}), payments: purchase.payments
       }));
-      setSupplierPurchases([...mappedPurchases, ...supplierPurchases.filter((purchase) => purchase.id.startsWith("ACH-"))]);
+      setSupplierPurchases(mappedPurchases);
       setPurchaseSupplierName("");
       setPurchaseStockItemId("");
       setPurchaseQuantity("");
@@ -787,8 +750,8 @@ function App() {
       const [refreshed, serverPurchases] = await Promise.all([
         listAtelierStock(session, atelierId), listAtelierSupplierPurchases(session, atelierId)
       ]);
-      setStockItems((current) => [...refreshed.items, ...current.filter((item) => item.id.startsWith("STK-"))]);
-      setStockMovements((current) => [...refreshed.movements, ...current.filter((item) => item.id.startsWith("MOV-"))]);
+      setStockItems(refreshed.items);
+      setStockMovements(refreshed.movements);
       const names = new Map(supplierDirectory.map((item) => [item.id, item.name]));
       const mapped: SupplierPurchase[] = serverPurchases.map((item) => ({
         id: item.id, supplierName: names.get(item.supplierId) ?? purchase.supplierName,
@@ -798,7 +761,7 @@ function App() {
         ...(item.cancelReason ? { cancelReason: item.cancelReason } : {}),
         ...(item.note ? { note: item.note } : {}), payments: item.payments
       }));
-      setSupplierPurchases((current) => [...mapped, ...current.filter((item) => item.id.startsWith("ACH-"))]);
+      setSupplierPurchases(mapped);
       setNotice("Achat réceptionné : les mouvements et le changement d’état ont été validés ensemble sur le serveur.");
     } catch (cause) {
       setNotice(cause instanceof Error ? `Réception non enregistrée : ${cause.message}` : "Impossible de confirmer la réception sur le serveur.");
@@ -838,7 +801,7 @@ function App() {
         ...(item.cancelReason ? { cancelReason: item.cancelReason } : {}),
         ...(item.note ? { note: item.note } : {}), payments: item.payments
       }));
-      setSupplierPurchases((current) => [...mapped, ...current.filter((item) => item.id.startsWith("ACH-"))]);
+      setSupplierPurchases(mapped);
       setSupplierPaymentAmount("");
       setSupplierPaymentPurchaseId(null);
       setNotice("Règlement fournisseur de " + formatXof(amount) + " enregistré sur le serveur. La réception et le stock restent inchangés.");
@@ -872,7 +835,7 @@ function App() {
         ...(item.cancelReason ? { cancelReason: item.cancelReason } : {}),
         ...(item.note ? { note: item.note } : {}), payments: item.payments
       }));
-      setSupplierPurchases((current) => [...mapped, ...current.filter((item) => item.id.startsWith("ACH-"))]);
+      setSupplierPurchases(mapped);
       setPurchaseToCancelId(null);
       setPurchaseCancelReason("");
       setNotice("Achat annulé sur le serveur. Le motif reste conservé dans l’historique et le stock est inchangé.");
@@ -1323,7 +1286,7 @@ function App() {
             </div>
             <div className="marketplace-listing-heading"><div><p className="eyebrow">VITRINE</p><h2>Les annonces préparées</h2><p>Les créations et les fournitures, réunies dans un seul espace.</p></div><span className="marketplace-listing-count">{marketplaceListings.length} annonce{marketplaceListings.length === 1 ? "" : "s"}</span></div>
             {marketplaceListings.length === 0 ? <div className="marketplace-empty content-card"><span className="marketplace-empty-icon"><NavIcon name="store" /></span><h3>Votre vitrine commence ici</h3><p>Aucune annonce pour le moment. Ajoutez un vêtement prêt à vendre, un album de créations ou une fourniture utile aux professionnels de la couture.</p><button className="primary-button" onClick={() => { setListingDraft({ ...emptyListing, sellerName: atelier.name, city: atelier.city }); setListingFormOpen(true); setNotice(""); }}>Créer la première annonce <span>→</span></button></div> : <div className="marketplace-listing-grid">{marketplaceListings.map((listing) => { const photos = [...(listing.imageUrl ? [listing.imageUrl] : []), ...(listing.imageUrls ?? [])]; return <article className="marketplace-product-card content-card" key={listing.id}><div className="marketplace-card-photos">{photos.length ? photos.map((photo, index) => <img key={`${listing.id}-photo-${index}`} src={photo} alt={`${listing.title}, photo ${index + 1}`} loading="lazy" />) : <div className={listing.sellerType === "tailor" ? "marketplace-product-placeholder fashion" : "marketplace-product-placeholder supplies"}><NavIcon name={listing.sellerType === "tailor" ? "shirt" : "package"} /></div>}</div><div className="marketplace-product-copy"><span className={listing.sellerType === "tailor" ? "marketplace-product-type fashion" : "marketplace-product-type supplies"}>{listing.sellerType === "tailor" ? "MODE & CRÉATIONS" : "TISSUS & FOURNITURES"}</span><h3>{listing.title}</h3><p>{listing.description || listing.category}</p><strong>{listing.price}</strong><div className="marketplace-product-meta"><span>{listing.sellerName}</span><span>{listing.city || "Zone non précisée"}</span></div>{listing.sellerType === "tailor" && listing.sellerActivity && <span className="marketplace-activity-tag">Tailleur</span>}</div><div className="marketplace-card-actions"><button type="button" className="secondary-button" onClick={() => editMarketplaceListing(listing)}>Modifier</button><button className="marketplace-remove" type="button" onClick={() => setMarketplaceListings((current) => current.filter((item) => item.id !== listing.id))}>Retirer</button></div></article>; })}</div>}
-            <p className="marketplace-local-note">Les annonces enregistrées ici sont visibles uniquement dans ce navigateur. Les comptes vendeurs, les photos hébergées, la publication publique, les paiements et les commandes en ligne seront raccordés au backend marketplace.</p>
+            <p className="marketplace-local-note">Cet ancien éditeur local est désactivé. Les annonces officielles doivent être enregistrées et confirmées par le serveur Marketplace.</p>
           </section>}
 
           {view === "reminders" && <section className="reminders-page">
