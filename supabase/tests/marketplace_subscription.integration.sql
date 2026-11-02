@@ -42,7 +42,7 @@ begin
   exception when insufficient_privilege then
     null;
   end;
-end $;
+end $$;
 reset role;
 
 -- Public catalog can read published products; a separate authenticated buyer can place an order.
