@@ -12,6 +12,8 @@ export type MarketplaceSeller = {
   city: string;
   category: string;
   description: string;
+  logoPath: string | null;
+  logoUrl: string | null;
   status: "actif" | "suspendu";
 };
 
@@ -51,7 +53,7 @@ export type MarketplaceOrder = {
 
 type SellerRow = {
   id: string; type_vendeur: MarketplaceSeller["sellerType"];
-  nom_entreprise: string; ville: string; categorie: string; description: string;
+  nom_entreprise: string; ville: string; categorie: string; description: string; logo_path: string | null;
   statut: MarketplaceSeller["status"];
 };
 type SellerContactRow = { nom_contact: string; telephone: string };
@@ -76,10 +78,11 @@ async function readJson(response: Response): Promise<unknown> {
   return body;
 }
 
-function mapSeller(row: SellerRow, userId: string, contact: SellerContactRow): MarketplaceSeller {
+async function mapSeller(row: SellerRow, userId: string, contact: SellerContactRow): Promise<MarketplaceSeller> {
   return { id: row.id, userId, sellerType: row.type_vendeur, atelierId: null,
     businessName: row.nom_entreprise, contactName: contact.nom_contact, phone: contact.telephone, city: row.ville,
-    category: row.categorie, description: row.description, status: row.statut };
+    category: row.categorie, description: row.description, logoPath: row.logo_path ?? null,
+    logoUrl: row.logo_path ? await createMarketplacePhotoSignedUrl(row.logo_path) : null, status: row.statut };
 }
 
 async function getOwnSellerContact(session: YereSession): Promise<SellerContactRow> {
@@ -108,17 +111,17 @@ function mapOrder(row: OrderRow): MarketplaceOrder {
 }
 
 export async function getMyMarketplaceSeller(session: YereSession): Promise<MarketplaceSeller | null> {
-  const fields = "id,type_vendeur,nom_entreprise,ville,categorie,description,statut";
+  const fields = "id,type_vendeur,nom_entreprise,ville,categorie,description,logo_path,statut";
   const response = await authenticatedFetch(session,
     `rest/v1/marketplace_vendeur?select=${fields}&id=not.is.null&limit=1`);
   const data = await readJson(response);
   if (!Array.isArray(data)) throw new Error("Profil vendeur invalide.");
   if (!data.length) return null;
   const contact = await getOwnSellerContact(session);
-  return mapSeller(data[0] as SellerRow, session.user.id, contact);
+  return await mapSeller(data[0] as SellerRow, session.user.id, contact);
 }
 
-export async function createMarketplaceSeller(session: YereSession, input: Omit<MarketplaceSeller, "id" | "userId" | "status">): Promise<MarketplaceSeller> {
+export async function createMarketplaceSeller(session: YereSession, input: { sellerType: MarketplaceSeller["sellerType"]; atelierId: string | null; businessName: string; contactName: string; phone: string; city: string; category: string; description: string }): Promise<MarketplaceSeller> {
   const response = await authenticatedFetch(session, "rest/v1/marketplace_vendeur", {
     method: "POST", headers: { Prefer: "return=minimal" },
     body: JSON.stringify({ user_id: session.user.id, type_vendeur: input.sellerType, atelier_id: input.atelierId,
@@ -132,7 +135,23 @@ export async function createMarketplaceSeller(session: YereSession, input: Omit<
   const data = await readJson(profileResponse);
   if (!Array.isArray(data) || !data[0]) throw new Error("Le compte vendeur n'a pas été confirmé.");
   const contact = await getOwnSellerContact(session);
-  return mapSeller(data[0] as SellerRow, session.user.id, contact);
+  return await mapSeller(data[0] as SellerRow, session.user.id, contact);
+}
+
+
+export async function updateMarketplaceSeller(session: YereSession, sellerId: string, input: {
+  businessName: string; contactName: string; phone: string; city: string; category: string; description: string; logoPath: string | null;
+}): Promise<MarketplaceSeller> {
+  const response = await authenticatedFetch(session, `rest/v1/marketplace_vendeur?id=eq.${encodeURIComponent(sellerId)}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ nom_entreprise: input.businessName.trim(), nom_contact: input.contactName.trim(),
+      telephone: input.phone.trim(), ville: input.city.trim(), categorie: input.category.trim(),
+      description: input.description.trim(), logo_path: input.logoPath })
+  });
+  await readJson(response);
+  const updated = await getMyMarketplaceSeller(session);
+  if (!updated || updated.id !== sellerId) throw new Error("La mise à jour de la boutique n'a pas été confirmée.");
+  return updated;
 }
 
 export async function listMarketplaceListings(session: YereSession, includeOwnDrafts = false): Promise<MarketplaceListing[]> {
