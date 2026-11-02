@@ -3,7 +3,7 @@
 begin;
 
 -- Atelier profile writes are limited to editable fields; identity and currency stay server-controlled.
-do $
+do $atelier_privilege_check$
 begin
   if not has_column_privilege('authenticated', 'public.atelier', 'nom', 'UPDATE') then
     raise exception 'FAIL: authenticated owner/manager cannot update atelier name';
@@ -16,7 +16,7 @@ begin
      or has_column_privilege('authenticated', 'public.atelier', 'devise', 'INSERT') then
     raise exception 'FAIL: atelier insert privileges are broader or narrower than intended';
   end if;
-end $;
+end $atelier_privilege_check$;
 
 insert into auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
