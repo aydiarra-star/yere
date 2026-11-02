@@ -143,3 +143,5 @@
 .yere-market-app .pm-chat-reply .pm-cta{align-self:end;min-height:42px}
 .yere-market-app .pm-chat-empty{display:grid;place-items:center;padding:30px;color:#818aa1;font-size:11px;text-align:center}
 @media(max-width:620px){.yere-market-app .pm-messaging{grid-template-columns:1fr}.yere-market-app .pm-conversation-list{max-height:210px;overflow:auto;border-right:0;border-bottom:1px solid #e9ebf3}.yere-market-app .pm-chat-panel{min-height:340px}.yere-market-app .pm-chat-reply{grid-template-columns:1fr}.yere-market-app .pm-chat-reply .pm-cta{width:100%}}
+
+.pm-mark{width:42px;height:42px;object-fit:cover;border:0;border-radius:9px;color:transparent}
