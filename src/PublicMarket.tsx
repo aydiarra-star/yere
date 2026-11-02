@@ -288,7 +288,7 @@ export default function PublicMarket() {
         <div className="pm-header-actions">
           {session ? <><span className="pm-user">{session.user.email}</span><button className="pm-outline" type="button" onClick={() => void handleSignOut()} disabled={busy}>Déconnexion</button></> :
             <button className="pm-outline" type="button" onClick={() => { setShowAccount((v) => !v); setError(""); }}>Se connecter</button>}
-          <a className="pm-outline pm-atelier-link" href="/atelier">Espace Atelier</a><a className="pm-cta" href="#vendeurs">Vendre sur YÉRÉ</a>
+          <a className="pm-outline pm-atelier-link" href="/atelier">Compte professionnel</a><a className="pm-cta" href="#vendeurs">Vendre sur YÉRÉ</a>
         </div>
       </header>
 
