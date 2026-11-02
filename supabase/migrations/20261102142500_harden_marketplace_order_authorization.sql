@@ -7,8 +7,8 @@ create or replace function public.creer_commande_marketplace(
   p_quantite integer,
   p_nom_acheteur text,
   p_telephone_acheteur text,
-  p_ville_livraison text,
-  p_note_acheteur text
+  p_ville_livraison text default '',
+  p_note_acheteur text default ''
 )
 returns uuid
 language plpgsql
