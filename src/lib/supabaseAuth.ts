@@ -183,6 +183,31 @@ export async function createAtelier(session: YereSession, input: { nom: string; 
   return created.id;
 }
 
+/** Updates only the editable profile fields of an atelier. */
+export async function updateAtelierProfile(
+  session: YereSession,
+  atelierId: string,
+  input: { nom: string; telephone: string; ville: string }
+): Promise<void> {
+  const values = {
+    nom: input.nom.trim(),
+    telephone: input.telephone.trim() || null,
+    ville: input.ville.trim() || null
+  };
+  const response = await authenticatedFetch(session,
+    `rest/v1/atelier?id=eq.${encodeURIComponent(atelierId)}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(values)
+    }
+  );
+  const data = await parseResponse(response);
+  if (!Array.isArray(data) || data.length !== 1 || data[0]?.id !== atelierId) {
+    throw new Error("Le profil de l’atelier n’a pas été confirmé sur le serveur.");
+  }
+}
+
 
 /** Sends a password recovery email and returns no account-existence information. */
 export async function requestPasswordRecovery(email: string): Promise<void> {
