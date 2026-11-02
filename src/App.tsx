@@ -207,7 +207,8 @@ function App() {
   }, [setClients, setOrders, setSupplierPurchases]);
 
   useEffect(() => {
-    if (serverSyncStatus !== "ready" || !isAtelierOwner) {
+    const ownerAccess = teamMembers.some((member) => member.userId === readSession()?.user.id && member.active && member.role === "proprietaire");
+    if (serverSyncStatus !== "ready" || !ownerAccess) {
       setAtelierSubscription(null);
       setSubscriptionPayments([]);
       setSubscriptionLoadError("");
@@ -233,7 +234,7 @@ function App() {
       }
     })();
     return () => { active = false; };
-  }, [serverSyncStatus, isAtelierOwner]);
+  }, [serverSyncStatus, teamMembers]);
 
   useEffect(() => {
     if (!taskOrderId) setTaskOrderId(orders.find((order) => order.serverId)?.serverId ?? "");
