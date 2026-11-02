@@ -34,8 +34,8 @@ export function preserveRejectedStorageValue(
 }
 
 /**
- * Browser-local persistence for the prototype only.
- * This is not a substitute for authenticated, server-side storage.
+ * Browser-local cache for UI continuity and offline drafts.
+ * Authenticated business records are loaded from and written to the server APIs.
  */
 export function usePersistentState<T>(
   key: string,
@@ -43,7 +43,7 @@ export function usePersistentState<T>(
   isValid?: (value: unknown) => value is T,
   scope: PersistenceScope = "user"
 ): [T, Dispatch<SetStateAction<T>>] {
-  // Authenticated accounts get isolated browser caches while cloud sync is being rolled out.
+  // Authenticated accounts get isolated browser caches; server APIs remain the source of truth for synced records.
   const storageKey = typeof window !== "undefined"
     ? resolvePersistentStorageKey(key, window.sessionStorage.getItem("yere-user-scope"), window.sessionStorage.getItem("yere-active-atelier"), scope)
     : key;
