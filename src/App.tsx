@@ -6,7 +6,8 @@ import { normalizeBackupOnboardingState, normalizeBackupMarketplaceListings } fr
 import { isMarketplaceListingListValid, type MarketplaceListing } from "./marketplace";
 import { usePersistentState } from "./usePersistentState";
 import { createAtelierClient, createAtelierOrder, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
-import { readSession } from "./lib/supabaseAuth";
+import { listMyAteliers, readSession, updateAtelierProfile } from "./lib/supabaseAuth";
+import { getAtelierSubscription, type AtelierSubscription } from "./lib/atelierSubscription";
 import { createAtelierTask, listAtelierTasks, updateAtelierTask, type AtelierTask, type AtelierTaskStatus } from "./lib/atelierTasks";
 import { cancelAtelierInvitation, createAtelierInvitation, deactivateAtelierMember, listAtelierInvitations, listAtelierMembers, updateAtelierMemberRole, updateAtelierMemberProfile, type AtelierInvitation, type AtelierMember } from "./lib/atelierTeam";
 import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, getAtelierSupplierProfile, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, saveAtelierSupplierProfile, type AtelierSupplier } from "./lib/atelierSuppliers";
@@ -94,6 +95,7 @@ function App() {
   const [supplierPurchases, setSupplierPurchases] = usePersistentState<SupplierPurchase[]>("yere-demo-supplier-purchases-v1", [], isSupplierPurchaseListValid, "atelier");
   const [supplierDirectory, setSupplierDirectory] = useState<AtelierSupplier[]>([]);
   const [teamMembers, setTeamMembers] = useState<AtelierMember[]>([]);
+  const [atelierSubscription, setAtelierSubscription] = useState<AtelierSubscription | null>(null);
   const [teamInvitations, setTeamInvitations] = useState<AtelierInvitation[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"gestionnaire" | "employe">("employe");
@@ -140,7 +142,7 @@ function App() {
         const currentMember = serverMembers.find((member) => member.userId === session.user.id && member.active);
         const ownerAccess = currentMember?.role === "proprietaire";
         const [serverClients, serverOrders, serverStock, serverSuppliers, serverSupplierProfile,
-          serverExpenses, serverPurchases, serverTasks] = await Promise.all([
+          serverExpenses, serverPurchases, serverTasks, serverSubscription] = await Promise.all([
           listAtelierClients(session, atelierId),
           listAtelierOrders(session, atelierId, ownerAccess),
           listAtelierStock(session, atelierId),
@@ -148,7 +150,8 @@ function App() {
           getAtelierSupplierProfile(session, atelierId),
           ownerAccess ? listAtelierExpenses(session, atelierId) : Promise.resolve([]),
           ownerAccess ? listAtelierSupplierPurchases(session, atelierId) : Promise.resolve([]),
-          listAtelierTasks(session, atelierId)
+          listAtelierTasks(session, atelierId),
+          ownerAccess ? getAtelierSubscription(session, atelierId).catch(() => null) : Promise.resolve(null)
         ]);
         if (!active) return;
         setClients(serverClients);
@@ -167,6 +170,7 @@ function App() {
         ]);
         setSupplierDirectory(serverSuppliers);
         setTeamMembers(serverMembers);
+        setAtelierSubscription(serverSubscription);
         setTeamInvitations(serverInvitations);
         setAtelierTasks(serverTasks);
         setTaskOrderId(serverOrders.find((order) => order.serverId)?.serverId ?? "");
@@ -190,9 +194,12 @@ function App() {
           ...current.filter((purchase) => purchase.id.startsWith("ACH-") && !mappedPurchases.some((serverPurchase) => serverPurchase.id === purchase.id))
         ] : []);
       } catch (cause) {
-        if (active) setNotice(cause instanceof Error
-          ? `Impossible de synchroniser les données de l'atelier : ${cause.message}`
-          : "Impossible de synchroniser les données de l'atelier avec le serveur.");
+        if (active) {
+          setAtelierSubscription(null);
+          setNotice(cause instanceof Error
+            ? `Impossible de synchroniser les données de l'atelier : ${cause.message}`
+            : "Impossible de synchroniser les données de l'atelier avec le serveur.");
+        }
       }
     })();
     return () => { active = false; };
@@ -1128,7 +1135,7 @@ function App() {
           />}
 
           {view === "clients" && <section className="content-card clients-card"><div className="section-heading"><div><h2>Répertoire clients</h2><p>{clients.length} fiche{clients.length > 1 ? "s" : ""} dans cet atelier</p></div><label className="search-box"><span>⌕</span><input autoFocus={view === "clients"} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher par nom ou téléphone" aria-label="Rechercher un client" /></label></div>
-            {showForm && <form className="new-client-form" onSubmit={addClient}><div><h3>Créer une fiche client</h3><p>Les mensurations pourront être complétées ensuite. Prototype local : n’utilisez pas encore de données clients réelles.</p></div><label>Nom complet<input required autoFocus value={clientName} onChange={(event) => setClientName(event.target.value)} placeholder="Ex. Mariama Diallo" /></label><label>Téléphone<input value={clientPhone} onChange={(event) => setClientPhone(event.target.value)} placeholder="+221 77 000 00 00" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>Annuler</button><button type="submit" className="primary-button">Enregistrer le client</button></div></form>}
+            {showForm && <form className="new-client-form" onSubmit={addClient}><div><h3>Créer une fiche client</h3><p>Les fiches clients et les mensurations sont enregistrées dans l’atelier et synchronisées sur le serveur.</p></div><label>Nom complet<input required autoFocus value={clientName} onChange={(event) => setClientName(event.target.value)} placeholder="Ex. Mariama Diallo" /></label><label>Téléphone<input value={clientPhone} onChange={(event) => setClientPhone(event.target.value)} placeholder="+221 77 000 00 00" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>Annuler</button><button type="submit" className="primary-button">Enregistrer le client</button></div></form>}
             <div className="client-list">{visibleClients.map((client, index) => <button key={client.id} className={selectedClient === client.id ? "client-row selected" : "client-row"} onClick={() => setSelectedClient(selectedClient === client.id ? null : client.id)}><span className={`client-avatar avatar-${index % 4}`}>{client.name.split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</span><span className="client-main"><b>{client.name}</b><small>{client.phone || "Pas de téléphone renseigné"}</small></span><span className="client-measurements"><b>{[client.measurement.bust, client.measurement.waist, client.measurement.hips, client.measurement.shoulder, client.measurement.sleeve, client.measurement.length, client.measurement.arm, client.measurement.neck, client.measurement.thigh, client.measurement.legLength].filter(Boolean).length}/10</b><small>mesures saisies</small></span><span className="row-chevron">›</span></button>)}
               {visibleClients.length === 0 && <div className="empty-state"><span>⌕</span><b>Aucun client trouvé</b><p>Essayez un autre nom ou numéro.</p></div>}
             </div>
@@ -1191,7 +1198,7 @@ function App() {
           {view === "cash" && isAtelierOwner && <section className="cash-page">
             <div className="cash-summary-grid">
               <article className="content-card cash-summary"><span>Reste à encaisser</span><strong>{formatXof(outstanding)}</strong><small>Soldes des commandes non réglées</small></article>
-              <article className="content-card cash-summary"><span>Total encaissé</span><strong>{formatXof(totalCollected)}</strong><small>Versements enregistrés dans ce prototype</small></article>
+              <article className="content-card cash-summary"><span>Total encaissé</span><strong>{formatXof(totalCollected)}</strong><small>Versements confirmés et synchronisés sur le serveur</small></article>
               <article className="content-card cash-summary"><span>Dépenses enregistrées</span><strong>{formatXof(totalExpenses)}</strong><small>Dépenses actives synchronisées sur le serveur, hors règlements fournisseurs suivis séparément</small></article>
               <article className="content-card cash-summary"><span>Règlements fournisseurs</span><strong>{formatXof(totalSupplierPayments)}</strong><small>Sorties enregistrées dans le module Achats fournisseurs</small></article>
               <article className="content-card cash-summary"><span>Encaissements − sorties suivies</span><strong>{formatXof(totalCollected - totalCashOutflows)}</strong><small>Indicateur de trésorerie simplifié, pas un solde comptable</small></article>
@@ -1209,7 +1216,27 @@ function App() {
           {view === "account" && <section className="content-card account-page">
             <div className="section-heading account-section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div></div>
             <div id="yere-profile-account-controls" className="profile-account-controls-slot" />
-            <form className="account-form" onSubmit={(event) => { event.preventDefault(); setAtelier((current) => normalizeAtelierProfile(current)); setNotice("Profil d'atelier mis à jour localement. La synchronisation des champs de profil sera ajoutée dans un prochain chantier."); }}>
+            <form className="account-form" onSubmit={async (event) => {
+              event.preventDefault();
+              const session = readSession();
+              const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+              if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+              const normalized = normalizeAtelierProfile(atelier);
+              try {
+                await updateAtelierProfile(session, atelierId, {
+                  nom: normalized.name, telephone: normalized.phone, ville: normalized.city
+                });
+                setAtelier(normalized);
+                setNotice("Nom, téléphone et ville de l’atelier enregistrés et synchronisés sur le serveur.");
+              } catch (cause) {
+                try {
+                  const workspaces = await listMyAteliers(session);
+                  const saved = workspaces.find((item) => item.id === atelierId);
+                  if (saved) setAtelier((current) => ({ ...current, name: saved.nom, phone: saved.telephone ?? "", city: saved.ville ?? "" }));
+                } catch { /* keep the original save error visible */ }
+                setNotice(cause instanceof Error ? `Profil non enregistré : ${cause.message}` : "Impossible de synchroniser le profil de l’atelier.");
+              }
+            }}>
               <div className="profile-profession" aria-label="Métier YÉRÉ"><span>Métier</span><strong>Tailleur</strong><small>YÉRÉ est actuellement dédié aux tailleurs.</small></div>
               
               <label>Organisation du travail<select value={atelier.workMode ?? "independent"} onChange={(event) => setAtelier((current) => ({ ...current, workMode: event.target.value as WorkMode }))}>{workModes.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}</select></label>
@@ -1218,6 +1245,17 @@ function App() {
               <label>Ville<input value={atelier.city} onChange={(event) => setAtelier((current) => ({ ...current, city: event.target.value }))} /></label>
               <button type="submit" className="primary-button">Enregistrer le profil</button>
             </form>
+            <p className="privacy-note">Le nom, le téléphone et la ville sont synchronisés. Le mode d’organisation reste une préférence locale à cet appareil.</p>
+            {isAtelierOwner && <section className="content-card team-panel subscription-panel" aria-labelledby="subscription-title">
+              <div className="section-heading"><div><h3 id="subscription-title">Abonnement YÉRÉ</h3><p>Un abonnement par atelier, toute l’équipe incluse.</p></div></div>
+              {atelierSubscription ? <>
+                <p><strong>{formatXof(atelierSubscription.monthlyPriceXof)} / mois / atelier</strong></p>
+                {atelierSubscription.status === "essai"
+                  ? <p>Votre période d’essai gratuite se termine le <strong>{new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(new Date(atelierSubscription.trialEndsAt))}</strong>.</p>
+                  : <p>Statut : <strong>{atelierSubscription.status === "actif" ? "Abonnement actif" : atelierSubscription.status === "paiement_requis" ? "Paiement requis" : atelierSubscription.status === "en_retard" ? "Paiement en retard" : atelierSubscription.status === "suspendu" ? "Suspendu" : "Résilié"}</strong>{atelierSubscription.periodEndsAt ? ` · échéance ${new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(new Date(atelierSubscription.periodEndsAt))}` : ""}.</p>}
+                <p className="privacy-note">Aucun prélèvement automatique ni paiement en ligne n’est activé. Le tarif annoncé est de 5 000 FCFA par mois et par atelier, avec toute l’équipe incluse.</p>
+              </> : <p className="privacy-note">Les informations d’abonnement ne sont pas disponibles pour cet atelier. Actualisez la page ou contactez l’assistance avant toute facturation.</p>}
+            </section>}
             <section className="content-card team-panel" aria-labelledby="team-title">
               <div className="section-heading"><div><h3 id="team-title">Équipe et accès à l’atelier</h3><p>Les droits sont contrôlés sur le serveur et chaque membre reste limité à cet atelier.</p></div><span className="marketplace-listing-count">{teamMembers.filter((member) => member.active).length} membre(s)</span></div>
               <div className="table-wrap"><table><thead><tr><th>Profil professionnel / compte</th><th>Rôle</th><th>État</th><th>Depuis</th>{isAtelierOwner ? <th>Actions</th> : null}</tr></thead><tbody>{teamMembers.map((member) => <tr key={member.userId}><td><strong>{member.professionalName || (member.role === "proprietaire" ? "Propriétaire de l’atelier" : member.role === "gestionnaire" ? "Gestionnaire" : "Profil à compléter")}</strong>{member.specialties.length ? <small>{member.specialties.join(" · ")}</small> : null}{member.experienceLevel ? <small>{({debutant:"Débutant",intermediaire:"Intermédiaire",experimente:"Expérimenté",maitre:"Maître tailleur"} as const)[member.experienceLevel]}</small> : null}{member.presentation ? <small>{member.presentation}</small> : null}<code>{member.userId.slice(0,8)}…{member.userId.slice(-4)}</code>{member.userId === currentUserId ? <small>Votre compte</small> : null}{isAtelierOwner && member.active && member.role === "employe" ? <TailorProfileEditor member={member} busy={teamBusy} onSave={saveTailorProfessionalProfile} /> : null}</td><td>{member.role === "proprietaire" ? "Propriétaire" : member.role === "gestionnaire" ? "Gestionnaire" : "Tailleur"}</td><td>{member.active ? "Actif" : "Désactivé"}</td><td>{new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(member.createdAt))}</td>{isAtelierOwner ? <td>{member.role !== "proprietaire" ? <div className="team-member-actions"><button type="button" className="text-button" disabled={teamBusy || !member.active} onClick={() => void changeTeamMemberRole(member)}>{member.role === "gestionnaire" ? "Rétablir employé" : "Nommer gestionnaire"}</button>{member.active ? <button type="button" className="text-button" disabled={teamBusy} onClick={() => void deactivateTeamMember(member)}>Désactiver</button> : <span className="privacy-note">Accès retiré</span>}</div> : <span className="privacy-note">Compte propriétaire protégé</span>}</td> : null}</tr>)}</tbody></table></div>
@@ -1242,7 +1280,7 @@ function App() {
               <p className="privacy-note">Attention : le fichier exporté contient des informations personnelles. Gardez-le hors d’accès public. Avant restauration, exportez les données actuelles si vous souhaitez les conserver.</p>
             </section>
             <div className="account-secondary"><div><b>Relances clients</b><p>Consultez les suggestions de relance manuelle, sans envoi automatique.</p></div><button className="secondary-button" onClick={() => setView("reminders")}>Ouvrir les relances →</button></div>
-            <p className="privacy-note">Les comptes, les ateliers et les données métier principales sont synchronisés. Les champs de profil de cet écran restent enregistrés localement jusqu’au raccordement de leur formulaire à la base serveur.</p>
+            <p className="privacy-note">Les comptes, les ateliers et les données métier principales sont synchronisés sur le serveur. Le mode d’organisation reste une préférence locale à cet appareil.</p>
           </section>}
           {view === "stock" && <section className="stock-page">
             <div className="cash-summary-grid">
@@ -1274,7 +1312,7 @@ function App() {
               {purchaseToCancelId && supplierPurchases.some((purchase) => purchase.id === purchaseToCancelId && purchase.status === "À recevoir" && supplierPurchasePaidTotal(purchase) === 0) && <form className="new-order-form" onSubmit={cancelPurchase}><h3>Annuler l’achat {purchaseToCancelId}</h3><p>L’annulation sera conservée dans l’historique. Elle ne modifiera pas le stock.</p><label>Motif obligatoire<textarea required maxLength={240} rows={3} value={purchaseCancelReason} onChange={(event) => setPurchaseCancelReason(event.target.value)} placeholder="Indiquer pourquoi la commande doit être annulée" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => { setPurchaseToCancelId(null); setPurchaseCancelReason(""); }}>Retour</button><button type="submit" className="primary-button">Confirmer l’annulation</button></div></form>}
             </section> : <section className="content-card"><h2>Achats fournisseurs</h2><p>Les achats, coûts et règlements fournisseurs sont réservés au Propriétaire.</p></section>}
             <section className="content-card"><div className="section-heading"><div><h2>Historique des mouvements</h2><p>Les mouvements restent visibles pour comprendre les variations de stock.</p></div></div>{stockMovements.length === 0 ? <div className="empty-state">Aucun mouvement enregistré.</div> : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Article</th><th>Type</th><th>Quantité</th><th>Note</th></tr></thead><tbody>{stockMovements.slice(0, 100).map((movement) => <tr key={movement.id}><td>{movement.movedAt}</td><td>{stockItems.find((item) => item.id === movement.itemId)?.name ?? "Article inconnu"}</td><td>{movement.type}</td><td>{movement.quantity} {stockItems.find((item) => item.id === movement.itemId)?.unit ?? ""}</td><td>{movement.note || "—"}</td></tr>)}</tbody></table></div>}</section>
-            <p className="privacy-note">Les achats peuvent regrouper plusieurs articles et leurs réceptions alimentent l’historique de stock. Les factures fournisseurs, paiements et synchronisation serveur restent à développer.</p>
+            <p className="privacy-note">Les achats, règlements et réceptions sont synchronisés sur le serveur. La gestion des factures fournisseurs et les rapports comptables restent à développer.</p>
           </section>}
           {view === "suppliers" && <section className="content-card supplier-page">
             <div className="section-heading"><div><h2>Profil fournisseur</h2><p>Renseignez les informations professionnelles de votre espace fournisseur.</p></div><span className="supplier-symbol"><NavIcon name="truck" /></span></div>
@@ -1289,12 +1327,12 @@ function App() {
               <button type="submit" className="primary-button">Enregistrer le profil fournisseur</button>
             </form>
             <div className="supplier-shop-access"><div><span className="supplier-symbol"><NavIcon name="store" /></span><div><h3>Création de boutique</h3><p>Préparez votre boutique avec un nom public, une catégorie et une zone de livraison.</p></div></div><button className="secondary-button" onClick={() => { setSupplier((current) => ({ ...current, shopName: current.shopName || current.businessName })); setView("marketplace"); }}>Créer / gérer ma boutique <span>→</span></button></div>
-            <p className="privacy-note">Le profil fournisseur et le carnet de fournisseurs sont enregistrés dans la base sécurisée de votre atelier. La publication publique du catalogue et les commandes marketplace restent à activer côté serveur.</p>
+            <p className="privacy-note">Le carnet de fournisseurs de l’atelier est synchronisé sur le serveur. Pour ouvrir une boutique publique, publier des offres et gérer les commandes Market, utilisez l’espace YÉRÉ Market.</p>
           </section>}
           {view === "marketplace" && <section className="marketplace-page">
             <div className="marketplace-hero content-card">
-              <div className="marketplace-hero-copy"><p className="eyebrow">LA VITRINE YÉRÉ</p><h2>La mode rencontre ses clients. Les artisans trouvent leurs matières.</h2><p>Découvrez les créations des professionnels de la couture et les produits des fournisseurs au même endroit.</p></div>
-              <div className="marketplace-hero-actions"><button type="button" className="primary-button" onClick={() => { setListingDraft({ ...emptyListing, sellerType: "tailor", sellerActivity: atelier.activity ?? "tailleur", category: "Vêtements prêts à vendre", sellerName: atelier.name, city: atelier.city }); setListingFormOpen(true); setNotice(""); }}>Vendre mes créations <span>→</span></button><button type="button" className="secondary-button" onClick={() => { setListingDraft({ ...emptyListing, sellerType: "supplier", category: "Tissus", sellerName: supplier.businessName, city: supplier.city }); setListingFormOpen(true); setNotice(""); }}>Vendre des fournitures</button></div>
+              <div className="marketplace-hero-copy"><p className="eyebrow">BROUILLONS LOCAUX · NON PUBLIÉS</p><h2>Préparez vos fiches avant publication dans le Market public.</h2><p>Les fiches ci-dessous restent enregistrées sur cet appareil. Pour ouvrir une boutique, publier une annonce et recevoir des commandes, utilisez le Market connecté au serveur.</p></div>
+              <div className="marketplace-hero-actions"><button type="button" className="primary-button" onClick={() => window.location.assign("/")}>Ouvrir YÉRÉ Market public <span>→</span></button><button type="button" className="secondary-button" onClick={() => { setListingDraft({ ...emptyListing, sellerType: "tailor", sellerActivity: atelier.activity ?? "tailleur", category: "Vêtements prêts à vendre", sellerName: atelier.name, city: atelier.city }); setListingFormOpen(true); setNotice(""); }}>Préparer un brouillon local</button></div>
             </div>
             {listingFormOpen && <form className="marketplace-listing-form content-card" onSubmit={saveMarketplaceListing}>
               <div className="section-heading"><div><p className="eyebrow">{editingListingId ? "MODIFIER UNE ANNONCE" : "NOUVELLE ANNONCE"}</p><h2>{editingListingId ? "Modifier votre annonce" : listingDraft.sellerType === "tailor" ? "Présenter une création à vendre" : "Ajouter un produit de mercerie"}</h2><p>Ajoutez plusieurs photos et revenez modifier cette fiche quand vous le souhaitez.</p></div><button type="button" className="marketplace-close" onClick={() => { setListingFormOpen(false); setEditingListingId(null); }} aria-label="Fermer le formulaire">×</button></div>
@@ -1321,9 +1359,9 @@ function App() {
                 <span className="marketplace-category-art"><NavIcon name="package" /></span><span className="marketplace-category-kicker">POUR LES FOURNISSEURS</span><strong>Tissus & mercerie</strong><span className="marketplace-category-description">Tissus, fils, aiguilles, boutons, fermetures, accessoires et matériel de couture.</span><span className="marketplace-category-link">Publier une offre <b>→</b></span>
               </button>
             </div>
-            <div className="marketplace-listing-heading"><div><p className="eyebrow">VITRINE</p><h2>Les annonces préparées</h2><p>Les créations et les fournitures, réunies dans un seul espace.</p></div><span className="marketplace-listing-count">{marketplaceListings.length} annonce{marketplaceListings.length === 1 ? "" : "s"}</span></div>
-            {marketplaceListings.length === 0 ? <div className="marketplace-empty content-card"><span className="marketplace-empty-icon"><NavIcon name="store" /></span><h3>Votre vitrine commence ici</h3><p>Aucune annonce pour le moment. Ajoutez un vêtement prêt à vendre, un album de créations ou une fourniture utile aux professionnels de la couture.</p><button className="primary-button" onClick={() => { setListingDraft({ ...emptyListing, sellerName: atelier.name, city: atelier.city }); setListingFormOpen(true); setNotice(""); }}>Créer la première annonce <span>→</span></button></div> : <div className="marketplace-listing-grid">{marketplaceListings.map((listing) => { const photos = [...(listing.imageUrl ? [listing.imageUrl] : []), ...(listing.imageUrls ?? [])]; return <article className="marketplace-product-card content-card" key={listing.id}><div className="marketplace-card-photos">{photos.length ? photos.map((photo, index) => <img key={`${listing.id}-photo-${index}`} src={photo} alt={`${listing.title}, photo ${index + 1}`} loading="lazy" />) : <div className={listing.sellerType === "tailor" ? "marketplace-product-placeholder fashion" : "marketplace-product-placeholder supplies"}><NavIcon name={listing.sellerType === "tailor" ? "shirt" : "package"} /></div>}</div><div className="marketplace-product-copy"><span className={listing.sellerType === "tailor" ? "marketplace-product-type fashion" : "marketplace-product-type supplies"}>{listing.sellerType === "tailor" ? "MODE & CRÉATIONS" : "TISSUS & FOURNITURES"}</span><h3>{listing.title}</h3><p>{listing.description || listing.category}</p><strong>{listing.price}</strong><div className="marketplace-product-meta"><span>{listing.sellerName}</span><span>{listing.city || "Zone non précisée"}</span></div>{listing.sellerType === "tailor" && listing.sellerActivity && <span className="marketplace-activity-tag">Tailleur</span>}</div><div className="marketplace-card-actions"><button type="button" className="secondary-button" onClick={() => editMarketplaceListing(listing)}>Modifier</button><button className="marketplace-remove" type="button" onClick={() => setMarketplaceListings((current) => current.filter((item) => item.id !== listing.id))}>Retirer</button></div></article>; })}</div>}
-            <p className="marketplace-local-note">Les annonces enregistrées ici sont visibles uniquement dans ce navigateur. Les comptes vendeurs, les photos hébergées, la publication publique, les paiements et les commandes en ligne seront raccordés au backend marketplace.</p>
+            <div className="marketplace-listing-heading"><div><p className="eyebrow">BROUILLONS NON PUBLIÉS</p><h2>Fiches enregistrées sur cet appareil</h2><p>Ces fiches ne sont pas visibles par les acheteurs du Market public.</p></div><span className="marketplace-listing-count">{marketplaceListings.length} annonce{marketplaceListings.length === 1 ? "" : "s"}</span></div>
+            {marketplaceListings.length === 0 ? <div className="marketplace-empty content-card"><span className="marketplace-empty-icon"><NavIcon name="store" /></span><h3>Aucun brouillon local</h3><p>Pour publier une offre visible par les acheteurs, ouvrez YÉRÉ Market et créez votre boutique.</p><button className="primary-button" onClick={() => window.location.assign("/")}>Ouvrir YÉRÉ Market <span>→</span></button></div> : <div className="marketplace-listing-grid">{marketplaceListings.map((listing) => { const photos = [...(listing.imageUrl ? [listing.imageUrl] : []), ...(listing.imageUrls ?? [])]; return <article className="marketplace-product-card content-card" key={listing.id}><div className="marketplace-card-photos">{photos.length ? photos.map((photo, index) => <img key={`${listing.id}-photo-${index}`} src={photo} alt={`${listing.title}, photo ${index + 1}`} loading="lazy" />) : <div className={listing.sellerType === "tailor" ? "marketplace-product-placeholder fashion" : "marketplace-product-placeholder supplies"}><NavIcon name={listing.sellerType === "tailor" ? "shirt" : "package"} /></div>}</div><div className="marketplace-product-copy"><span className={listing.sellerType === "tailor" ? "marketplace-product-type fashion" : "marketplace-product-type supplies"}>{listing.sellerType === "tailor" ? "MODE & CRÉATIONS" : "TISSUS & FOURNITURES"}</span><h3>{listing.title}</h3><p>{listing.description || listing.category}</p><strong>{listing.price}</strong><div className="marketplace-product-meta"><span>{listing.sellerName}</span><span>{listing.city || "Zone non précisée"}</span></div>{listing.sellerType === "tailor" && listing.sellerActivity && <span className="marketplace-activity-tag">Tailleur</span>}</div><div className="marketplace-card-actions"><button type="button" className="secondary-button" onClick={() => editMarketplaceListing(listing)}>Modifier</button><button className="marketplace-remove" type="button" onClick={() => setMarketplaceListings((current) => current.filter((item) => item.id !== listing.id))}>Retirer</button></div></article>; })}</div>}
+            <p className="marketplace-local-note">Ces brouillons restent visibles uniquement dans ce navigateur et ne sont pas publiés. Les boutiques, les photos, les annonces publiques, les commandes et les messages sont gérés dans YÉRÉ Market.</p>
           </section>}
 
           {view === "reminders" && <section className="reminders-page">
