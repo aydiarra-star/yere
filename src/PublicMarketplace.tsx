@@ -23,7 +23,7 @@ export default function PublicMarketplace({ onProfessionalLogin }: Props) {
   return <main className="public-market">
     <header className="public-market-header">
       <a className="public-brand" href="#accueil" aria-label="YÉRÉ Market, accueil">
-        <span className="public-brand-mark">✳</span>
+        <img className="public-brand-mark" src="/images/yere-logo.svg" alt="" />
         <span><strong>YÉRÉ</strong><small>MARKET</small></span>
       </a>
       <nav className="public-header-nav" aria-label="Navigation principale">
@@ -75,7 +75,7 @@ export default function PublicMarketplace({ onProfessionalLogin }: Props) {
 
     <section className="public-catalogue" aria-labelledby="public-catalogue-title">
       <div><span className="public-eyebrow">VITRINE PUBLIQUE</span><h2 id="public-catalogue-title">Les annonces publiées sur YÉRÉ</h2><p>Consultez le catalogue réel des offres disponibles, recherchez un article et passez commande depuis le Market.</p><a className="public-market-catalogue-link" href="/market/">Explorer les annonces publiées →</a></div>
-      <div className="public-catalogue-mark"><span>✳</span><strong>YÉRÉ MARKET</strong><small>La vitrine des créateurs et fournisseurs</small></div>
+      <div className="public-catalogue-mark"><img className="public-catalogue-logo" src="/images/yere-logo.svg" alt="YÉRÉ Market" /><small>La vitrine des créateurs et fournisseurs</small></div>
     </section>
 
     <section className="public-vendor-banner" id="vendeurs">
