@@ -1,67 +1,80 @@
-/* YÉRÉ — harmonisation ciblée de toutes les vues marketplace.
-   Bleu nuit officiel, typographie Manrope héritée de l’application, aucun accent vert.
-   Les règles ne modifient ni les annonces, ni les comptes, ni les données. */
-
+/* V2 — correction de cascade : neutralise les variantes héritées "fashion/supplies"
+   et les badges de succès qui échappaient aux premières règles. */
+.app-shell.yere-app .marketplace-page,
+.app-shell.yere-app .marketplace-page * {
+  font-family: "Manrope Variable", Manrope, system-ui, sans-serif !important;
+}
 .app-shell.yere-app .marketplace-page {
+  font-size: 14px !important;
+  line-height: 1.55 !important;
   color: #171e49 !important;
+}
+.app-shell.yere-app .marketplace-page :is(p, span, label, li, a, strong, b, small, em, button, input, select, textarea) {
   font-family: inherit !important;
+}
+.app-shell.yere-app .marketplace-page :is(p, label, button, input, select, textarea, a, li) {
   font-size: 14px !important;
   line-height: 1.5 !important;
 }
-.app-shell.yere-app .marketplace-page :is(button, input, select, textarea, label, p, span, strong, small, li) {
+.app-shell.yere-app .marketplace-page :is(h1, h2, h3, h4, h5, h6) {
   font-family: inherit !important;
+  color: #171e49 !important;
+  line-height: 1.3 !important;
+  letter-spacing: normal !important;
 }
-.app-shell.yere-app .marketplace-page :is(p, label, input, select, textarea, button) {
-  font-size: 14px !important;
-  line-height: 1.5 !important;
-}
-.app-shell.yere-app .marketplace-page :is(.marketplace-category-kicker, .marketplace-product-type, .marketplace-listing-count, .marketplace-activity-tag, .marketplace-form-grid small) {
+.app-shell.yere-app .marketplace-page :is(.eyebrow, .marketplace-category-kicker, .marketplace-product-type, .marketplace-listing-count, .marketplace-activity-tag, .marketplace-form-grid small) {
+  color: #46547f !important;
   font-size: 12px !important;
-  line-height: 1.4 !important;
-  color: #5d6b8a !important;
+  line-height: 1.45 !important;
+  font-weight: 700 !important;
 }
-.app-shell.yere-app .marketplace-page :is(.marketplace-category-description, .marketplace-product-copy p, .marketplace-product-meta, .marketplace-form-footer p, .marketplace-empty p, .marketplace-listing-heading > div > p:last-child, .marketplace-local-note) {
-  color: #5d6b8a !important;
+.app-shell.yere-app .marketplace-page :is(.marketplace-category-description, .marketplace-product-copy p, .marketplace-product-meta, .marketplace-form-footer p, .marketplace-empty p, .marketplace-listing-heading p, .marketplace-local-note, .marketplace-form-grid small) {
+  color: #596582 !important;
   font-size: 14px !important;
   line-height: 1.55 !important;
 }
-.app-shell.yere-app .marketplace-page :is(.marketplace-hero-copy h2, .marketplace-listing-heading h2, .marketplace-empty h3, .marketplace-product-copy h3, .marketplace-category-card > strong) {
-  color: #171e49 !important;
-  font-family: inherit !important;
+.app-shell.yere-app .marketplace-page :is(.marketplace-hero-copy h2, .marketplace-listing-heading h2) {
+  font-size: clamp(20px, 2.5vw, 26px) !important;
   font-weight: 750 !important;
 }
-.app-shell.yere-app .marketplace-page .marketplace-hero-copy h2 {
-  font-size: clamp(23px, 3vw, 30px) !important;
-  line-height: 1.25 !important;
-}
-.app-shell.yere-app .marketplace-page :is(.marketplace-listing-heading h2, .marketplace-category-card > strong) {
+.app-shell.yere-app .marketplace-page :is(.marketplace-category-card > strong, .marketplace-listing-heading h2) {
   font-size: 18px !important;
-  line-height: 1.35 !important;
 }
-.app-shell.yere-app .marketplace-page :is(.marketplace-empty h3, .marketplace-product-copy h3) {
+.app-shell.yere-app .marketplace-page :is(.marketplace-product-copy h3, .marketplace-empty h3) {
   font-size: 16px !important;
-  line-height: 1.4 !important;
+  font-weight: 700 !important;
 }
-.app-shell.yere-app .marketplace-page :is(.marketplace-category-link, .marketplace-product-type, .marketplace-product-copy > strong, .marketplace-listing-count, .marketplace-activity-tag) {
-  color: #171e49 !important;
-}
-.app-shell.yere-app .marketplace-page :is(.marketplace-category-card, .marketplace-product-card, .marketplace-listing-form, .marketplace-empty) {
-  border-color: #e2e6f1 !important;
-  box-shadow: 0 5px 18px rgba(23, 30, 73, .055) !important;
-}
-.app-shell.yere-app .marketplace-page :is(.marketplace-category-card.fashion-category, .marketplace-category-card.supplies-category) {
-  background: linear-gradient(145deg, #f7f8fc 0%, #fff 78%) !important;
-}
-.app-shell.yere-app .marketplace-page :is(.marketplace-category-art, .marketplace-empty-icon, .marketplace-product-placeholder, .marketplace-listing-count, .marketplace-activity-tag) {
+.app-shell.yere-app .marketplace-page :is(.marketplace-category-art, .marketplace-empty-icon, .marketplace-product-placeholder, .marketplace-listing-count, .marketplace-activity-tag, .marketplace-product-type, .marketplace-product-type.fashion, .marketplace-product-type.supplies, .marketplace-category-card.fashion-category, .marketplace-category-card.supplies-category) {
   background: #eaeefa !important;
   color: #171e49 !important;
-  border-color: #e2e6f1 !important;
+  border-color: #d9dfef !important;
 }
-.app-shell.yere-app .marketplace-page :is(.marketplace-category-link, .marketplace-listing-count, .marketplace-product-type, .marketplace-product-copy > strong) {
+.app-shell.yere-app .marketplace-page :is(.marketplace-category-link, .marketplace-category-link b, .marketplace-product-copy > strong, .marketplace-product-type, .marketplace-product-type.fashion, .marketplace-product-type.supplies, .marketplace-listing-count, .marketplace-activity-tag, .marketplace-category-kicker, .marketplace-remove) {
   color: #171e49 !important;
 }
+.app-shell.yere-app .marketplace-page :is(.marketplace-category-card, .marketplace-product-card, .marketplace-listing-form, .marketplace-empty, .marketplace-photo-manager) {
+  border-color: #e2e6f1 !important;
+}
+.app-shell.yere-app .marketplace-page :is(.marketplace-hero, .marketplace-category-card, .marketplace-product-card, .marketplace-listing-form, .marketplace-empty, .marketplace-photo-manager, .marketplace-form-footer, .marketplace-product-placeholder) {
+  background-color: #fff !important;
+}
+.app-shell.yere-app .marketplace-page .marketplace-hero {
+  background: linear-gradient(115deg, #eaeefa 0%, #f7f8fc 52%, #fff 100%) !important;
+}
+.app-shell.yere-app .marketplace-page :is(.marketplace-category-art, .marketplace-empty-icon, .marketplace-product-placeholder) {
+  background: #eaeefa !important;
+}
+.app-shell.yere-app .marketplace-page :is(.primary-button, .primary-button *, .marketplace-hero-actions .primary-button, .marketplace-empty .primary-button) {
+  color: #fff !important;
+  background-color: #171e49 !important;
+  border-color: #171e49 !important;
+}
+.app-shell.yere-app .marketplace-page :is(.secondary-button, .marketplace-close, .marketplace-remove-photo, .marketplace-card-actions button) {
+  font-family: inherit !important;
+  font-size: 14px !important;
+}
 .app-shell.yere-app .marketplace-page :is(.marketplace-form-grid input, .marketplace-form-grid select, .marketplace-form-grid textarea) {
-  font: inherit !important;
+  font-family: inherit !important;
   font-size: 14px !important;
   color: #171e49 !important;
 }
@@ -69,64 +82,11 @@
   border-color: #171e49 !important;
   outline-color: #eaeefa !important;
 }
-.app-shell.yere-app .marketplace-page :is(.marketplace-card-actions, .marketplace-form-footer) button {
-  font: inherit !important;
-  font-size: 14px !important;
-}
-
-/* Le panneau Plus reste lisible sans flouter toute la page derrière lui. */
-.more-backdrop {
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-
-/* Market public : même famille typographique et même échelle que l’espace Atelier. */
-.yere-market-app {
-  font-family: "Manrope Variable", Manrope, system-ui, sans-serif !important;
-  font-size: 14px !important;
-  line-height: 1.5 !important;
-}
-.yere-market-app :is(p, label, input, select, textarea, button, a, li) {
-  font-family: inherit !important;
-}
-.yere-market-app :is(.pm-nav, .pm-hero-copy > p, .pm-section-heading p, .pm-panel > div > p, .pm-product-copy > p, .pm-seller-copy > p, .pm-seller-copy ul, .pm-seller-card p, .pm-order, .pm-chat-message p) {
-  font-size: 14px !important;
-  line-height: 1.55 !important;
-}
-.yere-market-app :is(.pm-eyebrow, .pm-product-copy > small, .pm-product-meta, .pm-form-note, .pm-alert, .pm-panel label, .pm-modal label, .pm-user, .pm-order-status, .pm-footer p) {
-  font-size: 12px !important;
-  line-height: 1.45 !important;
-}
-.yere-market-app :is(.pm-cta, .pm-outline, .pm-hero-button, .pm-buy, .pm-contact, .pm-text-button, .pm-panel input, .pm-panel select, .pm-panel textarea, .pm-modal input, .pm-modal textarea) {
-  font: inherit !important;
-  font-size: 14px !important;
-}
-.yere-market-app :is(.pm-section-heading h2, .pm-panel h2, .pm-modal h2) {
-  font-family: inherit !important;
-  font-size: 20px !important;
-  line-height: 1.3 !important;
-}
-.yere-market-app :is(.pm-product-copy h3, .pm-seller-card h3, .pm-empty h3) {
-  font-family: inherit !important;
-  font-size: 16px !important;
-  line-height: 1.4 !important;
-}
-.yere-market-app .pm-hero h1 {
-  font-family: inherit !important;
-  font-size: clamp(28px, 4vw, 38px) !important;
-  line-height: 1.15 !important;
-  letter-spacing: -.035em !important;
-}
-.yere-market-app .pm-hero h1 em {
-  font-family: inherit !important;
-}
-.yere-market-app .pm-hero-stamp {
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-  background: #171e49 !important;
-}
 @media (max-width: 620px) {
-  .yere-market-app :is(.pm-hero-copy > p, .pm-section-heading p, .pm-product-copy > p, .pm-seller-copy > p) {
+  .app-shell.yere-app .marketplace-page :is(p, label, button, input, select, textarea, a, li) {
     font-size: 14px !important;
+  }
+  .app-shell.yere-app .marketplace-page :is(.eyebrow, .marketplace-category-kicker, .marketplace-product-type, .marketplace-listing-count, .marketplace-activity-tag, .marketplace-form-grid small) {
+    font-size: 12px !important;
   }
 }
