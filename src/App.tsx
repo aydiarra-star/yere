@@ -120,6 +120,10 @@ function App() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [draftMeasurement, setDraftMeasurement] = useState<Measurement>({ ...emptyMeasurement });
   const [notice, setNotice] = useState("");
+  const [serverSyncStatus, setServerSyncStatus] = useState<"idle" | "loading" | "ready" | "error">(() =>
+    readSession() && typeof window !== "undefined" && window.sessionStorage.getItem("yere-active-atelier") ? "loading" : "idle"
+  );
+  const [serverSyncError, setServerSyncError] = useState("");
 
   useEffect(() => {
     if (onboardingStartedAt === null) setOnboardingStartedAt(Date.now());
@@ -128,8 +132,13 @@ function App() {
   useEffect(() => {
     const session = readSession();
     const atelierId = window.sessionStorage.getItem("yere-active-atelier");
-    if (!session || !atelierId) return;
+    if (!session || !atelierId) {
+      setServerSyncStatus("idle");
+      return;
+    }
     let active = true;
+    setServerSyncStatus("loading");
+    setServerSyncError("");
     void (async () => {
       try {
         // Load membership first: financial requests must never start before the role is known.
@@ -177,10 +186,16 @@ function App() {
           payments: purchase.payments
         }));
         setSupplierPurchases(ownerAccess ? mappedPurchases : []);
+        setServerSyncStatus("ready");
       } catch (cause) {
-        if (active) setNotice(cause instanceof Error
-          ? `Impossible de synchroniser les données de l'atelier : ${cause.message}`
-          : "Impossible de synchroniser les données de l'atelier avec le serveur.");
+        if (active) {
+          const message = cause instanceof Error
+            ? cause.message
+            : "Impossible de synchroniser les données de l'atelier avec le serveur.";
+          setServerSyncError(message);
+          setServerSyncStatus("error");
+          setNotice(`Impossible de synchroniser les données de l'atelier : ${message}`);
+        }
       }
     })();
     return () => { active = false; };
@@ -1027,6 +1042,26 @@ function App() {
     setShowOrderForm(true);
     setView("orders");
     setMobileMoreOpen(false);
+  }
+
+  if (serverSyncStatus === "loading") {
+    return <main className="auth-loading" role="status">
+      <img className="auth-mark" src="/images/yere-logo.png" alt="YÉRÉ" />
+      <p>Synchronisation sécurisée de votre atelier…</p>
+    </main>;
+  }
+
+  if (serverSyncStatus === "error") {
+    return <main className="auth-shell">
+      <section className="auth-card" role="alert">
+        <img className="auth-mark" src="/images/yere-logo.png" alt="YÉRÉ" />
+        <p className="eyebrow">SYNCHRONISATION BLOQUÉE</p>
+        <h1>Vos données ne sont pas disponibles.</h1>
+        <p className="auth-intro">YÉRÉ n'affichera pas de données locales à la place du serveur et bloque temporairement les modifications pour protéger votre atelier.</p>
+        <p className="auth-error">{serverSyncError}</p>
+        <button className="primary-button auth-submit" type="button" onClick={() => window.location.reload()}>Réessayer la connexion</button>
+      </section>
+    </main>;
   }
 
   if (onboardingOpen) {
