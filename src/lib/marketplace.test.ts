@@ -51,7 +51,7 @@ describe("marketplace seller privacy boundary", () => {
       phone: "770000000"
     });
     const profileRequest = authenticatedFetch.mock.calls[0][1] as string;
-    expect(profileRequest).toContain("select=id,type_vendeur,nom_entreprise,ville,categorie,description,statut");
+    expect(profileRequest).toContain("select=id,type_vendeur,nom_entreprise,ville,categorie,description,logo_path,statut");
     expect(profileRequest).not.toMatch(/atelier_id|nom_contact|telephone|user_id/);
     expect(authenticatedFetch.mock.calls[1][1]).toBe("rest/v1/rpc/get_my_marketplace_seller_contact");
     expect(authenticatedFetch.mock.calls[1][2]).toMatchObject({ method: "POST", body: "{}" });
