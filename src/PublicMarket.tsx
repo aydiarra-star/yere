@@ -321,7 +321,7 @@ export default function PublicMarket() {
         <div className="pm-header-actions">
           {session ? <><span className="pm-user">{session.user.email}</span><button className="pm-outline" type="button" onClick={() => void handleSignOut()} disabled={busy}>Déconnexion</button></> :
             <button className="pm-outline" type="button" onClick={() => { setShowAccount((v) => !v); setError(""); }}>Se connecter</button>}
-          <a className="pm-outline pm-atelier-link" href="/?espace=professionnel">Compte professionnel</a><a className="pm-cta" href="#vendeurs">Vendre sur YÉRÉ</a>
+          <a className="pm-outline pm-atelier-link" href="/?espace=professionnel">Espace tailleur</a><a className="pm-cta" href="#vendeurs">Vendre sur YÉRÉ</a>
         </div>
       </header>
 
@@ -368,7 +368,7 @@ export default function PublicMarket() {
         </div>
       </section>
 
-      <footer className="pm-footer"><a className="pm-brand" href="/"><img className="pm-mark" src="/images/yere-logo.png" alt="" /><span><b>YÉRÉ</b><small>MARKET</small></span></a><p>Le marché qui rapproche les artisans, les vendeurs et les passionnés de couture.</p><a href="/?espace=professionnel">Espace tailleur →</a></footer>
+      <footer className="pm-footer"><a className="pm-brand" href="/"><img className="pm-mark" src="/images/yere-logo.png" alt="" /><span><b>YÉRÉ</b><small>MARKET</small></span></a><p>Le marché qui rapproche les artisans, les vendeurs et les passionnés de couture.</p></footer>
     </main>
   );
 }
