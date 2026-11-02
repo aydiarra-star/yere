@@ -145,3 +145,19 @@
 @media(max-width:620px){.yere-market-app .pm-messaging{grid-template-columns:1fr}.yere-market-app .pm-conversation-list{max-height:210px;overflow:auto;border-right:0;border-bottom:1px solid #e9ebf3}.yere-market-app .pm-chat-panel{min-height:340px}.yere-market-app .pm-chat-reply{grid-template-columns:1fr}.yere-market-app .pm-chat-reply .pm-cta{width:100%}}
 
 .pm-mark{width:42px;height:42px;object-fit:cover;border:0;border-radius:9px;color:transparent}
+
+
+/* Header controls sit on the navy header: keep their labels white. */
+.yere-market-app .pm-header .pm-outline {
+  color: #fff !important;
+  border-color: #aab5d8 !important;
+  background: transparent !important;
+}
+.yere-market-app .pm-header .pm-outline:hover {
+  color: #fff !important;
+  background: #283568 !important;
+}
+.yere-market-app .pm-header .pm-outline:disabled {
+  color: #d8def0 !important;
+  opacity: .7;
+}
