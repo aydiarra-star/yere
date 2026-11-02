@@ -255,17 +255,17 @@ export default function AuthGate({ children }: Props) {
     setShowProfessionalAuth(false);
   }
 
-  if (!ready) return <main className="auth-loading"><img className="auth-mark" src="/images/yere-logo.svg" alt="YÉRÉ" /><p>Préparation de votre espace YÉRÉ…</p></main>;
+  if (!ready) return <main className="auth-loading"><img className="auth-mark" src="/images/yere-logo.png" alt="YÉRÉ" /><p>Préparation de votre espace YÉRÉ…</p></main>;
 
   // Public marketplace is the default entry point; authentication is only opened on request.
   if (!session && !showProfessionalAuth && !passwordRecovery) return <PublicMarketplace onProfessionalLogin={() => setShowProfessionalAuth(true)} />;
 
-  if (!supabaseReady) return <main className="auth-shell"><section className="auth-card"><img className="auth-mark" src="/images/yere-logo.svg" alt="YÉRÉ" /><p className="eyebrow">YÉRÉ · ATELIER</p><h1>Connexion indisponible</h1><p>La configuration Supabase manque sur ce déploiement. Aucun compte ne peut être créé pour le moment.</p></section></main>;
+  if (!supabaseReady) return <main className="auth-shell"><section className="auth-card"><img className="auth-mark" src="/images/yere-logo.png" alt="YÉRÉ" /><p className="eyebrow">YÉRÉ · ATELIER</p><h1>Connexion indisponible</h1><p>La configuration Supabase manque sur ce déploiement. Aucun compte ne peut être créé pour le moment.</p></section></main>;
 
   if (passwordRecovery && session) return (
     <main className="auth-shell">
       <section className="auth-card">
-        <div className="auth-brand"><img className="auth-mark" src="/images/yere-logo.svg" alt="YÉRÉ" /><span><strong>YÉRÉ</strong><small>ATELIER</small></span></div>
+        <div className="auth-brand"><img className="auth-mark" src="/images/yere-logo.png" alt="YÉRÉ" /><span><strong>YÉRÉ</strong><small>ATELIER</small></span></div>
         <p className="eyebrow">SÉCURITÉ DU COMPTE</p>
         <h1>Choisissez un nouveau mot de passe.</h1>
         <p className="auth-intro">Créez un mot de passe d’au moins 8 caractères pour retrouver votre espace YÉRÉ.</p>
@@ -283,7 +283,7 @@ export default function AuthGate({ children }: Props) {
   if (!session) return (
     <main className="auth-shell">
       <section className="auth-card">
-        <div className="auth-brand"><img className="auth-mark" src="/images/yere-logo.svg" alt="YÉRÉ" /><span><strong>YÉRÉ</strong><small>ATELIER</small></span></div>
+        <div className="auth-brand"><img className="auth-mark" src="/images/yere-logo.png" alt="YÉRÉ" /><span><strong>YÉRÉ</strong><small>ATELIER</small></span></div>
         <p className="eyebrow">VOTRE ESPACE PROFESSIONNEL</p>
         <h1>{mode === "login" ? "Heureux de vous retrouver." : mode === "recovery" ? "Récupérez votre accès." : "Créez votre compte YÉRÉ."}</h1>
         <p className="auth-intro">Un espace de travail sécurisé pour organiser votre activité de tailleur.</p>
@@ -316,7 +316,7 @@ export default function AuthGate({ children }: Props) {
           {message && <p className="auth-message" role="status">{message}</p>}
           <div className="auth-divider"><span>ou créer votre propre atelier</span></div>
         </div>}
-        <div className="auth-brand"><img className="auth-mark" src="/images/yere-logo.svg" alt="YÉRÉ" /><span><strong>YÉRÉ</strong><small>ATELIER</small></span><button className="auth-signout" type="button" onClick={() => void handleSignOut()}>Déconnexion</button></div>
+        <div className="auth-brand"><img className="auth-mark" src="/images/yere-logo.png" alt="YÉRÉ" /><span><strong>YÉRÉ</strong><small>ATELIER</small></span><button className="auth-signout" type="button" onClick={() => void handleSignOut()}>Déconnexion</button></div>
         <p className="eyebrow">PREMIÈRE CONFIGURATION</p>
         <h1>Créons votre atelier.</h1>
         <p className="auth-intro">Votre compte est prêt. Renseignez les informations de votre atelier pour créer votre espace professionnel.</p>
@@ -344,7 +344,7 @@ export default function AuthGate({ children }: Props) {
       </div>
 {creatingAtelier && <section className="auth-shell">
         <section className="auth-card auth-workspace-card">
-          <div className="auth-brand"><img className="auth-mark" src="/images/yere-logo.svg" alt="YÉRÉ" /><span><strong>YÉRÉ</strong><small>ATELIER</small></span></div>
+          <div className="auth-brand"><img className="auth-mark" src="/images/yere-logo.png" alt="YÉRÉ" /><span><strong>YÉRÉ</strong><small>ATELIER</small></span></div>
           <p className="eyebrow">NOUVEL ESPACE PROFESSIONNEL</p>
           <h1>Créez un autre atelier.</h1>
           <p className="auth-intro">Vous gardez le même compte. Vous serez propriétaire de ce nouvel atelier, indépendamment de vos rôles dans les autres ateliers.</p>

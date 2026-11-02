@@ -1084,7 +1084,7 @@ function App() {
       <header className="app-header">
         <div className="app-header-inner">
           <a className="yere-wordmark" href="#accueil" onClick={(event) => { event.preventDefault(); setView("overview"); setMobileMoreOpen(false); }} aria-label="YÉRÉ Tailleur, retour à l’accueil">
-            <span className="wordmark-star" aria-hidden="true">✳</span>
+            <img className="wordmark-star" src="/images/yere-logo.png" alt="" aria-hidden="true" />
             <span className="wordmark-copy"><strong>YÉRÉ</strong><small>TAILLEUR</small></span>
           </a>
           <div className="header-workspace"><span>VOTRE ESPACE</span><b>Atelier de couture</b></div>
@@ -1419,7 +1419,7 @@ function Onboarding({ atelier, onAtelierChange, onCancel, onFinish }: {
     setDraft((previous) => ({ ...previous, [field]: value }));
   }
   return <main className="onboarding-shell">
-    <header className="onboarding-brand"><span className="brand-mark">Y</span><span><strong>YÉRÉ</strong><small>ATELIER</small></span><button type="button" className="onboarding-back" onClick={onCancel}>← Retour à l’accueil</button></header>
+    <header className="onboarding-brand"><img className="brand-mark" src="/images/yere-logo.png" alt="" aria-hidden="true" /><span><strong>YÉRÉ</strong><small>ATELIER</small></span><button type="button" className="onboarding-back" onClick={onCancel}>← Retour à l’accueil</button></header>
     <div className="onboarding-layout onboarding-layout-simple">
       <section className="onboarding-copy">
         <p className="eyebrow">CONFIGURATION</p>
