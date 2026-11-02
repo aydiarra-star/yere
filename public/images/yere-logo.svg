@@ -16,7 +16,4 @@
  <path d="M187 331l-28 5m166-5 28 5" fill="none" stroke-width="5" stroke-linecap="round"/>
  <circle cx="256" cy="315" r="7" fill="#D8B46A"/>
 </g>
-<text x="256" y="445" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="59" letter-spacing="7" fill="url(#gold)">YÉRÉ</text>
-<path d="M100 467h130m52 0h130" stroke="url(#gold)" stroke-width="2"/>
-<path d="M256 455l12 12-12 12-12-12z" fill="none" stroke="url(#gold)" stroke-width="2"/>
 </svg>
