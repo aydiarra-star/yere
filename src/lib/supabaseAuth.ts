@@ -161,6 +161,26 @@ export async function listMyAteliers(session: YereSession): Promise<Array<{ id: 
   return Array.isArray(data) ? data as Array<{ id: string; nom: string; telephone: string | null; ville: string | null }> : [];
 }
 
+/** Updates the workshop's canonical identity fields on Supabase. */
+export async function updateAtelierProfile(
+  session: YereSession,
+  atelierId: string,
+  input: { nom: string; telephone: string; ville: string }
+): Promise<void> {
+  const response = await authenticatedFetch(session,
+    `rest/v1/atelier?id=eq.${encodeURIComponent(atelierId)}&select=id,nom,telephone,ville`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ nom: input.nom.trim(), telephone: input.telephone.trim() || null, ville: input.ville.trim() || null })
+    }
+  );
+  const data = await parseResponse(response);
+  if (!Array.isArray(data) || data.length !== 1 || (data[0] as { id?: string }).id !== atelierId) {
+    throw new Error("Le serveur n'a pas confirmé la mise à jour du profil de l'atelier.");
+  }
+}
+
 export async function createAtelier(session: YereSession, input: { nom: string; telephone: string; ville: string }): Promise<string> {
   // Capture existing tenant IDs first so duplicate workshop names/details never
   // cause the app to select an older atelier after the owner trigger runs.
