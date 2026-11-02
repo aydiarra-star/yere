@@ -5,14 +5,17 @@ begin;
 -- Atelier profile writes are limited to editable fields; identity and currency stay server-controlled.
 do $atelier_privilege_check$
 begin
-  if not has_column_privilege('authenticated', 'public.atelier', 'nom', 'UPDATE') then
-    raise exception 'FAIL: authenticated owner/manager cannot update atelier name';
+  if not has_column_privilege('authenticated', 'public.atelier', 'nom', 'UPDATE')
+     or not has_column_privilege('authenticated', 'public.atelier', 'telephone', 'UPDATE')
+     or not has_column_privilege('authenticated', 'public.atelier', 'ville', 'UPDATE') then
+    raise exception 'FAIL: authenticated owner/manager cannot update editable atelier profile fields';
   end if;
   if has_column_privilege('authenticated', 'public.atelier', 'id', 'UPDATE')
      or has_column_privilege('authenticated', 'public.atelier', 'devise', 'UPDATE') then
     raise exception 'FAIL: authenticated users can update protected atelier identity/currency fields';
   end if;
   if not has_column_privilege('authenticated', 'public.atelier', 'id', 'INSERT')
+     or not has_column_privilege('authenticated', 'public.atelier', 'nom', 'INSERT')
      or has_column_privilege('authenticated', 'public.atelier', 'devise', 'INSERT') then
     raise exception 'FAIL: atelier insert privileges are broader or narrower than intended';
   end if;
