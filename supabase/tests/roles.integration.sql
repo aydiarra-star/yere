@@ -100,6 +100,17 @@ begin
   if v_count <> 1 then
     raise exception 'FAIL: manager cannot create a work order without financial terms';
   end if;
+
+  begin
+    perform * from public.set_commande_financial_terms(
+      '20000000-0000-4000-8000-000000000001',
+      (select id from public.commande where reference='CI-MANAGER-ZERO'),
+      17000,0,now(),null
+    );
+    raise exception 'FAIL: manager set financial terms on an order';
+  exception when insufficient_privilege then
+    null;
+  end;
 end $manager_order_finance$;
 
 do $manager$
@@ -277,14 +288,36 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000001',true);
 select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
-do $$
-declare v_finance jsonb;
+do $
+declare
+  v_finance jsonb;
+  v_commande_id uuid;
 begin
   v_finance := public.get_atelier_order_financials('20000000-0000-4000-8000-000000000001');
-  if jsonb_array_length(v_finance) <> 1
-     or (v_finance->0->>'prix_fcfa')::bigint <> 25000 then
+  if not exists (
+    select 1 from jsonb_array_elements(v_finance) item
+    where (item->>'prix_fcfa')::bigint = 25000
+  ) then
     raise exception 'FAIL: owner financial RPC did not return expected order financials';
   end if;
+
+  select id into v_commande_id from public.commande
+  where atelier_id='20000000-0000-4000-8000-000000000001'
+    and reference='CI-MANAGER-ZERO';
+  perform * from public.set_commande_financial_terms(
+    '20000000-0000-4000-8000-000000000001',v_commande_id,
+    18000,5000,now(),'ci-owner-payment'
+  );
+  v_finance := public.get_atelier_order_financials('20000000-0000-4000-8000-000000000001');
+  if not exists (
+    select 1 from jsonb_array_elements(v_finance) item
+    where (item->>'commande_id')::uuid = v_commande_id
+      and (item->>'prix_fcfa')::bigint = 18000
+      and jsonb_array_length(item->'paiements') = 1
+  ) then
+    raise exception 'FAIL: owner cannot set price and initial deposit after work-order creation';
+  end if;
+
   if (select count(*) from public.client where atelier_id='20000000-0000-4000-8000-000000000002') <> 0 then
     raise exception 'FAIL: owner of workshop one can read workshop two clients';
   end if;
