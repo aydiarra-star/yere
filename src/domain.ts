@@ -165,7 +165,8 @@ export function isOrderListValid(value: unknown): value is Order[] {
         && isCalendarDate(item.measurementSnapshotAt)))
     && isCalendarDate(item.dueDate)
     && (item.orderedAt === undefined || isCalendarDate(item.orderedAt))
-    && typeof item.price === "number" && Number.isSafeInteger(item.price) && item.price > 0
+    && typeof item.price === "number" && Number.isSafeInteger(item.price) && item.price >= 0
+    && (item.price > 0 || (item.deposit === 0 && (item.payments === undefined || (Array.isArray(item.payments) && item.payments.length === 0))))
     && typeof item.deposit === "number" && Number.isSafeInteger(item.deposit)
     && item.deposit >= 0 && item.deposit <= item.price
     && (item.payments === undefined || (
@@ -328,11 +329,13 @@ export function addOrderPayment(order: Order, payment: OrderPayment): Order | nu
 /** Validate a new order before it enters the prototype's local state. */
 export function isOrderInputValid(
   input: { clientId: string; garment: string; dueDate: string; price: number; deposit: number },
-  clientIds: string[]
+  clientIds: string[],
+  allowUnpriced = false
 ): boolean {
   if (!input.clientId || !clientIds.includes(input.clientId) || !input.garment.trim()) return false;
-  if (!Number.isSafeInteger(input.price) || input.price <= 0) return false;
+  if (!Number.isSafeInteger(input.price) || input.price < 0 || (input.price === 0 && !allowUnpriced)) return false;
   if (!Number.isSafeInteger(input.deposit) || input.deposit < 0 || input.deposit > input.price) return false;
+  if (input.price === 0 && input.deposit !== 0) return false;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dueDate)) return false;
   const dueDate = new Date(`${input.dueDate}T12:00:00Z`);
   return Number.isFinite(dueDate.getTime()) && dueDate.toISOString().slice(0, 10) === input.dueDate;

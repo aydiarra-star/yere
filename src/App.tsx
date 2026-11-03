@@ -5,7 +5,7 @@ import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, workModes
 import { normalizeBackupOnboardingState, normalizeBackupMarketplaceListings } from "./localBackup";
 import { isMarketplaceListingListValid, type MarketplaceListing } from "./marketplace";
 import { usePersistentState } from "./usePersistentState";
-import { createAtelierClient, createAtelierOrder, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
+import { createAtelierClient, createAtelierOrder, saveAtelierOrderFinancialTerms, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
 import { readSession, updateAtelierProfile } from "./lib/supabaseAuth";
 import { getAtelierSubscription, listAtelierSubscriptionPayments, type AtelierSubscription, type SubscriptionPayment } from "./lib/atelierSubscription";
 import { createAtelierTask, listAtelierTasks, updateAtelierTask, type AtelierTask, type AtelierTaskStatus } from "./lib/atelierTasks";
@@ -74,6 +74,9 @@ function App() {
   const [newOrderDueDate, setNewOrderDueDate] = useState(() => new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
   const [newOrderPrice, setNewOrderPrice] = useState("");
   const [newOrderDeposit, setNewOrderDeposit] = useState("0");
+  const [financialOrderId, setFinancialOrderId] = useState<string | null>(null);
+  const [financialPrice, setFinancialPrice] = useState("");
+  const [financialDeposit, setFinancialDeposit] = useState("0");
   const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
   const [paymentHistoryOrderId, setPaymentHistoryOrderId] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -244,6 +247,7 @@ function App() {
   const currentUserId = readSession()?.user.id;
   const canManageTeam = teamMembers.some((member) => member.userId === currentUserId && member.active && (member.role === "proprietaire" || member.role === "gestionnaire"));
   const isAtelierOwner = teamMembers.some((member) => member.userId === currentUserId && member.active && member.role === "proprietaire");
+  const canCreateOrders = teamMembers.some((member) => member.userId === currentUserId && member.active && ["proprietaire", "gestionnaire", "employe"].includes(member.role));
   const outstanding = isAtelierOwner ? orders.reduce((sum, order) => sum + balanceDue(order), 0) : 0;
   const outstandingOrderCount = isAtelierOwner ? orders.filter((order) => balanceDue(order) > 0).length : 0;
   const totalExpenses = isAtelierOwner ? expenses.reduce((sum, expense) => sum + (expense.voidedAt ? 0 : expense.amount), 0) : 0;
@@ -345,33 +349,23 @@ function App() {
 
   async function addOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const price = Number(newOrderPrice);
-    const deposit = Number(newOrderDeposit);
-    if (!isOrderInputValid({ clientId: newOrderClientId, garment: newOrderGarment, dueDate: newOrderDueDate, price, deposit }, clients.map((client) => client.id))) {
-      setNotice("Vérifiez le client, le vêtement, la date de livraison, le prix et l'acompte. Les montants doivent être des nombres entiers positifs, et l'acompte ne peut pas dépasser le prix.");
+    if (!canCreateOrders) { setNotice("Seuls les membres actifs de l’atelier peuvent créer une commande."); return; }
+    const price = isAtelierOwner ? Number(newOrderPrice) : 0;
+    const deposit = isAtelierOwner ? Number(newOrderDeposit) : 0;
+    if (!isOrderInputValid({ clientId: newOrderClientId, garment: newOrderGarment, dueDate: newOrderDueDate, price, deposit }, clients.map((client) => client.id), !isAtelierOwner)) {
+      setNotice(isAtelierOwner
+        ? "Vérifiez le client, le vêtement, la date, le prix et l’acompte."
+        : "Vérifiez le client, le vêtement et la date de livraison.");
       return;
     }
     const session = readSession();
     const atelierId = window.sessionStorage.getItem("yere-active-atelier");
-    if (!session || !atelierId) {
-      setNotice("Votre session ou votre atelier n'est plus disponible. Reconnectez-vous.");
-      return;
-    }
-    if (deposit > 0 && !canManageTeam) {
-      setNotice("Un employé peut créer une commande sans acompte. Le versement initial doit être enregistré par le propriétaire ou le gestionnaire.");
-      return;
-    }
+    if (!session || !atelierId) { setNotice("Votre session ou votre atelier n'est plus disponible. Reconnectez-vous."); return; }
     const orderedAt = new Date().toISOString().slice(0, 10);
     const orderClient = clients.find((client) => client.id === newOrderClientId);
-    if (!orderClient) {
-      setNotice("Ce client n’est plus disponible. Sélectionnez à nouveau un client.");
-      return;
-    }
+    if (!orderClient) { setNotice("Ce client n’est plus disponible. Sélectionnez à nouveau un client."); return; }
     const measurementSnapshot = createOrderMeasurementSnapshot(orderClient.measurement, orderedAt);
-    if (!measurementSnapshot) {
-      setNotice("Les mensurations du client sont invalides. Vérifiez-les avant de créer la commande.");
-      return;
-    }
+    if (!measurementSnapshot) { setNotice("Les mensurations du client sont invalides. Vérifiez-les avant de créer la commande."); return; }
     const reference = `YR-${Date.now()}`;
     try {
       const order = await createAtelierOrder(session, atelierId, {
@@ -380,16 +374,36 @@ function App() {
         ...measurementSnapshot, dueDate: newOrderDueDate, orderedAt, price, deposit, status: "À préparer"
       });
       setOrders((current) => [order, ...current]);
-      setNewOrderGarment("");
-      setNewOrderKind("confection");
-      setNewOrderPrice("");
-      setNewOrderDeposit("0");
+      setNewOrderGarment(""); setNewOrderKind("confection"); setNewOrderPrice(""); setNewOrderDeposit("0");
       setShowOrderForm(false);
-      setNotice(`Commande ${order.id} enregistrée dans votre atelier YÉRÉ, avec ${deposit > 0 ? "l'acompte initial" : "un solde intégral à régler"} synchronisé sur le serveur.`);
+      setNotice(isAtelierOwner
+        ? `Commande ${order.id} enregistrée sur le serveur avec ses conditions financières.`
+        : `Commande ${order.id} enregistrée sur le serveur. Le prix et l’acompte restent à définir par le propriétaire.`);
     } catch (cause) {
-      setNotice(cause instanceof Error
-        ? `Commande non enregistrée : ${cause.message}`
-        : "Impossible d'enregistrer la commande sur le serveur.");
+      setNotice(cause instanceof Error ? `Commande non enregistrée : ${cause.message}` : "Impossible d'enregistrer la commande sur le serveur.");
+    }
+  }
+
+  async function saveOrderFinancialTerms(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const order = orders.find((item) => item.id === financialOrderId);
+    const price = Number(financialPrice);
+    const deposit = Number(financialDeposit);
+    if (!isAtelierOwner || !order?.serverId || order.price !== 0 || !Number.isSafeInteger(price) || price <= 0
+      || !Number.isSafeInteger(deposit) || deposit < 0 || deposit > price) {
+      setNotice("Seul le propriétaire peut définir un prix valide et un acompte inférieur ou égal au prix.");
+      return;
+    }
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; }
+    try {
+      await saveAtelierOrderFinancialTerms(session, atelierId, order, { price, deposit, paidAt: new Date().toISOString().slice(0, 10) });
+      setOrders(await listAtelierOrders(session, atelierId, true));
+      setFinancialOrderId(null); setFinancialPrice(""); setFinancialDeposit("0");
+      setNotice(`Prix et acompte de la commande ${order.id} enregistrés par le propriétaire.`);
+    } catch (cause) {
+      setNotice(cause instanceof Error ? `Conditions financières non enregistrées : ${cause.message}` : "Impossible d’enregistrer les conditions financières.");
     }
   }
 
@@ -1072,7 +1086,7 @@ function App() {
   }
 
   function createOrder() {
-    if (!isAtelierOwner) return;
+    if (!canCreateOrders) return;
     setNewOrderClientId(selectedClient ?? clients[0]?.id ?? "");
     setShowOrderForm(true);
     setView("orders");
@@ -1137,7 +1151,7 @@ function App() {
               <h1 className="page-banner-title">{view === "clients" ? "Vos clients & mensurations" : view === "orders" ? "Suivi des commandes" : view === "cash" ? "La caisse de votre atelier" : view === "stock" ? "Gestion du stock" : view === "account" ? (atelier.name || "Votre compte atelier") : view === "marketplace" ? "La marketplace YÉRÉ" : view === "suppliers" ? "Espace fournisseurs" : "Faites revenir vos clients."}</h1>
               <p className="page-subtitle">{view === "clients" ? "Retrouvez les fiches clients et leurs dernières mesures." : view === "orders" ? "Suivez chaque pièce, de la préparation à la livraison." : view === "cash" ? "Suivez les acomptes et les montants à récupérer." : view === "stock" ? "Gardez un œil sur les fournitures de l’atelier." : view === "account" ? "Votre profil d’atelier." : view === "marketplace" ? "Tailleurs et fournisseurs : présentez vos produits et vos créations dans la vitrine YÉRÉ." : view === "suppliers" ? "Gérez votre profil fournisseur et préparez votre boutique YÉRÉ." : "Des occasions concrètes de reprendre contact avec vos clients."}</p>
             </div>
-            {(["clients", "suppliers", "marketplace"].includes(view) || (view === "orders" && isAtelierOwner)) && <button className="primary-button welcome-action" onClick={() => { if (view === "orders") createOrder(); else if (view === "suppliers") setView("marketplace"); else if (view === "marketplace") { setListingDraft({ ...emptyListing, sellerType: "tailor", sellerActivity: atelier.activity ?? "tailleur", category: "Vêtements prêts à vendre", sellerName: atelier.name, city: atelier.city }); setListingFormOpen(true); setNotice(""); } else { setShowForm(true); setView("clients"); } }}><span className="cta-scissors-icon" aria-hidden="true"><NavIcon name="tailor-scissors" /></span> {view === "orders" ? "Créer une commande" : view === "suppliers" ? "Créer ma boutique" : view === "marketplace" ? "Créer ma vitrine" : "Nouveau client"}</button>}
+            {(["clients", "suppliers", "marketplace"].includes(view) || (view === "orders" && canCreateOrders)) && <button className="primary-button welcome-action" onClick={() => { if (view === "orders") createOrder(); else if (view === "suppliers") setView("marketplace"); else if (view === "marketplace") { setListingDraft({ ...emptyListing, sellerType: "tailor", sellerActivity: atelier.activity ?? "tailleur", category: "Vêtements prêts à vendre", sellerName: atelier.name, city: atelier.city }); setListingFormOpen(true); setNotice(""); } else { setShowForm(true); setView("clients"); } }}><span className="cta-scissors-icon" aria-hidden="true"><NavIcon name="tailor-scissors" /></span> {view === "orders" ? "Créer une commande" : view === "suppliers" ? "Créer ma boutique" : view === "marketplace" ? "Créer ma vitrine" : "Nouveau client"}</button>}
           </div>}
           {notice && view !== "overview" && <div className="notice" role="status"><span aria-hidden="true">ⓘ</span><p>{notice}</p><button aria-label="Fermer le message" onClick={() => setNotice("")}>×</button></div>}
 
@@ -1149,7 +1163,7 @@ function App() {
             outstandingOrderCount={outstandingOrderCount}
             outstanding={outstanding}
             showFinancials={isAtelierOwner}
-            canCreateOrders={isAtelierOwner}
+            canCreateOrders={canCreateOrders}
             activeOrderCount={orders.filter((order) => order.status !== "Livré").length}
             inProductionOrder={orders.find((order) => order.status === "En confection")}
             onOpenDeliveries={() => { setOrderDeliveryFilter("all"); setView("orders"); }}
@@ -1169,15 +1183,14 @@ function App() {
             {selected && <div className="measurement-panel"><div className="section-heading"><div><h2>Mensurations de {selected.name}</h2><p>Dernière fiche de mesures enregistrée</p></div></div><form className="measurement-form" onSubmit={saveMeasurements}><label className="measure-field"><span>Type de vêtement</span><select aria-label="Type de vêtement" value={draftMeasurement.garmentType ?? "Tenue complète"} onChange={(event) => updateMeasurement("garmentType", event.target.value)}><option>Tenue complète</option><option>Boubou / robe</option><option>Pantalon</option><option>Chemise</option><option>Veste / costume</option><option>Autre</option></select></label><div className="measurement-grid">{(measurementFieldsByGarment[draftMeasurement.garmentType ?? "Tenue complète"] ?? measurementFieldsByGarment["Tenue complète"]).map(([label, key]) => <label className="measure-field" key={key}><span>{label} (cm)</span><input type="number" min="0" step="any" inputMode="decimal" aria-label={label} value={(draftMeasurement[key] ?? "") as string} onChange={(event) => updateMeasurement(key, event.target.value)} placeholder="Saisir en cm" /></label>)}</div><label className="measure-notes-field">Notes pour la prochaine commande<textarea value={draftMeasurement.note} onChange={(event) => updateMeasurement("note", event.target.value)} placeholder="Décrire les préférences, la coupe ou le tissu" rows={2} /></label><div className="form-actions"><button type="submit" className="primary-button">Enregistrer les mensurations</button></div></form><section className="measurement-history" aria-label="Historique des mensurations"><h3>Historique des prises de mesures</h3>{(selected.measurementHistory ?? []).length === 0 ? <p className="history-empty">Aucune prise de mesures enregistrée. Complétez les champs puis enregistrez une première version.</p> : <ol>{[...(selected.measurementHistory ?? [])].reverse().map((version) => <li key={version.id}><b>{new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(version.measuredAt + "T12:00:00"))}</b><span>{[version.measurement.garmentType, version.measurement.bust && `Poitrine ${version.measurement.bust} cm`, version.measurement.waist && `Taille ${version.measurement.waist} cm`, version.measurement.hips && `Hanches ${version.measurement.hips} cm`, version.measurement.shoulder && `Épaules ${version.measurement.shoulder} cm`, version.measurement.sleeve && `Manche ${version.measurement.sleeve} cm`, version.measurement.length && `Longueur ${version.measurement.length} cm`, version.measurement.arm && `Bras ${version.measurement.arm} cm`, version.measurement.neck && `Cou ${version.measurement.neck} cm`, version.measurement.thigh && `Cuisse ${version.measurement.thigh} cm`, version.measurement.legLength && `Jambe ${version.measurement.legLength} cm`, version.measurement.note].filter(Boolean).join(" · ") || "Aucune mesure renseignée"}</span><button type="button" className="secondary-button" onClick={() => { setDraftMeasurement({ ...version.measurement }); setNotice("Anciennes mensurations reprises dans le formulaire. Vérifiez-les puis enregistrez pour créer une nouvelle version datée."); }}>Reprendre ces mesures</button></li>)}</ol>}</section><p className="privacy-note">Les fiches clients, les mensurations et leur historique sont synchronisés sur le serveur. Les anciennes données locales ne sont pas importées automatiquement.</p></div>}
           </section>}
 
-          {view === "orders" && <section className="content-card"><div className="section-heading"><div><h2>Commandes de l’atelier</h2><p>Modifiez le statut pour suivre la production.</p></div>{isAtelierOwner ? <button className="primary-button" onClick={() => { setShowOrderForm((value) => !value); setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); }}>＋ Nouvelle commande</button> : null}</div>
-            {isAtelierOwner && showOrderForm && <form className="new-order-form" onSubmit={addOrder}>
+          {view === "orders" && <section className="content-card"><div className="section-heading"><div><h2>Commandes de l’atelier</h2><p>Modifiez le statut pour suivre la production.</p></div>{canCreateOrders ? <button type="button" className="primary-button" onClick={() => { setShowOrderForm((value) => !value); setNewOrderClientId(selectedClient ?? clients[0]?.id ?? ""); }}>＋ Nouvelle commande</button> : null}</div>
+            {canCreateOrders && showOrderForm && <form className="new-order-form" onSubmit={addOrder}>
               <h3>Créer une commande</h3>
               <label>Client<select required value={newOrderClientId} onChange={(event) => setNewOrderClientId(event.target.value)}><option value="">Choisir un client</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select></label>
               <label>Type de travail<select value={newOrderKind} onChange={(event) => setNewOrderKind(event.target.value as "confection" | "retouche")}><option value="confection">Confection / création</option><option value="retouche">Retouche</option></select></label>
               <label>Vêtement / création<input required maxLength={120} value={newOrderGarment} onChange={(event) => setNewOrderGarment(event.target.value)} placeholder={newOrderKind === "retouche" ? "Ex. raccourcir un pantalon" : "Ex. Boubou brodé"} /></label>
               <label>Date de livraison<input required type="date" value={newOrderDueDate} onChange={(event) => setNewOrderDueDate(event.target.value)} /></label>
-              <label>Prix convenu (FCFA)<input required type="number" min="1" step="1" value={newOrderPrice} onChange={(event) => setNewOrderPrice(event.target.value)} placeholder="25000" /></label>
-              <label>Acompte reçu (FCFA)<input required type="number" min="0" step="1" value={newOrderDeposit} onChange={(event) => setNewOrderDeposit(event.target.value)} /></label>
+              {isAtelierOwner ? <><label>Prix convenu (FCFA)<input required type="number" min="1" step="1" value={newOrderPrice} onChange={(event) => setNewOrderPrice(event.target.value)} placeholder="25000" /></label><label>Acompte reçu (FCFA)<input required type="number" min="0" step="1" value={newOrderDeposit} onChange={(event) => setNewOrderDeposit(event.target.value)} /></label></> : <p className="privacy-note">Le prix et les acomptes ne sont pas accessibles ici. Le propriétaire complétera les conditions financières après la création.</p>}
               <div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowOrderForm(false)}>Annuler</button><button type="submit" className="primary-button" disabled={clients.length === 0}>Enregistrer la commande</button></div>
               {clients.length === 0 && <div className="order-needs-client"><p className="history-empty">Créez d’abord un client pour lui associer une commande.</p><button type="button" className="secondary-button" onClick={() => { setShowForm(true); setView("clients"); }}>Ajouter un client</button></div>}
             </form>}
@@ -1191,7 +1204,8 @@ function App() {
               </label>
               <p aria-live="polite">{filteredOrders.length} commande{filteredOrders.length === 1 ? "" : "s"} affichée{filteredOrders.length === 1 ? "" : "s"}</p>
             </div>
-            <OrderTable orders={filteredOrders} clients={clients} onStatusChange={updateStatus} onRetouchStageChange={updateRetouchStage} showFinancials={isAtelierOwner} canEditWorkflow={canManageTeam} />
+            <OrderTable orders={filteredOrders} clients={clients} onStatusChange={updateStatus} onRetouchStageChange={updateRetouchStage} onSetFinancialTerms={(order) => { setFinancialOrderId(order.id); setFinancialPrice(""); setFinancialDeposit("0"); }} showFinancials={isAtelierOwner} canEditWorkflow={canManageTeam} />
+            {isAtelierOwner && financialOrderId && orders.some((order) => order.id === financialOrderId && order.price === 0) && <form className="new-order-form" onSubmit={saveOrderFinancialTerms}><h3>Conditions financières — {orders.find((order) => order.id === financialOrderId)?.garment}</h3><label>Prix convenu (FCFA)<input required type="number" min="1" step="1" value={financialPrice} onChange={(event) => setFinancialPrice(event.target.value)} /></label><label>Acompte déjà reçu (FCFA)<input required type="number" min="0" step="1" value={financialDeposit} onChange={(event) => setFinancialDeposit(event.target.value)} /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setFinancialOrderId(null)}>Annuler</button><button type="submit" className="primary-button">Enregistrer les conditions</button></div></form>}
             <section className="content-card team-panel" aria-labelledby="atelier-tasks-title">
               <div className="section-heading"><div><h3 id="atelier-tasks-title">Travaux et tâches de l’atelier</h3><p>Répartition du travail, responsables et historique des avancements. Aucune rémunération n’est suivie ici.</p></div><span className="marketplace-listing-count">{atelierTasks.length} tâche(s)</span></div>
               {canManageTeam && <form className="new-order-form" onSubmit={addAtelierTask}>
@@ -1494,7 +1508,7 @@ function Onboarding({ atelier, onAtelierChange, onCancel, onFinish }: {
   </main>;
 }
 
-function OrderTable({ orders, clients, onStatusChange, onRetouchStageChange, onView, showFinancials = true, canEditWorkflow = true }: { orders: Order[]; clients: Client[]; onStatusChange: (id: string, status: OrderStatus) => void; onRetouchStageChange: (id: string, stage: RetouchStage) => void; onView?: (order: Order) => void; showFinancials?: boolean; canEditWorkflow?: boolean }) {
+function OrderTable({ orders, clients, onStatusChange, onRetouchStageChange, onView, onSetFinancialTerms, showFinancials = true, canEditWorkflow = true }: { orders: Order[]; clients: Client[]; onStatusChange: (id: string, status: OrderStatus) => void; onRetouchStageChange: (id: string, stage: RetouchStage) => void; onView?: (order: Order) => void; onSetFinancialTerms: (order: Order) => void; showFinancials?: boolean; canEditWorkflow?: boolean }) {
   const measurementLabel = (order: Order) => {
     const measurement = order.measurementSnapshot;
     if (!measurement) return "Non disponible pour cette ancienne commande";
@@ -1523,8 +1537,8 @@ function OrderTable({ orders, clients, onStatusChange, onRetouchStageChange, onV
     : <span className="retouch-stage-readonly">Étape retouche : {order.retouchStage ?? "À examiner"}</span>;
 
   return <div className="orders-display">
-    <div className="table-wrap orders-desktop"><table><thead><tr><th>COMMANDE</th><th>CLIENT</th><th>DATE DE LIVRAISON</th>{showFinancials ? <><th>PRIX</th><th>RESTE DÛ</th></> : null}<th>STATUT</th></tr></thead><tbody>{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <tr key={order.id}><td><b className="order-id">{order.id}</b><small className="table-secondary">{order.kind === "retouche" ? "Retouche · " : ""}{order.garment}</small><small className="table-secondary">{order.measurementSnapshotAt ? "Mesures du " + formatDueDate(order.measurementSnapshotAt) + " · " : ""}{measurementLabel(order)}</small></td><td><span className="table-client">{client?.name ?? "Client supprimé"}</span></td><td>{formatDueDate(order.dueDate)}</td>{showFinancials ? <><td>{formatXof(order.price)}</td><td><b className={balanceDue(order) === 0 ? "paid" : ""}>{formatXof(balanceDue(order))}</b></td></> : null}<td>{statusControl(order)}{retouchStageControl(order)}</td></tr>; })}</tbody></table></div>
-    <div className="order-card-list" role="group" aria-label="Commandes sous forme de cartes">{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <article className="order-card" key={order.id}><div className="order-card-heading"><div><b className="order-id">{order.id}</b><strong>{order.kind === "retouche" ? "Retouche · " : ""}{order.garment}</strong></div><span className={"order-status-chip status-" + getStatusClass(order.status)}>{order.status}</span></div><p className="order-card-client"><span>Client</span><b>{client?.name ?? "Client supprimé"}</b></p><p className="order-card-client"><span>Mensurations à la commande</span><b>{measurementLabel(order)}</b></p>{order.kind === "retouche" && <p className="order-card-client"><span>Étape retouche</span><b>{order.retouchStage ?? "À examiner"}</b></p>}{retouchStageControl(order)}<div className="order-card-details"><div><span>Livraison</span><b>{formatDueDate(order.dueDate)}</b></div>{showFinancials ? <div><span>À encaisser</span><b className={balanceDue(order) === 0 ? "paid" : "order-balance"}>{formatXof(balanceDue(order))}</b></div> : null}</div>{onView && <button type="button" className="order-view-button" onClick={() => onView(order)}>Voir la commande <span aria-hidden="true">→</span></button>}</article>; })}</div>
+    <div className="table-wrap orders-desktop"><table><thead><tr><th>COMMANDE</th><th>CLIENT</th><th>DATE DE LIVRAISON</th>{showFinancials ? <><th>PRIX</th><th>RESTE DÛ</th></> : null}<th>STATUT</th></tr></thead><tbody>{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <tr key={order.id}><td><b className="order-id">{order.id}</b><small className="table-secondary">{order.kind === "retouche" ? "Retouche · " : ""}{order.garment}</small><small className="table-secondary">{order.measurementSnapshotAt ? "Mesures du " + formatDueDate(order.measurementSnapshotAt) + " · " : ""}{measurementLabel(order)}</small></td><td><span className="table-client">{client?.name ?? "Client supprimé"}</span></td><td>{formatDueDate(order.dueDate)}</td>{showFinancials ? <><td>{order.price > 0 ? formatXof(order.price) : <button type="button" className="secondary-button" onClick={() => onSetFinancialTerms(order)}>Définir le prix</button>}</td><td><b className={balanceDue(order) === 0 ? "paid" : ""}>{order.price > 0 ? formatXof(balanceDue(order)) : "À définir"}</b></td></> : null}<td>{statusControl(order)}{retouchStageControl(order)}</td></tr>; })}</tbody></table></div>
+    <div className="order-card-list" role="group" aria-label="Commandes sous forme de cartes">{orders.map((order) => { const client = clients.find((item) => item.id === order.clientId); return <article className="order-card" key={order.id}><div className="order-card-heading"><div><b className="order-id">{order.id}</b><strong>{order.kind === "retouche" ? "Retouche · " : ""}{order.garment}</strong></div><span className={"order-status-chip status-" + getStatusClass(order.status)}>{order.status}</span></div><p className="order-card-client"><span>Client</span><b>{client?.name ?? "Client supprimé"}</b></p><p className="order-card-client"><span>Mensurations à la commande</span><b>{measurementLabel(order)}</b></p>{order.kind === "retouche" && <p className="order-card-client"><span>Étape retouche</span><b>{order.retouchStage ?? "À examiner"}</b></p>}{retouchStageControl(order)}<div className="order-card-details"><div><span>Livraison</span><b>{formatDueDate(order.dueDate)}</b></div>{showFinancials ? <div><span>{order.price > 0 ? "À encaisser" : "Prix"}</span><b className={balanceDue(order) === 0 ? "paid" : "order-balance"}>{order.price > 0 ? formatXof(balanceDue(order)) : "À définir"}</b></div> : null}{showFinancials && order.price === 0 ? <button type="button" className="secondary-button" onClick={() => onSetFinancialTerms(order)}>Définir le prix et l’acompte</button> : null}</div>{onView && <button type="button" className="order-view-button" onClick={() => onView(order)}>Voir la commande <span aria-hidden="true">→</span></button>}</article>; })}</div>
     {orders.length === 0 && <div className="empty-state">Aucune commande pour le moment. Créez votre première commande pour commencer.</div>}
   </div>;
 }

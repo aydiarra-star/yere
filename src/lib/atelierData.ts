@@ -213,6 +213,28 @@ export async function createAtelierOrder(
   };
 }
 
+export async function saveAtelierOrderFinancialTerms(
+  session: YereSession, atelierId: string, order: Order,
+  input: { price: number; deposit: number; paidAt: string }
+): Promise<void> {
+  if (!order.serverId) throw new Error("Cette commande n’est pas enregistrée sur le serveur.");
+  if (!Number.isSafeInteger(input.price) || input.price <= 0
+    || !Number.isSafeInteger(input.deposit) || input.deposit < 0 || input.deposit > input.price) {
+    throw new Error("Prix ou acompte invalide.");
+  }
+  const response = await authenticatedFetch(session, "rest/v1/rpc/set_commande_financial_terms", {
+    method: "POST",
+    body: JSON.stringify({
+      p_atelier_id: atelierId, p_commande_id: order.serverId,
+      p_prix: input.price, p_acompte_initial: input.deposit,
+      p_date_paiement: `${input.paidAt}T12:00:00Z`,
+      p_payment_key: `yere-terms-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`
+    })
+  });
+  const result = await responseJson(response);
+  if (!Array.isArray(result) || result.length !== 1) throw new Error("Le serveur n’a pas confirmé les conditions financières.");
+}
+
 export async function saveAtelierPayment(
   session: YereSession, atelierId: string, order: Order, payment: Omit<OrderPayment, "id">
 ): Promise<OrderPayment> {
