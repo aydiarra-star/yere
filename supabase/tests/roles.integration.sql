@@ -75,6 +75,33 @@ values ('20000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-00000000
 set local role authenticated;
 select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000002',true);
 select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
+do $manager_order_finance$
+declare v_count bigint;
+begin
+  begin
+    perform * from public.create_commande_with_initial_payment(
+      '20000000-0000-4000-8000-000000000001','CI-MANAGER-PRICE',
+      '30000000-0000-4000-8000-000000000001','Boubou test',current_date,null,
+      'a_preparer',15000,'confection',null,null,null,0,null
+    );
+    raise exception 'FAIL: manager created an order with a non-zero price';
+  exception when insufficient_privilege then
+    null;
+  end;
+
+  perform * from public.create_commande_with_initial_payment(
+    '20000000-0000-4000-8000-000000000001','CI-MANAGER-ZERO',
+    '30000000-0000-4000-8000-000000000001','Boubou test',current_date,null,
+    'a_preparer',0,'confection',null,null,null,0,null
+  );
+  select count(*) into v_count from public.commande
+  where atelier_id='20000000-0000-4000-8000-000000000001'
+    and reference='CI-MANAGER-ZERO';
+  if v_count <> 1 then
+    raise exception 'FAIL: manager cannot create a work order without financial terms';
+  end if;
+end $manager_order_finance$;
+
 do $manager$
 declare v_count bigint;
 begin
@@ -125,7 +152,45 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000003',true);
 select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
-do $$
+do $tailor_order_finance$
+declare v_count bigint;
+begin
+  begin
+    perform * from public.create_commande_with_initial_payment(
+      '20000000-0000-4000-8000-000000000001','CI-TAILOR-PRICE',
+      '30000000-0000-4000-8000-000000000001','Chemise test',current_date,null,
+      'a_preparer',12000,'confection',null,null,null,0,null
+    );
+    raise exception 'FAIL: tailor created an order with a non-zero price';
+  exception when insufficient_privilege then
+    null;
+  end;
+
+  begin
+    perform * from public.create_commande_with_initial_payment(
+      '20000000-0000-4000-8000-000000000001','CI-TAILOR-DEPOSIT',
+      '30000000-0000-4000-8000-000000000001','Chemise test',current_date,null,
+      'a_preparer',0,'confection',null,null,null,1000,'ci-tailor-payment'
+    );
+    raise exception 'FAIL: tailor recorded an initial deposit';
+  exception when insufficient_privilege then
+    null;
+  end;
+
+  perform * from public.create_commande_with_initial_payment(
+    '20000000-0000-4000-8000-000000000001','CI-TAILOR-ZERO',
+    '30000000-0000-4000-8000-000000000001','Chemise test',current_date,null,
+    'a_preparer',0,'confection',null,null,null,0,null
+  );
+  select count(*) into v_count from public.commande
+  where atelier_id='20000000-0000-4000-8000-000000000001'
+    and reference='CI-TAILOR-ZERO';
+  if v_count <> 1 then
+    raise exception 'FAIL: tailor cannot create a work order without financial terms';
+  end if;
+end $tailor_order_finance$;
+
+do $
 begin
   if (select count(*) from public.atelier_membre where atelier_id='20000000-0000-4000-8000-000000000001') <> 3 then
     raise exception 'FAIL: tailor cannot read complete atelier workgroup';
