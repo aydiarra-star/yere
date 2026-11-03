@@ -155,28 +155,32 @@ export async function authenticatedFetch(session: YereSession, path: string, ini
   return response;
 }
 
-export async function listMyAteliers(session: YereSession): Promise<Array<{ id: string; nom: string; telephone: string | null; ville: string | null }>> {
-  const response = await authenticatedFetch(session, "rest/v1/atelier?select=id,nom,telephone,ville&order=created_at.asc");
+export type AtelierWorkMode = "independent" | "collaborators" | "team";
+export type AtelierWorkspace = { id: string; nom: string; telephone: string | null; ville: string | null; mode_organisation: AtelierWorkMode };
+
+export async function listMyAteliers(session: YereSession): Promise<AtelierWorkspace[]> {
+  const response = await authenticatedFetch(session, "rest/v1/atelier?select=id,nom,telephone,ville,mode_organisation&order=created_at.asc");
   const data = await parseResponse(response);
-  return Array.isArray(data) ? data as Array<{ id: string; nom: string; telephone: string | null; ville: string | null }> : [];
+  return Array.isArray(data) ? data as AtelierWorkspace[] : [];
 }
 
 /** Updates the workshop's canonical identity fields on Supabase. */
 export async function updateAtelierProfile(
   session: YereSession,
   atelierId: string,
-  input: { nom: string; telephone: string; ville: string }
+  input: { nom: string; telephone: string; ville: string; mode_organisation: AtelierWorkMode }
 ): Promise<void> {
   const response = await authenticatedFetch(session,
-    `rest/v1/atelier?id=eq.${encodeURIComponent(atelierId)}&select=id,nom,telephone,ville`,
+    `rest/v1/atelier?id=eq.${encodeURIComponent(atelierId)}&select=id,nom,telephone,ville,mode_organisation`,
     {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
-      body: JSON.stringify({ nom: input.nom.trim(), telephone: input.telephone.trim() || null, ville: input.ville.trim() || null })
+      body: JSON.stringify({ nom: input.nom.trim(), telephone: input.telephone.trim() || null, ville: input.ville.trim() || null, mode_organisation: input.mode_organisation })
     }
   );
   const data = await parseResponse(response);
-  if (!Array.isArray(data) || data.length !== 1 || (data[0] as { id?: string }).id !== atelierId) {
+  if (!Array.isArray(data) || data.length !== 1 || (data[0] as { id?: string; mode_organisation?: string }).id !== atelierId
+    || (data[0] as { mode_organisation?: string }).mode_organisation !== input.mode_organisation) {
     throw new Error("Le serveur n'a pas confirmé la mise à jour du profil de l'atelier.");
   }
 }
