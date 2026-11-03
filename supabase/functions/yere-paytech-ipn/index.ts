@@ -23,7 +23,10 @@ async function readPayload(req: Request): Promise<Record<string, unknown>> {
   const contentType = req.headers.get("content-type") ?? "";
   let parsed: unknown;
   if (contentType.includes("application/json")) parsed = JSON.parse(raw);
-  else {
+  else if (contentType.includes("multipart/form-data")) {
+    const form = await new Response(raw, { headers: { "Content-Type": contentType } }).formData();
+    parsed = Object.fromEntries(form.entries());
+  } else {
     const params = new URLSearchParams(raw);
     parsed = Object.fromEntries(params.entries());
   }
