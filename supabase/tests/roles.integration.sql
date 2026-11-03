@@ -288,7 +288,7 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000001',true);
 select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
-do $
+do $owner_finance$
 declare
   v_finance jsonb;
   v_commande_id uuid;
@@ -324,7 +324,7 @@ begin
   if (select count(*) from public.commande_tache_historique where tache_id='60000000-0000-4000-8000-000000000001') < 3 then
     raise exception 'FAIL: task history did not record creation, status and note changes';
   end if;
-end $$;
+end $owner_finance$;
 select public.update_atelier_member_profile(
  '20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000003',
  'Tailleur CI',array['Couture','Broderie'], 'experimente','Profil de test'
