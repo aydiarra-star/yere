@@ -77,6 +77,13 @@ export async function updateAtelierMemberRole(
   }));
   if(data!==true)throw new Error("La modification du rôle n’a pas été confirmée par le serveur.");
 }
+export async function reactivateAtelierMember(session:YereSession,atelierId:string,userId:string):Promise<void>{
+  const data=await parse(await authenticatedFetch(session,"rest/v1/rpc/reactivate_atelier_member",{
+    method:"POST",body:JSON.stringify({p_atelier_id:atelierId,p_user_id:userId})
+  }));
+  if(data!==true)throw new Error("Le rétablissement de l’accès n’a pas été confirmé par le serveur.");
+}
+
 export async function deactivateAtelierMember(session:YereSession,atelierId:string,userId:string):Promise<void>{
   const data=await parse(await authenticatedFetch(session,"rest/v1/rpc/deactivate_atelier_member",{
     method:"POST",body:JSON.stringify({p_atelier_id:atelierId,p_user_id:userId})
