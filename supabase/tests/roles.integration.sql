@@ -181,7 +181,7 @@ begin
     perform * from public.create_commande_with_initial_payment(
       '20000000-0000-4000-8000-000000000001','CI-TAILOR-DEPOSIT',
       '30000000-0000-4000-8000-000000000001','Chemise test',current_date,null,
-      'a_preparer',0,'confection',null,null,null,1000,'ci-tailor-payment'
+      'a_preparer',12000,'confection',null,null,null,1000,'ci-tailor-payment'
     );
     raise exception 'FAIL: tailor recorded an initial deposit';
   exception when insufficient_privilege then
