@@ -31,16 +31,11 @@
   box-sizing: border-box;
   white-space: nowrap;
 }
-.payment-logo-wave {
-  color: #1b75d0;
-  font-size: 1.08rem;
-  font-weight: 800;
-  letter-spacing: -.06em;
-}
-.wave-symbol {
-  font-size: 1.6rem;
-  line-height: 1;
-  transform: rotate(-18deg);
+.payment-logo-wave img {
+  display: block;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
 }
 .payment-logo-orange {
   flex-direction: column;
