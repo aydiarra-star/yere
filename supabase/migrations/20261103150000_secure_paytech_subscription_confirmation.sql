@@ -48,7 +48,7 @@ begin
     raise exception 'Abonnement introuvable' using errcode = 'P0002';
   end if;
 
-  v_period_start := greatest(now(), coalesce(v_subscription.periode_fin, v_subscription.fin_essai));
+  v_period_start := greatest(now(), coalesce(v_subscription.periode_fin, v_subscription.fin_essai), v_subscription.fin_essai);
   v_period_end := v_period_start + interval '1 month';
 
   update public.abonnement_paiement
