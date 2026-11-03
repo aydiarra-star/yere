@@ -9,7 +9,7 @@ import { createAtelierClient, createAtelierOrder, saveAtelierOrderFinancialTerms
 import { readSession, updateAtelierProfile } from "./lib/supabaseAuth";
 import { getAtelierSubscription, listAtelierSubscriptionPayments, type AtelierSubscription, type SubscriptionPayment } from "./lib/atelierSubscription";
 import { createAtelierTask, listAtelierTasks, updateAtelierTask, type AtelierTask, type AtelierTaskStatus } from "./lib/atelierTasks";
-import { cancelAtelierInvitation, createAtelierInvitation, deactivateAtelierMember, listAtelierInvitations, listAtelierMembers, updateAtelierMemberRole, updateAtelierMemberProfile, type AtelierInvitation, type AtelierMember } from "./lib/atelierTeam";
+import { cancelAtelierInvitation, createAtelierInvitation, deactivateAtelierMember, reactivateAtelierMember, listAtelierInvitations, listAtelierMembers, updateAtelierMemberRole, updateAtelierMemberProfile, type AtelierInvitation, type AtelierMember } from "./lib/atelierTeam";
 import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, getAtelierSupplierProfile, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, saveAtelierSupplierProfile, type AtelierSupplier } from "./lib/atelierSuppliers";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
@@ -102,6 +102,8 @@ function App() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"gestionnaire" | "employe">("employe");
   const [teamBusy, setTeamBusy] = useState(false);
+  const [editingTeamRoleUserId, setEditingTeamRoleUserId] = useState<string | null>(null);
+  const [teamRoleDraft, setTeamRoleDraft] = useState<"gestionnaire" | "employe">("employe");
   const [atelierTasks, setAtelierTasks] = useState<AtelierTask[]>([]);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
@@ -656,21 +658,39 @@ function App() {
     } finally { setTeamBusy(false); }
   }
 
-  async function changeTeamMemberRole(member: AtelierMember) {
+  async function saveTeamMemberRole(member: AtelierMember) {
     const session = readSession();
     const atelierId = window.sessionStorage.getItem("yere-active-atelier");
-    if (!isAtelierOwner || !session || !atelierId || member.role === "proprietaire") {
-      setNotice("Seul le propriétaire peut modifier le rôle d'un collaborateur.");
+    if (!isAtelierOwner || !session || !atelierId || member.role === "proprietaire" || !member.active) {
+      setNotice("Seul le propriétaire peut modifier le rôle d’un membre actif.");
       return;
     }
-    const nextRole = member.role === "gestionnaire" ? "employe" : "gestionnaire";
     setTeamBusy(true);
     try {
-      await updateAtelierMemberRole(session, atelierId, member.userId, nextRole);
-      setTeamMembers((current) => current.map((item) => item.userId === member.userId ? { ...item, role: nextRole } : item));
-      setNotice("Rôle du collaborateur mis à jour.");
+      await updateAtelierMemberRole(session, atelierId, member.userId, teamRoleDraft);
+      setTeamMembers((current) => current.map((item) => item.userId === member.userId ? { ...item, role: teamRoleDraft } : item));
+      setEditingTeamRoleUserId(null);
+      setNotice(`Rôle mis à jour : ${teamRoleDraft === "gestionnaire" ? "Gestionnaire" : "Tailleur"}.`);
     } catch (cause) {
       setNotice(cause instanceof Error ? "Modification refusée : " + cause.message : "Impossible de modifier ce rôle.");
+    } finally { setTeamBusy(false); }
+  }
+
+  async function reactivateTeamMember(member: AtelierMember) {
+    const session = readSession();
+    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
+    if (!isAtelierOwner || !session || !atelierId || member.role === "proprietaire" || member.active) {
+      setNotice("Seul le propriétaire peut rétablir l’accès d’un membre désactivé.");
+      return;
+    }
+    if (!window.confirm("Rétablir l’accès de ce membre à l’atelier ? Son rôle et son historique seront conservés.")) return;
+    setTeamBusy(true);
+    try {
+      await reactivateAtelierMember(session, atelierId, member.userId);
+      setTeamMembers((current) => current.map((item) => item.userId === member.userId ? { ...item, active: true } : item));
+      setNotice("Accès du membre rétabli. Son rôle et son historique ont été conservés.");
+    } catch (cause) {
+      setNotice(cause instanceof Error ? "Réactivation refusée : " + cause.message : "Impossible de rétablir cet accès.");
     } finally { setTeamBusy(false); }
   }
 
@@ -1283,7 +1303,7 @@ function App() {
             </section>}
             <section className="content-card team-panel" aria-labelledby="team-title">
               <div className="section-heading"><div><h3 id="team-title">Équipe et accès à l’atelier</h3><p>Les droits sont contrôlés sur le serveur et chaque membre reste limité à cet atelier.</p></div><span className="marketplace-listing-count">{teamMembers.filter((member) => member.active).length} membre(s)</span></div>
-              <div className="table-wrap"><table><thead><tr><th>Profil professionnel / compte</th><th>Rôle</th><th>État</th><th>Depuis</th>{isAtelierOwner ? <th>Actions</th> : null}</tr></thead><tbody>{teamMembers.map((member) => <tr key={member.userId}><td><strong>{member.professionalName || (member.role === "proprietaire" ? "Propriétaire de l’atelier" : member.role === "gestionnaire" ? "Gestionnaire" : "Profil à compléter")}</strong>{member.specialties.length ? <small>{member.specialties.join(" · ")}</small> : null}{member.experienceLevel ? <small>{({debutant:"Débutant",intermediaire:"Intermédiaire",experimente:"Expérimenté",maitre:"Maître tailleur"} as const)[member.experienceLevel]}</small> : null}{member.presentation ? <small>{member.presentation}</small> : null}<code>{member.userId.slice(0,8)}…{member.userId.slice(-4)}</code>{member.userId === currentUserId ? <small>Votre compte</small> : null}{isAtelierOwner && member.active && member.role === "employe" ? <TailorProfileEditor member={member} busy={teamBusy} onSave={saveTailorProfessionalProfile} /> : null}</td><td>{member.role === "proprietaire" ? "Propriétaire" : member.role === "gestionnaire" ? "Gestionnaire" : "Tailleur"}</td><td>{member.active ? "Actif" : "Désactivé"}</td><td>{new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(member.createdAt))}</td>{isAtelierOwner ? <td>{member.role !== "proprietaire" ? <div className="team-member-actions"><button type="button" className="text-button" disabled={teamBusy || !member.active} onClick={() => void changeTeamMemberRole(member)}>{member.role === "gestionnaire" ? "Rétablir employé" : "Nommer gestionnaire"}</button>{member.active ? <button type="button" className="text-button" disabled={teamBusy} onClick={() => void deactivateTeamMember(member)}>Désactiver</button> : <span className="privacy-note">Accès retiré</span>}</div> : <span className="privacy-note">Compte propriétaire protégé</span>}</td> : null}</tr>)}</tbody></table></div>
+              <div className="table-wrap"><table><thead><tr><th>Profil professionnel / compte</th><th>Rôle</th><th>État</th><th>Depuis</th>{isAtelierOwner ? <th>Actions</th> : null}</tr></thead><tbody>{teamMembers.map((member) => <tr key={member.userId}><td><strong>{member.professionalName || (member.role === "proprietaire" ? "Propriétaire de l’atelier" : member.role === "gestionnaire" ? "Gestionnaire" : "Profil à compléter")}</strong>{member.specialties.length ? <small>{member.specialties.join(" · ")}</small> : null}{member.experienceLevel ? <small>{({debutant:"Débutant",intermediaire:"Intermédiaire",experimente:"Expérimenté",maitre:"Maître tailleur"} as const)[member.experienceLevel]}</small> : null}{member.presentation ? <small>{member.presentation}</small> : null}<code>{member.userId.slice(0,8)}…{member.userId.slice(-4)}</code>{member.userId === currentUserId ? <small>Votre compte</small> : null}{isAtelierOwner && member.active && member.role === "employe" ? <TailorProfileEditor member={member} busy={teamBusy} onSave={saveTailorProfessionalProfile} /> : null}</td><td>{member.role === "proprietaire" ? "Propriétaire" : member.role === "gestionnaire" ? "Gestionnaire" : "Tailleur"}</td><td>{member.active ? "Actif" : "Désactivé"}</td><td>{new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(member.createdAt))}</td>{isAtelierOwner ? <td>{member.role !== "proprietaire" ? <div className="team-member-actions">{member.active ? <>{editingTeamRoleUserId === member.userId ? <><select aria-label={`Nouveau rôle de ${member.professionalName || "ce membre"}`} value={teamRoleDraft} disabled={teamBusy} onChange={(event) => setTeamRoleDraft(event.target.value as "gestionnaire" | "employe")}><option value="employe">Tailleur</option><option value="gestionnaire">Gestionnaire</option></select><button type="button" className="text-button" disabled={teamBusy || teamRoleDraft === member.role} onClick={() => void saveTeamMemberRole(member)}>Confirmer</button><button type="button" className="text-button" disabled={teamBusy} onClick={() => setEditingTeamRoleUserId(null)}>Annuler</button></> : <><button type="button" className="text-button" disabled={teamBusy} onClick={() => { setTeamRoleDraft(member.role === "gestionnaire" ? "gestionnaire" : "employe"); setEditingTeamRoleUserId(member.userId); }}>Modifier le rôle</button><button type="button" className="text-button" disabled={teamBusy} onClick={() => void deactivateTeamMember(member)}>Désactiver</button></>}</> : <><span className="privacy-note">Accès retiré</span><button type="button" className="text-button" disabled={teamBusy} onClick={() => void reactivateTeamMember(member)}>Rétablir l’accès</button></>}</div> : <span className="privacy-note">Compte propriétaire protégé</span>}</td> : null}</tr>)}</tbody></table></div>
               {canManageTeam ? <>
                 <form className="new-order-form team-invite-form" onSubmit={inviteTeamMember}>
                   <h4>Inviter un collaborateur</h4>
