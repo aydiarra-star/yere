@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { readSession } from "./lib/supabaseAuth";
 import { startAtelierSubscriptionPayment } from "./lib/paytech";
+import PaymentMethodLogos from "./PaymentMethodLogos";
 
 export default function PayTechSubscriptionButton() {
   const [busy, setBusy] = useState(false);
@@ -29,7 +30,8 @@ export default function PayTechSubscriptionButton() {
       <button type="button" className="primary-button" onClick={() => void beginPayment()} disabled={busy}>
         {busy ? "Préparation du paiement…" : "Payer / renouveler — 5 000 FCFA"}
       </button>
-      <p className="privacy-note">Paiement sécurisé sur la page PayTech : Wave, Orange Money, Free Money ou carte bancaire Visa / Mastercard. L'abonnement ne sera activé qu'après confirmation serveur du paiement.</p>
+      <p className="privacy-note">Paiement sécurisé sur la page PayTech. L'abonnement ne sera activé qu'après confirmation serveur du paiement.</p>
+      <PaymentMethodLogos />
       {error && <p role="alert" className="form-error">{error}</p>}
     </div>
   );
