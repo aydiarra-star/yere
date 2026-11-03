@@ -1,7 +1,11 @@
 import "./payment-method-logos.css";
 
 const methods = [
-  { name: "Wave", className: "payment-logo-wave", mark: <><span className="wave-symbol" aria-hidden="true">≈</span><span>wave</span></> },
+  {
+    name: "Wave",
+    className: "payment-logo-wave",
+    mark: <img src="https://oqsf.sn/wp-content/uploads/2023/04/wave-300x300.webp" alt="Wave" />,
+  },
   { name: "Orange Money", className: "payment-logo-orange", mark: <><span className="orange-symbol" aria-hidden="true">orange</span><span>money</span></> },
   { name: "Visa", className: "payment-logo-visa", mark: <span>VISA</span> },
   { name: "Mastercard", className: "payment-logo-mastercard", mark: <><span className="mastercard-symbol" aria-hidden="true"><i /><i /></span><span className="mastercard-word">mastercard</span></> },
