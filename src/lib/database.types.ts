@@ -79,6 +79,7 @@ export type Database = {
           created_at: string
           devise: string
           id: string
+          mode_organisation: string
           nom: string
           telephone: string | null
           updated_at: string
@@ -88,6 +89,7 @@ export type Database = {
           created_at?: string
           devise?: string
           id?: string
+          mode_organisation?: string
           nom: string
           telephone?: string | null
           updated_at?: string
@@ -97,6 +99,7 @@ export type Database = {
           created_at?: string
           devise?: string
           id?: string
+          mode_organisation?: string
           nom?: string
           telephone?: string | null
           updated_at?: string

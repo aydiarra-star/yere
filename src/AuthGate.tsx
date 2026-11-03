@@ -6,7 +6,7 @@ import { resolvePersistentStorageKey } from "./usePersistentState";
 import PublicMarketplace from "./PublicMarketplace";
 import "./auth-gate.css";
 
-type Atelier = { id: string; nom: string; telephone: string | null; ville: string | null };
+type Atelier = { id: string; nom: string; telephone: string | null; ville: string | null; mode_organisation: "independent" | "collaborators" | "team" };
 type Props = { children: ReactNode; initialProfessionalLogin?: boolean };
 
 function seedLocalProfile(userId: string, atelier: Atelier) {
@@ -14,7 +14,7 @@ function seedLocalProfile(userId: string, atelier: Atelier) {
   window.sessionStorage.setItem("yere-user-scope", userId);
   window.sessionStorage.setItem("yere-active-atelier", atelier.id);
   window.localStorage.setItem(resolvePersistentStorageKey("yere-demo-atelier-v1", userId, atelier.id, "atelier"), JSON.stringify({
-    name: atelier.nom, phone: atelier.telephone ?? "", city: atelier.ville ?? "", activity: "tailleur", workMode: "independent", secondaryActivities: []
+    name: atelier.nom, phone: atelier.telephone ?? "", city: atelier.ville ?? "", activity: "tailleur", workMode: atelier.mode_organisation, secondaryActivities: []
   }));
   window.localStorage.setItem(`yere-demo-onboarding-complete-v1${suffix}`, "true");
 }
