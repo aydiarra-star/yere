@@ -1,0 +1,101 @@
+.payment-methods {
+  margin: 1rem 0 0;
+  padding: 1rem;
+  border: 1px solid rgba(19, 41, 75, .12);
+  border-radius: 14px;
+  background: #fff;
+}
+.payment-methods-title {
+  margin: 0 0 .75rem;
+  color: #13294b;
+  font-size: .82rem;
+  font-weight: 700;
+}
+.payment-methods-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .6rem;
+}
+.payment-method-logo {
+  min-width: 74px;
+  height: 42px;
+  padding: 0 .65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .28rem;
+  border: 1px solid #e7eaf0;
+  border-radius: 9px;
+  background: #fff;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+.payment-logo-wave img {
+  display: block;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+.payment-logo-orange {
+  flex-direction: column;
+  gap: 0;
+  color: #f36f21;
+  font-size: .68rem;
+  font-weight: 800;
+  line-height: .95;
+}
+.orange-symbol {
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: #f36f21;
+  color: #fff;
+  font-size: .6rem;
+  letter-spacing: -.04em;
+}
+.payment-logo-visa {
+  color: #1434cb;
+  font-size: 1.25rem;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -.08em;
+}
+.payment-logo-mastercard {
+  flex-direction: column;
+  gap: 1px;
+}
+.mastercard-symbol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 19px;
+}
+.mastercard-symbol i {
+  display: block;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: #eb001b;
+}
+.mastercard-symbol i + i {
+  margin-left: -7px;
+  background: #f79e1b;
+  mix-blend-mode: multiply;
+}
+.mastercard-word {
+  color: #252525;
+  font-size: .48rem;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+.payment-methods-note {
+  margin: .7rem 0 0;
+  color: #667085;
+  font-size: .72rem;
+  line-height: 1.45;
+}
+@media (max-width: 420px) {
+  .payment-methods { padding: .8rem; }
+  .payment-methods-list { gap: .45rem; }
+  .payment-method-logo { min-width: 66px; height: 39px; padding: 0 .45rem; }
+}
