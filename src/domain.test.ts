@@ -110,6 +110,7 @@ describe("validation des données restaurées", () => {
       price: 25000, deposit: 10000, status: "En confection"
     };
     expect(isOrderListValid([order])).toBe(true);
+    expect(isOrderListValid([{ ...order, price: 0, deposit: 0, payments: [] }])).toBe(true);
     expect(isOrderListValid([])).toBe(true);
   });
 
@@ -205,6 +206,12 @@ describe("validation d'une nouvelle commande", () => {
     expect(isOrderInputValid({ ...validInput, deposit: 10.5 }, ["c-1"])).toBe(false);
     expect(isOrderInputValid({ ...validInput, deposit: -1 }, ["c-1"])).toBe(false);
     expect(isOrderInputValid({ ...validInput, deposit: Number.POSITIVE_INFINITY }, ["c-1"])).toBe(false);
+  });
+
+  it("accepte une commande non tarifée créée par un membre de l’équipe, sans acompte", () => {
+    expect(isOrderInputValid({ ...validInput, price: 0, deposit: 0 }, ["c-1"], true)).toBe(true);
+    expect(isOrderInputValid({ ...validInput, price: 0, deposit: 1 }, ["c-1"], true)).toBe(false);
+    expect(isOrderInputValid({ ...validInput, price: 0, deposit: 0 }, ["c-1"])).toBe(false);
   });
 
   it("accepte un acompte nul ou égal au prix", () => {
