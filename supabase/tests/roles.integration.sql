@@ -201,7 +201,8 @@ begin
   end if;
 end $tailor_order_finance$;
 
-do $$begin
+do $$
+n
   if (select count(*) from public.atelier_membre where atelier_id='20000000-0000-4000-8000-000000000001') <> 3 then
     raise exception 'FAIL: tailor cannot read complete atelier workgroup';
   end if;
