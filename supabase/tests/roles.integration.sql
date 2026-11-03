@@ -139,6 +139,14 @@ begin
 end $manager$;
 insert into public.commande_tache (id,atelier_id,commande_id,titre,assigne_a,created_by)
 values ('60000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-000000000001','Assemblage','10000000-0000-4000-8000-000000000003',auth.uid());
+insert into public.commande_tache (id,atelier_id,commande_id,titre,assigne_a,created_by)
+values ('60000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-000000000001','Préparation générale',null,auth.uid());
+do $manager_task_scope$
+begin
+  if (select count(*) from public.commande_tache where atelier_id='20000000-0000-4000-8000-000000000001') <> 2 then
+    raise exception 'FAIL: manager cannot read all workshop tasks';
+  end if;
+end $manager_task_scope$;
 do $$
 begin
   begin
@@ -208,6 +216,17 @@ begin
   end if;
   if (select count(*) from public.commande_tache where id='60000000-0000-4000-8000-000000000001') <> 1 then
     raise exception 'FAIL: assigned tailor cannot read assigned task';
+  end if;
+  if (select count(*) from public.commande_tache where atelier_id='20000000-0000-4000-8000-000000000001') <> 1 then
+    raise exception 'FAIL: tailor can read tasks not assigned to them';
+  end if;
+  if (select count(*) from public.commande_tache_historique where tache_id='60000000-0000-4000-8000-000000000002') <> 0 then
+    raise exception 'FAIL: tailor can read history of an unassigned task';
+  end if;
+  insert into public.client (atelier_id, nom)
+  values ('20000000-0000-4000-8000-000000000001','Client créé par tailleur CI');
+  if (select count(*) from public.client where atelier_id='20000000-0000-4000-8000-000000000001' and nom='Client créé par tailleur CI') <> 1 then
+    raise exception 'FAIL: tailor cannot create a client in own workshop';
   end if;
   -- Verify effective RLS visibility rather than catalog grants.
   if (select count(*) from public.paiement) <> 0 then
