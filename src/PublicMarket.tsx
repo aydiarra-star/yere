@@ -85,7 +85,7 @@ export default function PublicMarket() {
       try {
         if (!supabaseReady) throw new Error("Le Market n’est pas encore configuré sur ce déploiement.");
         const recoveryCallback = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") === "recovery";
-        if (recoveryCallback) setPasswordRecovery(true);
+        if (recoveryCallback) { setPasswordRecovery(true); setShowAccount(true); }
         const callback = await consumeAuthCallback();
         let current = callback ?? readSession();
         if (current && current.expires_at * 1000 <= Date.now() + 60_000) current = await refreshSession(current);
@@ -155,7 +155,7 @@ export default function PublicMarket() {
     setBusy(true); setError(""); setNotice("");
     try {
       await updatePassword(session, newPassword);
-      setPasswordRecovery(false); setNewPassword(""); setConfirmPassword(""); setPassword("");
+      setPasswordRecovery(false); setNewPassword(""); setConfirmPassword(""); setPassword(""); setAuthMode("login");
       setNotice("Votre mot de passe a été modifié. Vous pouvez continuer sur YÉRÉ Market.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Impossible de modifier le mot de passe. Demandez un nouveau lien.");
