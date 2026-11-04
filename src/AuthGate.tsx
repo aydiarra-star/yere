@@ -58,15 +58,22 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
   }, [pendingInvitations.length]);
 
   async function loadWorkspace(activeSession: YereSession) {
-    const [workspaces, invitations] = await Promise.all([
-      listMyAteliers(activeSession), listMyAtelierInvitations(activeSession)
-    ]);
+    // Atelier access is essential; the invitation inbox is optional. A temporary
+    // invitation endpoint/RLS failure must not block an owner or member from
+    // opening an atelier whose membership was loaded successfully.
+    const workspaces = await listMyAteliers(activeSession);
     setWorkspaces(workspaces);
-    setPendingInvitations(invitations.filter((item) =>
-      item.email.toLowerCase() === (activeSession.user.email ?? "").toLowerCase()
-      && !item.declinedAt
-      && new Date(item.expiresAt).getTime() > Date.now()
-    ));
+    try {
+      const invitations = await listMyAtelierInvitations(activeSession);
+      setPendingInvitations(invitations.filter((item) =>
+        item.email.toLowerCase() === (activeSession.user.email ?? "").toLowerCase()
+        && !item.declinedAt
+        && new Date(item.expiresAt).getTime() > Date.now()
+      ));
+    } catch (cause) {
+      setPendingInvitations([]);
+      setError(cause instanceof Error ? cause.message : "Impossible de charger les invitations reçues.");
+    }
     const savedAtelierId = window.sessionStorage.getItem("yere-active-atelier");
     const selectedAtelier = workspaces.find((item) => item.id === savedAtelierId) ?? workspaces[0];
     if (selectedAtelier) {
