@@ -59,7 +59,7 @@ function App() {
   const [listingDraft, setListingDraft] = useState<Omit<MarketplaceListing, "id">>({ ...emptyListing });
   const [listingFormOpen, setListingFormOpen] = useState(false);
   const [editingListingId, setEditingListingId] = useState<string | null>(null);
-  const [onboardingComplete, setOnboardingComplete] = usePersistentState<boolean>("yere-demo-onboarding-complete-v1", false, isBooleanValue);
+  const [onboardingComplete] = usePersistentState<boolean>("yere-demo-onboarding-complete-v1", false, isBooleanValue);
   const [onboardingStartedAt, setOnboardingStartedAt] = usePersistentState<number | null>("yere-demo-onboarding-started-at-v1", null, isNullableTimestamp);
   const [view, setView] = useState<View>("overview");
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
@@ -1460,43 +1460,6 @@ function NavIcon({ name }: { name: string }) {
     "tailor-scissors": <><circle cx="5.8" cy="18.2" r="2.7" /><circle cx="17" cy="18.2" r="2.7" /><path d="M7.8 16.2 17.7 3.4c.4-.6 1.2-.5 1.5.1.3.7.1 1.4-.3 2.1L8.5 19M15 16.2 5.1 3.4c-.4-.6-1.2-.5-1.5.1-.3.7-.1 1.4.3 2.1L14.3 19" /><circle cx="11.4" cy="11.7" r=".7" /><path d="M19 10.7h3v4h-3M20.5 10.7v1.2M20.5 13.3v1.4" /></>
   };
   return <svg {...common}>{paths[name] ?? paths.store}</svg>;
-}
-
-function Onboarding({ atelier, onAtelierChange, onCancel, onFinish }: {
-  atelier: AtelierProfile;
-  onAtelierChange: (value: AtelierProfile) => void;
-  onCancel: () => void;
-  onFinish: () => void;
-}) {
-  const [draft, setDraft] = useState<AtelierProfile>(() => normalizeAtelierProfile(atelier));
-  function update(field: "name" | "phone" | "city", value: string) {
-    setDraft((previous) => ({ ...previous, [field]: value }));
-  }
-  return <main className="onboarding-shell">
-    <header className="onboarding-brand"><img className="brand-mark" src="/images/yere-logo.png" alt="" aria-hidden="true" /><span><strong>YÉRÉ</strong><small>ATELIER</small></span><button type="button" className="onboarding-back" onClick={onCancel}>← Retour à l’accueil</button></header>
-    <div className="onboarding-layout onboarding-layout-simple">
-      <section className="onboarding-copy">
-        <p className="eyebrow">CONFIGURATION</p>
-        <h1>Configurez votre espace YÉRÉ</h1>
-        <h2>Un seul outil, adapté à votre métier.</h2>
-        <p className="onboarding-body">YÉRÉ est conçu pour les tailleurs. Configurez votre atelier et votre façon de travailler.</p>
-        <form className="onboarding-form" onSubmit={(event) => { event.preventDefault(); onAtelierChange(normalizeAtelierProfile(draft)); onFinish(); }}>
-          <div className="profile-profession" aria-label="Métier YÉRÉ"><span>Métier</span><strong>Tailleur</strong><small>YÉRÉ est réservé aux tailleurs pour son lancement.</small></div>
-          
-          <label>Comment travaillez-vous ?
-            <select required value={draft.workMode ?? "independent"} onChange={(event) => setDraft((previous) => ({ ...previous, workMode: event.target.value as WorkMode }))}>
-              {workModes.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}
-            </select>
-          </label>
-          <label>Nom de l'atelier ou de votre activité<input required value={draft.name} onChange={(event) => update("name", event.target.value)} placeholder="Nom de l'atelier ou de l'activité" /></label>
-          <label>Téléphone<input type="tel" value={draft.phone} onChange={(event) => update("phone", event.target.value)} placeholder="Téléphone" /></label>
-          <label>Ville<input value={draft.city} onChange={(event) => update("city", event.target.value)} placeholder="Ville" /></label>
-          <button className="primary-button onboarding-primary" type="submit">Créer mon espace YÉRÉ <span>→</span></button>
-        </form>
-        <p className="onboarding-privacy">Votre espace atelier est connecté à YÉRÉ. Les informations du profil sont enregistrées sur le serveur.</p>
-      </section>
-    </div>
-  </main>;
 }
 
 function OrderTable({ orders, clients, onStatusChange, onRetouchStageChange, onView, onSetFinancialTerms, showFinancials = true, canEditWorkflow = true }: { orders: Order[]; clients: Client[]; onStatusChange: (id: string, status: OrderStatus) => void; onRetouchStageChange: (id: string, stage: RetouchStage) => void; onView?: (order: Order) => void; onSetFinancialTerms: (order: Order) => void; showFinancials?: boolean; canEditWorkflow?: boolean }) {
