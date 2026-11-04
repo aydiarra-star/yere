@@ -28,6 +28,7 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
   const [inboxOpen, setInboxOpen] = useState(false);
   const [profileControlsTarget, setProfileControlsTarget] = useState<HTMLElement | null>(null);
   const [ready, setReady] = useState(false);
+  const [bootstrapError, setBootstrapError] = useState("");
   const [mode, setMode] = useState<"login" | "signup" | "recovery">("login");
   const [showProfessionalAuth, setShowProfessionalAuth] = useState(initialProfessionalLogin);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
@@ -66,6 +67,7 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
       && !item.declinedAt
       && new Date(item.expiresAt).getTime() > Date.now()
     ));
+    setBootstrapError("");
     const savedAtelierId = window.sessionStorage.getItem("yere-active-atelier");
     const selectedAtelier = workspaces.find((item) => item.id === savedAtelierId) ?? workspaces[0];
     if (selectedAtelier) {
@@ -125,21 +127,31 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
     let active = true;
     async function initialize() {
       if (!supabaseReady) { setReady(true); return; }
+      let saved: YereSession | null = null;
       try {
         const recoveryCallback = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") === "recovery";
         if (recoveryCallback) setPasswordRecovery(true);
         const callbackSession = await consumeAuthCallback();
-        const saved = callbackSession ?? readSession();
+        saved = callbackSession ?? readSession();
         if (!saved) { setReady(true); return; }
         const current = saved.expires_at * 1000 <= Date.now() + 60_000 ? await refreshSession(saved) : saved;
         if (!active) return;
         setSession(current);
         await loadWorkspace(current);
       } catch (cause) {
-        clearSession();
         if (active) {
-          setSession(null); setAtelier(null);
-          setError(cause instanceof Error ? cause.message : "La confirmation du compte a échoué. Demandez un nouveau lien.");
+          setAtelier(null);
+          const detail = cause instanceof Error ? cause.message : "Impossible de vérifier votre espace auprès du serveur.";
+          if (saved) {
+            // A network/bootstrap failure is not proof that the account is signed out.
+            // Keep the credential locally, but do not expose atelier data until the server revalidates access.
+            setSession(saved);
+            setBootstrapError(detail);
+          } else {
+            clearSession();
+            setSession(null);
+            setError(detail);
+          }
         }
       } finally {
         if (active) setReady(true);
@@ -177,7 +189,7 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
 
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setBusy(true); setError(""); setMessage("");
+    setBusy(true); setError(""); setMessage(""); setBootstrapError("");
     try {
       if (mode === "recovery") {
         await requestPasswordRecovery(email.trim().toLowerCase());
@@ -197,7 +209,15 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
         await loadWorkspace(next);
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Connexion impossible. Réessayez.");
+      const detail = cause instanceof Error ? cause.message : "Connexion impossible. Réessayez.";
+      const saved = readSession();
+      if (saved) {
+        setSession(saved);
+        setAtelier(null);
+        setBootstrapError(detail);
+      } else {
+        setError(detail);
+      }
     } finally { setBusy(false); }
   }
 
@@ -249,9 +269,22 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
     window.location.reload();
   }
 
+  async function retryWorkspaceVerification() {
+    if (!session) return;
+    setBusy(true);
+    setBootstrapError("");
+    try {
+      const current = session.expires_at * 1000 <= Date.now() + 60_000 ? await refreshSession(session) : session;
+      setSession(current);
+      await loadWorkspace(current);
+    } catch (cause) {
+      setBootstrapError(cause instanceof Error ? cause.message : "La vérification du serveur a échoué. Réessayez lorsque la connexion sera rétablie.");
+    } finally { setBusy(false); }
+  }
+
   async function handleSignOut() {
     if (session) await signOut(session);
-    setSession(null); setAtelier(null); setWorkspaces([]); setMessage(""); setError("");
+    setSession(null); setAtelier(null); setWorkspaces([]); setMessage(""); setError(""); setBootstrapError("");
     setShowProfessionalAuth(false);
   }
 
@@ -261,6 +294,21 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
   if (!session && !showProfessionalAuth && !passwordRecovery) return <PublicMarketplace onProfessionalLogin={() => setShowProfessionalAuth(true)} />;
 
   if (!supabaseReady) return <main className="auth-shell"><section className="auth-card"><img className="auth-mark" src="/images/yere-logo.png" alt="YÉRÉ" /><p className="eyebrow">YÉRÉ · ATELIER</p><h1>Connexion indisponible</h1><p>La configuration Supabase manque sur ce déploiement. Aucun compte ne peut être créé pour le moment.</p></section></main>;
+
+  if (session && bootstrapError && !atelier) return (
+    <main className="auth-shell">
+      <section className="auth-card auth-workspace-card">
+        <div className="auth-brand"><img className="auth-mark" src="/images/yere-logo.png" alt="YÉRÉ" /><span><strong>YÉRÉ</strong><small>ATELIER</small></span></div>
+        <p className="eyebrow">VÉRIFICATION DE SÉCURITÉ</p>
+        <h1>Connexion au serveur indisponible.</h1>
+        <p className="auth-intro">Votre session enregistrée est conservée. Par sécurité, YÉRÉ n’ouvre aucun atelier et n’affiche aucune donnée tant que le serveur n’a pas confirmé vos accès.</p>
+        <p className="auth-error" role="alert">{bootstrapError}</p>
+        <button className="primary-button auth-submit" type="button" disabled={busy} onClick={() => void retryWorkspaceVerification()}>{busy ? "Vérification…" : "Réessayer la vérification"} <span>→</span></button>
+        <button className="secondary-button" type="button" disabled={busy} onClick={() => void handleSignOut()}>Se déconnecter</button>
+        <p className="auth-footnote">Aucune donnée métier n’est enregistrée localement ni synchronisée sans confirmation du serveur.</p>
+      </section>
+    </main>
+  );
 
   if (passwordRecovery && session) return (
     <main className="auth-shell">
