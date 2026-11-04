@@ -248,16 +248,21 @@ begin
 end $$;
 update public.commande_tache set statut='en_cours', note_avancement='Début du travail'
 where id='60000000-0000-4000-8000-000000000001';
-do $$
+do $employee_order_update$
+declare
+  v_updated_rows integer;
 begin
   begin
     update public.commande set statut='livre'
     where id='40000000-0000-4000-8000-000000000001';
-    raise exception 'FAIL: tailor unexpectedly changed global order status';
+    get diagnostics v_updated_rows = row_count;
+    if v_updated_rows <> 0 then
+      raise exception 'FAIL: tailor unexpectedly changed global order status';
+    end if;
   exception when insufficient_privilege or check_violation then
     null;
   end;
-end $$;
+end $employee_order_update$;
 update public.commande_tache set statut='terminee', note_avancement='Travail terminé'
 where id='60000000-0000-4000-8000-000000000001';
 reset role;
