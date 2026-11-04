@@ -3163,3 +3163,7 @@ main.main-content .page-wrap .tailor-priority-card .tailor-card-art{
 .dtech-settings-about span{font-size:.78rem;color:#687386}
 .dtech-settings-about strong{color:#0B1F3A}
 @media(max-width:640px){.dtech-settings-grid{grid-template-columns:1fr}.dtech-settings-about{grid-template-columns:1fr}.dtech-settings-top{align-items:center}.dtech-settings{padding:16px}}
+
+.dtech-settings-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dtech-settings-actions .primary-button,.dtech-settings-actions .secondary-button{min-height:44px}
+@media(max-width:640px){.dtech-settings-actions{display:grid;grid-template-columns:1fr}.dtech-settings-actions button{width:100%}}
