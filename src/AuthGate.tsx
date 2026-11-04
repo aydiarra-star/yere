@@ -150,11 +150,7 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
           if (active) setWorkspaceError(cause instanceof Error ? cause.message : "Impossible de charger votre atelier. Réessayez.");
         }
       }
-      try {
-        // Keep initialization completion independent from workspace availability.
-      } finally {
-        if (active) setReady(true);
-      }
+      if (active) setReady(true);
     }
     void initialize();
     return () => { active = false; };
