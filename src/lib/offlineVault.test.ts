@@ -43,6 +43,16 @@ describe("offline vault snapshot protection", () => {
     expect(result[0].measurementHistory).toEqual([{ id: "m-1", measuredAt: "2026-11-01", measurement: { hips: "95" } }]);
   });
 
+  it("removes free-text stock movement notes from the offline allowlist", () => {
+    const result = sanitizeOfflineSnapshot("stock", {
+      items: [{ id: "stock-1", name: "Tissu", unit: "m", quantity: 12, minimumQuantity: 2, createdAt: "2026-11-04", secret: "remove" }],
+      movements: [{ id: "move-1", itemId: "stock-1", type: "in", quantity: 4, movedAt: "2026-11-04", note: "texte libre privé", secret: "remove" }]
+    }) as { items: Array<Record<string, unknown>>; movements: Array<Record<string, unknown>> };
+    expect(result.items[0]).not.toHaveProperty("secret");
+    expect(result.movements[0]).not.toHaveProperty("note");
+    expect(result.movements[0]).not.toHaveProperty("secret");
+  });
+
   it("rejects malformed datasets and invalid stock shapes", () => {
     expect(() => sanitizeOfflineSnapshot("clients", {})).toThrow();
     expect(() => sanitizeOfflineSnapshot("stock", { items: [], movements: "invalid" })).toThrow();
