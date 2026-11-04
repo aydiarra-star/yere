@@ -278,8 +278,12 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
     if (!session) return;
     const nextAtelier = workspaces.find((item) => item.id === nextAtelierId);
     if (!nextAtelier || nextAtelier.id === atelier?.id) return;
-    seedLocalProfile(session.user.id, nextAtelier);
-    window.location.reload();
+    try {
+      seedLocalProfile(session.user.id, nextAtelier);
+      window.location.reload();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Impossible de sécuriser le changement d’atelier.");
+    }
   }
 
   async function retryWorkspaceVerification() {
