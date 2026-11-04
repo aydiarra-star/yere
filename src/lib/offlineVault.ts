@@ -23,6 +23,8 @@ type VaultRecord = {
   userId: string;
   atelierId: string;
   dataset: OfflineDataset;
+  role: OfflineRole;
+  serverVerifiedAt: number;
   syncedAt: number;
   expiresAt: number;
   iv: Uint8Array;
@@ -80,7 +82,12 @@ export function sanitizeOfflineSnapshot(dataset: OfflineDataset, value: unknown)
     return value.map((item) => pick(item, [
       "id", "serverId", "clientId", "garment", "dueDate", "orderedAt", "status", "kind",
       "retouchStage", "measurementSnapshot", "measurementSnapshotAt"
-    ]));
+    ]).map((order) => {
+      if (order.measurementSnapshot !== undefined) order.measurementSnapshot = pick(order.measurementSnapshot, [
+        "bust", "waist", "hips", "shoulder", "sleeve", "length", "arm", "neck", "thigh", "legLength", "garmentType", "note"
+      ]);
+      return order;
+    }));
   }
   if (!object(value) || !Array.isArray(value.items) || !Array.isArray(value.movements)) {
     throw new Error("Données de stock invalides.");
@@ -89,6 +96,37 @@ export function sanitizeOfflineSnapshot(dataset: OfflineDataset, value: unknown)
     items: value.items.map((item) => pick(item, ["id", "name", "unit", "quantity", "minimumQuantity", "createdAt"])),
     movements: value.movements.map((item) => pick(item, ["id", "itemId", "type", "quantity", "movedAt", "note"]))
   };
+}
+
+
+export async function encryptOfflinePayload(
+  context: Pick<OfflineVaultContext, "userId" | "atelierId">,
+  dataset: OfflineDataset,
+  payload: unknown,
+  key: CryptoKey,
+  iv = crypto.getRandomValues(new Uint8Array(12))
+): Promise<{ iv: Uint8Array; ciphertext: ArrayBuffer }> {
+  const safe = sanitizeOfflineSnapshot(dataset, payload);
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv, additionalData: additionalData(context.userId, context.atelierId, dataset) },
+    key,
+    new TextEncoder().encode(JSON.stringify(safe))
+  );
+  return { iv, ciphertext };
+}
+
+export async function decryptOfflinePayload<T = unknown>(
+  context: Pick<OfflineVaultContext, "userId" | "atelierId">,
+  dataset: OfflineDataset,
+  encrypted: { iv: Uint8Array; ciphertext: ArrayBuffer },
+  key: CryptoKey
+): Promise<T> {
+  const plaintext = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: encrypted.iv, additionalData: additionalData(context.userId, context.atelierId, dataset) },
+    key,
+    encrypted.ciphertext
+  );
+  return JSON.parse(new TextDecoder().decode(plaintext)) as T;
 }
 
 function openDatabase(): Promise<IDBDatabase> {
@@ -141,17 +179,13 @@ export async function saveOfflineSnapshot(
   try {
     const scope = recordId(context.userId, context.atelierId, dataset);
     const key = await getOrCreateKey(db, scope);
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const ciphertext = await crypto.subtle.encrypt(
-      { name: "AES-GCM", iv, additionalData: additionalData(context.userId, context.atelierId, dataset) },
-      key,
-      new TextEncoder().encode(JSON.stringify(safe))
-    );
+    const encrypted = await encryptOfflinePayload(context, dataset, safe, key);
     const transaction = db.transaction(DATA_STORE, "readwrite");
     transaction.objectStore(DATA_STORE).put({
       id: scope, userId: context.userId, atelierId: context.atelierId, dataset,
+      role: context.role, serverVerifiedAt: context.serverVerifiedAt,
       syncedAt: now, expiresAt: Math.min(now + OFFLINE_CACHE_TTL_MS, context.serverVerifiedAt + OFFLINE_CACHE_TTL_MS),
-      iv, ciphertext
+      iv: encrypted.iv, ciphertext: encrypted.ciphertext
     } satisfies VaultRecord);
     await transactionDone(transaction);
   } finally { db.close(); }
@@ -174,7 +208,7 @@ export async function readOfflineSnapshot<T = unknown>(
     });
     if (!record) return null;
     if (record.userId !== context.userId || record.atelierId !== context.atelierId || record.dataset !== dataset
-      || !Number.isFinite(record.expiresAt) || now > record.expiresAt || now < record.syncedAt) {
+      || record.role !== context.role || !Number.isFinite(record.expiresAt) || now > record.expiresAt || now < record.syncedAt) {
       await deleteSnapshot(db, id);
       return null;
     }
@@ -187,11 +221,8 @@ export async function readOfflineSnapshot<T = unknown>(
     });
     if (!key) { await deleteSnapshot(db, id); return null; }
     try {
-      const plaintext = await crypto.subtle.decrypt(
-        { name: "AES-GCM", iv: record.iv, additionalData: additionalData(context.userId, context.atelierId, dataset) },
-        key, record.ciphertext
-      );
-      return { data: JSON.parse(new TextDecoder().decode(plaintext)) as T, syncedAt: record.syncedAt, expiresAt: record.expiresAt };
+      const data = await decryptOfflinePayload<T>(context, dataset, { iv: record.iv, ciphertext: record.ciphertext }, key);
+      return { data, syncedAt: record.syncedAt, expiresAt: record.expiresAt };
     } catch {
       await deleteSnapshot(db, id);
       return null;
