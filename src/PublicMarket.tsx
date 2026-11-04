@@ -351,7 +351,7 @@ export default function PublicMarket() {
         <a className="pm-brand" href="/" aria-label="YÉRÉ Market, accueil"><img className="pm-mark" src="/images/yere-logo.png" alt="" /><span><b>YÉRÉ</b><small>MARKET</small></span></a>
         <nav className="pm-nav"><a href="#catalogue">Catalogue</a><a href="#vendeurs">Vendeurs</a>{session && <><a href="#commandes">Mes commandes</a><a href="#messages">Messages</a></>}</nav>
         <div className="pm-header-actions">
-          {session ? <><span className="pm-user">{session.user.email}</span><button className="pm-outline" type="button" onClick={() => void handleSignOut()} disabled={busy}>Déconnexion</button></> :
+          {session ? <><span className="pm-user">{session.user.email}</span><button className="pm-outline pm-account-access" type="button" onClick={() => document.getElementById("commandes")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Mon compte</button><button className="pm-outline" type="button" onClick={() => void handleSignOut()} disabled={busy}>Déconnexion</button></> :
             <button className="pm-outline" type="button" onClick={() => { setShowAccount((v) => !v); setError(""); }}>Se connecter</button>}
           <a className="pm-outline pm-atelier-link" href="/?espace=professionnel">Espace tailleur</a><a className="pm-cta" href="#vendeurs">Vendre sur YÉRÉ</a>
         </div>
