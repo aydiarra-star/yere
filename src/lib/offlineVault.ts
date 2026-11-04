@@ -172,7 +172,7 @@ export async function saveOfflineSnapshot(
   now = Date.now()
 ): Promise<void> {
   validContext(context);
-  sanitizeOfflineSnapshot(dataset, snapshot);
+  const safe = sanitizeOfflineSnapshot(dataset, snapshot);
   if (!Number.isFinite(now) || now < context.serverVerifiedAt || now - context.serverVerifiedAt > OFFLINE_CACHE_TTL_MS) {
     throw new Error("La vérification serveur est trop ancienne : reconnectez-vous avant de préparer le cache.");
   }
