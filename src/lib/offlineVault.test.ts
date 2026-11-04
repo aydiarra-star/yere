@@ -1,3 +1,4 @@
+import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
 import {
   decryptOfflinePayload,
@@ -6,7 +7,11 @@ import {
   isOfflineCacheFresh,
   isAtelierOfflineVaultKey,
   isUserOfflineVaultKey,
-  sanitizeOfflineSnapshot
+  sanitizeOfflineSnapshot,
+  saveOfflineSnapshot,
+  readOfflineSnapshot,
+  purgeOfflineVault,
+  purgeUserOfflineVault
 } from "./offlineVault";
 
 const context = { userId: "user-a", atelierId: "atelier-a" };
@@ -82,6 +87,49 @@ describe("offline vault snapshot protection", () => {
     expect(isOfflineCacheFresh(syncedAt, expiresAt, verifiedAt, syncedAt - 1)).toBe(false);
   });
 
+  it("stores encrypted snapshots in IndexedDB and purges only the requested account and atelier", async () => {
+    const verifiedAt = 1_800_000_000_000;
+    const now = verifiedAt + 1_000;
+    const accountAAtelierA = {
+      userId: "integration-user-a", atelierId: "integration-atelier-a",
+      role: "proprietaire" as const, membershipActive: true, serverVerifiedAt: verifiedAt
+    };
+    const accountAAtelierB = { ...accountAAtelierA, atelierId: "integration-atelier-b" };
+    const accountBAtelierA = { ...accountAAtelierA, userId: "integration-user-b" };
+    const snapshot = [{ id: "client-1", name: "Test", phone: "770000000", createdAt: "2026-11-04" }];
+    const legacyKey = "yere-legacy-archive-must-survive";
+    const legacyValue = "do-not-touch";
+    const previousLocalStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (key: string) => key === legacyKey ? legacyValue : null,
+        setItem: () => undefined, removeItem: () => undefined, clear: () => undefined,
+        key: () => legacyKey, get length() { return 1; }
+      }
+    });
+    try {
+      await saveOfflineSnapshot(accountAAtelierA, "clients", snapshot, now);
+      await saveOfflineSnapshot(accountAAtelierB, "clients", snapshot, now);
+      await saveOfflineSnapshot(accountBAtelierA, "clients", snapshot, now);
+      await expect(readOfflineSnapshot(accountAAtelierA, "clients", now)).resolves.toMatchObject({ data: snapshot });
+      await expect(readOfflineSnapshot(accountAAtelierB, "clients", now)).resolves.toMatchObject({ data: snapshot });
+      await expect(readOfflineSnapshot(accountBAtelierA, "clients", now)).resolves.toMatchObject({ data: snapshot });
+      await purgeOfflineVault({ userId: accountAAtelierA.userId, atelierId: accountAAtelierA.atelierId });
+      await expect(readOfflineSnapshot(accountAAtelierA, "clients", now)).resolves.toBeNull();
+      await expect(readOfflineSnapshot(accountAAtelierB, "clients", now)).resolves.toMatchObject({ data: snapshot });
+      await expect(readOfflineSnapshot(accountBAtelierA, "clients", now)).resolves.toMatchObject({ data: snapshot });
+      await purgeUserOfflineVault(accountAAtelierA.userId);
+      await expect(readOfflineSnapshot(accountAAtelierB, "clients", now)).resolves.toBeNull();
+      await expect(readOfflineSnapshot(accountBAtelierA, "clients", now)).resolves.toMatchObject({ data: snapshot });
+      expect(globalThis.localStorage.getItem(legacyKey)).toBe(legacyValue);
+    } finally {
+      await purgeUserOfflineVault(accountAAtelierA.userId);
+      await purgeUserOfflineVault(accountBAtelierA.userId);
+      if (previousLocalStorage) Object.defineProperty(globalThis, "localStorage", previousLocalStorage);
+      else delete (globalThis as typeof globalThis & { localStorage?: Storage }).localStorage;
+    }
+  });
   it("matches only the exact account and atelier cache scopes", () => {
     const accountKey = "user-a::atelier-a::clients";
     const otherAccountKey = "user-ab::atelier-a::clients";
