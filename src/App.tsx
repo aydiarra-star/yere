@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import HomeDashboard from "./HomeDashboard";
+import SettingsCenter from "./SettingsCenter";
 import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, filterOrdersByDelivery, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, retouchStages, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderDeliveryFilter, type OrderStatus, type RetouchStage, type StockItem, type StockMovement } from "./domain";
 import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, workModes, type AtelierProfile, type WorkMode } from "./atelierProfile";
 import { isMarketplaceListingListValid, type MarketplaceListing } from "./marketplace";
@@ -24,7 +25,7 @@ const measurementFieldsByGarment: Record<string, Array<[string, keyof Measuremen
   "Autre": [["Tour de poitrine", "bust"], ["Tour de taille", "waist"], ["Tour de hanches", "hips"], ["Épaules", "shoulder"], ["Longueur de manche", "sleeve"], ["Longueur du vêtement", "length"], ["Tour de bras (biceps)", "arm"], ["Tour de cou", "neck"], ["Tour de cuisse", "thigh"], ["Longueur de jambe / pantalon", "legLength"]]
 };
 
-type View = "overview" | "clients" | "orders" | "cash" | "stock" | "account" | "marketplace" | "reminders" | "suppliers";
+type View = "overview" | "clients" | "orders" | "cash" | "stock" | "account" | "settings" | "marketplace" | "reminders" | "suppliers";
 type SupplierProfile = { businessName: string; contactName: string; phone: string; city: string; category: string; shopName: string; description: string };
 const emptyListing: Omit<MarketplaceListing, "id"> = { sellerType: "tailor", title: "", category: "Vêtements prêts à vendre", price: "", description: "", sellerName: "", city: "", imageUrl: "", imageUrls: [] };
 const emptySupplier: SupplierProfile = { businessName: "", contactName: "", phone: "", city: "", category: "", shopName: "", description: "" };
@@ -1128,7 +1129,7 @@ function App() {
           </a>
           <div className="header-workspace"><span>VOTRE ESPACE</span><b>Atelier de couture</b></div>
           <nav className="desktop-nav" aria-label="Navigation principale">
-            {mobileNavItems.map((item) => <button key={item.id} type="button" className={(item.id === "more" ? (mobileMoreOpen || ["stock", "account", "reminders", "suppliers", "marketplace"].includes(view)) : view === item.id) ? "desktop-nav-item is-active" : "desktop-nav-item"} onClick={() => { if (item.id === "more") setMobileMoreOpen((open) => !open); else { setView(item.id); setMobileMoreOpen(false); } }} aria-current={item.id !== "more" && view === item.id ? "page" : undefined} aria-expanded={item.id === "more" ? mobileMoreOpen : undefined}>{item.label}</button>)}
+            {mobileNavItems.map((item) => <button key={item.id} type="button" className={(item.id === "more" ? (mobileMoreOpen || ["stock", "account", "settings", "reminders", "suppliers", "marketplace"].includes(view)) : view === item.id) ? "desktop-nav-item is-active" : "desktop-nav-item"} onClick={() => { if (item.id === "more") setMobileMoreOpen((open) => !open); else { setView(item.id); setMobileMoreOpen(false); } }} aria-current={item.id !== "more" && view === item.id ? "page" : undefined} aria-expanded={item.id === "more" ? mobileMoreOpen : undefined}>{item.label}</button>)}
           </nav>
           <button type="button" className="app-profile" onClick={openAccount} aria-label="Mon atelier : ouvrir le profil de l’atelier"><span><NavIcon name="user-filled" /></span><span className="profile-label">Mon atelier</span><span className="profile-chevron" aria-hidden="true">⌄</span></button>
         </div>
@@ -1139,8 +1140,8 @@ function App() {
           {view !== "overview" && <div className="welcome-row secondary-welcome">
             <div className="welcome-copy">
               <p className="secondary-eyebrow">VOTRE ESPACE ATELIER</p>
-              <h1 className="page-banner-title">{view === "clients" ? "Vos clients & mensurations" : view === "orders" ? "Suivi des commandes" : view === "cash" ? "La caisse de votre atelier" : view === "stock" ? "Gestion du stock" : view === "account" ? (atelier.name || "Votre compte atelier") : view === "marketplace" ? "La marketplace YÉRÉ" : view === "suppliers" ? "Espace fournisseurs" : "Faites revenir vos clients."}</h1>
-              <p className="page-subtitle">{view === "clients" ? "Retrouvez les fiches clients et leurs dernières mesures." : view === "orders" ? "Suivez chaque pièce, de la préparation à la livraison." : view === "cash" ? "Suivez les acomptes et les montants à récupérer." : view === "stock" ? "Gardez un œil sur les fournitures de l’atelier." : view === "account" ? "Votre profil d’atelier." : view === "marketplace" ? "Tailleurs et fournisseurs : présentez vos produits et vos créations dans la vitrine YÉRÉ." : view === "suppliers" ? "Gérez votre profil fournisseur et préparez votre boutique YÉRÉ." : "Des occasions concrètes de reprendre contact avec vos clients."}</p>
+              <h1 className="page-banner-title">{view === "clients" ? "Vos clients & mensurations" : view === "orders" ? "Suivi des commandes" : view === "cash" ? "La caisse de votre atelier" : view === "stock" ? "Gestion du stock" : view === "account" ? (atelier.name || "Votre compte atelier") : view === "settings" ? "Paramètres YÉRÉ" : view === "marketplace" ? "La marketplace YÉRÉ" : view === "suppliers" ? "Espace fournisseurs" : "Faites revenir vos clients."}</h1>
+              <p className="page-subtitle">{view === "clients" ? "Retrouvez les fiches clients et leurs dernières mesures." : view === "orders" ? "Suivez chaque pièce, de la préparation à la livraison." : view === "cash" ? "Suivez les acomptes et les montants à récupérer." : view === "stock" ? "Gardez un œil sur les fournitures de l’atelier." : view === "account" ? "Votre profil d’atelier." : view === "settings" ? "Réglages, assistance et informations de votre application." : view === "marketplace" ? "Tailleurs et fournisseurs : présentez vos produits et vos créations dans la vitrine YÉRÉ." : view === "suppliers" ? "Gérez votre profil fournisseur et préparez votre boutique YÉRÉ." : "Des occasions concrètes de reprendre contact avec vos clients."}</p>
             </div>
             {(["clients", "suppliers", "marketplace"].includes(view) || (view === "orders" && canCreateOrders)) && <button className="primary-button welcome-action" onClick={() => { if (view === "orders") createOrder(); else if (view === "suppliers") setView("marketplace"); else if (view === "marketplace") { setListingDraft({ ...emptyListing, sellerType: "tailor", sellerActivity: atelier.activity ?? "tailleur", category: "Vêtements prêts à vendre", sellerName: atelier.name, city: atelier.city }); setListingFormOpen(true); setNotice(""); } else { setShowForm(true); setView("clients"); } }}><span className="cta-scissors-icon" aria-hidden="true"><NavIcon name="tailor-scissors" /></span> {view === "orders" ? "Créer une commande" : view === "suppliers" ? "Créer ma boutique" : view === "marketplace" ? "Créer ma vitrine" : "Nouveau client"}</button>}
           </div>}
@@ -1250,7 +1251,7 @@ function App() {
           </section>}
 
           {view === "account" && <section className="content-card account-page">
-            <div className="section-heading account-section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div></div>
+            <div className="section-heading account-section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div><button type="button" className="secondary-button" onClick={() => setView("settings")}>Ouvrir les paramètres</button></div>
             <div id="yere-profile-account-controls" className="profile-account-controls-slot" />
             <form className="account-form" onSubmit={(event) => { event.preventDefault(); void (async () => { const session = readSession(); const atelierId = window.sessionStorage.getItem("yere-active-atelier"); const profile = normalizeAtelierProfile(atelier); if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; } if (!profile.name.trim()) { setNotice("Le nom de l’atelier est obligatoire."); return; } try { await updateAtelierProfile(session, atelierId, { nom: profile.name, telephone: profile.phone, ville: profile.city, mode_organisation: profile.workMode ?? "independent" }); setAtelier(profile); setNotice("Profil de l’atelier enregistré et confirmé par Supabase."); } catch (cause) { setNotice(cause instanceof Error ? `Profil non enregistré : ${cause.message}` : "Impossible d’enregistrer le profil sur le serveur."); } })(); }}>
               <div className="profile-profession" aria-label="Métier YÉRÉ"><span>Métier</span><strong>Tailleur</strong><small>YÉRÉ est actuellement dédié aux tailleurs.</small></div>
@@ -1302,6 +1303,7 @@ function App() {
             <div className="account-secondary"><div><b>Relances clients</b><p>Consultez les suggestions de relance manuelle, sans envoi automatique.</p></div><button className="secondary-button" onClick={() => setView("reminders")}>Ouvrir les relances →</button></div>
             <p className="privacy-note">Le nom, le téléphone, la ville et l’organisation du travail de votre atelier sont enregistrés sur Supabase. Les données métier restent synchronisées dans leurs modules dédiés.</p>
           </section>}
+          {view === "settings" && <SettingsCenter role={isAtelierOwner ? "proprietaire" : teamMembers.some((member) => member.userId === currentUserId && member.active && member.role === "gestionnaire") ? "gestionnaire" : "employe"} onBack={() => setView("account")} />}
           {view === "stock" && <section className="stock-page">
             <div className="cash-summary-grid">
               <article className="content-card cash-summary"><span>Articles suivis</span><strong>{stockItems.length}</strong><small>Articles synchronisés sur le serveur</small></article>
