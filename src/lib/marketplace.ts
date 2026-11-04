@@ -182,6 +182,13 @@ export async function saveMarketplaceListing(session: YereSession, input: {
   });
   const data = await readJson(response);
   if (!Array.isArray(data) || !data[0]?.id) throw new Error("L'annonce n'a pas été enregistrée.");
+  const savedPhotos = data[0].photos;
+  const expectedPhotos = body.photos;
+  if (!Array.isArray(savedPhotos)
+    || savedPhotos.length !== expectedPhotos.length
+    || savedPhotos.some((path: unknown, index: number) => path !== expectedPhotos[index])) {
+    throw new Error("L'annonce a été créée, mais ses photos n'ont pas été confirmées par le serveur. Réessayez avant de quitter cette page.");
+  }
   return String(data[0].id);
 }
 

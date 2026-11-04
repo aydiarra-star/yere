@@ -6,7 +6,7 @@ const { authenticatedFetch } = vi.hoisted(() => ({
 
 vi.mock("./supabaseAuth", () => ({ authenticatedFetch }));
 
-import { createMarketplaceSeller, getMyMarketplaceSeller } from "./marketplace";
+import { createMarketplaceSeller, getMyMarketplaceSeller, saveMarketplaceListing } from "./marketplace";
 import type { YereSession } from "./supabaseAuth";
 
 const session = {
@@ -85,5 +85,45 @@ describe("marketplace seller privacy boundary", () => {
     expect(authenticatedFetch.mock.calls[0][1]).toBe("rest/v1/marketplace_vendeur");
     expect(authenticatedFetch.mock.calls[0][2]).toMatchObject({ method: "POST", headers: { Prefer: "return=minimal" } });
     expect(String(authenticatedFetch.mock.calls[1][1])).not.toMatch(/nom_contact|telephone|user_id|atelier_id/);
+  });
+});
+
+describe("marketplace listing photo persistence", () => {
+  beforeEach(() => authenticatedFetch.mockReset());
+
+  const listingInput = {
+    sellerId: "seller-123",
+    title: "Tissu sénégalais",
+    category: "Tissus",
+    description: "Tissu de démonstration",
+    priceXof: 25000,
+    unit: "piece" as const,
+    city: "Dakar",
+    photos: ["user-123/seller-123/photo-1.jpg", "user-123/seller-123/photo-2.jpg"],
+    saleMode: "commande_yere" as const,
+    status: "publiee" as const,
+    stockAvailable: 8
+  };
+
+  it("confirms the server returned every uploaded photo path", async () => {
+    authenticatedFetch.mockResolvedValueOnce(jsonResponse([{
+      id: "listing-123",
+      photos: listingInput.photos
+    }]));
+
+    await expect(saveMarketplaceListing(session, listingInput)).resolves.toBe("listing-123");
+    const request = authenticatedFetch.mock.calls[0][2] as RequestInit;
+    expect(JSON.parse(String(request.body)).photos).toEqual(listingInput.photos);
+    expect(request.headers).toMatchObject({ Prefer: "return=representation" });
+  });
+
+  it("rejects a listing response when the server did not persist its photos", async () => {
+    authenticatedFetch.mockResolvedValueOnce(jsonResponse([{
+      id: "listing-123",
+      photos: []
+    }]));
+
+    await expect(saveMarketplaceListing(session, listingInput))
+      .rejects.toThrow("ses photos n'ont pas été confirmées par le serveur");
   });
 });
