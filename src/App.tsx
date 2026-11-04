@@ -149,6 +149,23 @@ function App() {
     let active = true;
     setServerSyncStatus("loading");
     setServerSyncError("");
+    // Never keep a previous atelier's records visible while the next server
+    // membership and workspace are being verified.
+    setClients([]);
+    setOrders([]);
+    setExpenses([]);
+    setStockItems([]);
+    setStockMovements([]);
+    setSupplierDirectory([]);
+    setTeamMembers([]);
+    setTeamInvitations([]);
+    setAtelierTasks([]);
+    setSupplierPurchases([]);
+    setSupplier(emptySupplier);
+    setAtelierSubscription(null);
+    setSubscriptionPayments([]);
+    setSelectedClient(null);
+    setNotice("");
     void (async () => {
       try {
         // Load membership first: financial requests must never start before the role is known.
@@ -203,6 +220,21 @@ function App() {
           const message = cause instanceof Error
             ? cause.message
             : "Impossible de synchroniser les données de l'atelier avec le serveur.";
+          // A failed membership or data check must leave no previous workspace data in memory.
+          setClients([]);
+          setOrders([]);
+          setExpenses([]);
+          setStockItems([]);
+          setStockMovements([]);
+          setSupplierDirectory([]);
+          setTeamMembers([]);
+          setTeamInvitations([]);
+          setAtelierTasks([]);
+          setSupplierPurchases([]);
+          setSupplier(emptySupplier);
+          setAtelierSubscription(null);
+          setSubscriptionPayments([]);
+          setSelectedClient(null);
           setServerSyncError(message);
           setServerSyncStatus("error");
           setNotice(`Impossible de synchroniser les données de l'atelier : ${message}`);
