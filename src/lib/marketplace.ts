@@ -369,7 +369,7 @@ export async function listPublicMarketplaceListings(): Promise<PublicMarketplace
   });
   return Promise.all(publicListings.map(async (listing) => ({
     ...listing,
-    photoUrls: (await Promise.all(listing.photos.map(createMarketplacePhotoSignedUrl)))
+    photoUrls: (await Promise.all(listing.photos.map((path) => createMarketplacePhotoSignedUrl(path))))
       .filter((url): url is string => url !== null)
   })));
 }
