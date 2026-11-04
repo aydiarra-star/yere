@@ -202,3 +202,30 @@
 .yere-market-app .pm-detail-actions button{flex:1;min-width:180px}
 .yere-market-app .pm-detail-actions button:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:620px){.yere-market-app .pm-detail-modal{padding:20px 16px}.yere-market-app .pm-detail-photo-frame{flex-basis:100%;height:300px}.yere-market-app .pm-detail-info{grid-template-columns:1fr 1fr}}
+
+
+/* Compact atelier subscription offer, positioned between the YÉRÉ presentation and the public Marketplace. */
+.yere-market-app .pm-subscription-promo{
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+  max-width:1144px;margin:26px auto 0;padding:20px 24px;
+  border:1px solid #dfe4f1;border-radius:14px;background:#fff;
+  box-shadow:0 8px 24px #202b5a0a;
+}
+.yere-market-app .pm-subscription-copy{min-width:0}
+.yere-market-app .pm-subscription-copy h2{margin:6px 0 5px;color:#171e49;font-size:22px;line-height:1.2;letter-spacing:-.035em}
+.yere-market-app .pm-subscription-trial{margin:0 0 4px;color:#45558c;font-size:14px;font-weight:850}
+.yere-market-app .pm-subscription-description{margin:0;color:#68738e;font-size:12px;line-height:1.6}
+.yere-market-app .pm-subscription-description strong{color:#171e49}
+.yere-market-app .pm-subscription-action{display:grid;justify-items:end;gap:7px;flex:0 0 auto;max-width:290px}
+.yere-market-app .pm-subscription-action .pm-cta{white-space:nowrap}
+.yere-market-app .pm-subscription-action small{max-width:290px;color:#7b849b;font-size:9px;line-height:1.45;text-align:right}
+@media(max-width:850px){
+  .yere-market-app .pm-subscription-promo{margin:22px 18px 0;padding:18px}
+}
+@media(max-width:620px){
+  .yere-market-app .pm-subscription-promo{display:grid;gap:14px;margin:18px 17px 0;padding:17px 15px}
+  .yere-market-app .pm-subscription-copy h2{font-size:19px}
+  .yere-market-app .pm-subscription-action{justify-items:stretch;max-width:none}
+  .yere-market-app .pm-subscription-action .pm-cta{width:100%;white-space:normal}
+  .yere-market-app .pm-subscription-action small{max-width:none;text-align:left}
+}
