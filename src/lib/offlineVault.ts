@@ -160,9 +160,21 @@ async function getOrCreateKey(db: IDBDatabase, scope: string): Promise<CryptoKey
   if (existing) return existing;
   const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
   const write = db.transaction(KEY_STORE, "readwrite");
-  write.objectStore(KEY_STORE).put(key, scope);
-  await transactionDone(write);
-  return key;
+  write.objectStore(KEY_STORE).add(key, scope);
+  try {
+    await transactionDone(write);
+    return key;
+  } catch (cause) {
+    // Concurrent tabs must never overwrite a key already used for encryption.
+    const retry = db.transaction(KEY_STORE, "readonly");
+    const winner = await new Promise<CryptoKey | undefined>((resolve, reject) => {
+      const request = retry.objectStore(KEY_STORE).get(scope);
+      request.onsuccess = () => resolve(request.result as CryptoKey | undefined);
+      request.onerror = () => reject(request.error);
+    });
+    if (winner) return winner;
+    throw cause;
+  }
 }
 
 export async function saveOfflineSnapshot(
