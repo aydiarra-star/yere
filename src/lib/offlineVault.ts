@@ -35,6 +35,20 @@ const DB_VERSION = 1;
 const KEY_STORE = "keys";
 const DATA_STORE = "snapshots";
 export const OFFLINE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+/** Rejects invalid clocks and cache envelopes outside the server-verification window. */
+export function isOfflineCacheFresh(
+  syncedAt: number,
+  expiresAt: number,
+  serverVerifiedAt: number,
+  now: number
+): boolean {
+  return Number.isFinite(syncedAt) && Number.isFinite(expiresAt)
+    && Number.isFinite(serverVerifiedAt) && Number.isFinite(now)
+    && serverVerifiedAt > 0 && syncedAt >= serverVerifiedAt
+    && expiresAt >= syncedAt && expiresAt <= syncedAt + OFFLINE_CACHE_TTL_MS
+    && expiresAt <= serverVerifiedAt + OFFLINE_CACHE_TTL_MS
+    && now >= syncedAt && now <= expiresAt;
+}
 const datasets: OfflineDataset[] = ["clients", "orders", "stock"];
 const measurementFields = ["bust", "waist", "hips", "shoulder", "sleeve", "length", "arm", "neck", "thigh", "legLength", "garmentType"];
 
@@ -235,7 +249,8 @@ export async function readOfflineSnapshot<T = unknown>(
     });
     if (!record) return null;
     if (record.userId !== context.userId || record.atelierId !== context.atelierId || record.dataset !== dataset
-      || record.role !== context.role || !Number.isFinite(record.expiresAt) || now > record.expiresAt || now < record.syncedAt) {
+      || record.role !== context.role
+      || !isOfflineCacheFresh(record.syncedAt, record.expiresAt, record.serverVerifiedAt, now)) {
       await deleteSnapshot(db, id);
       return null;
     }
