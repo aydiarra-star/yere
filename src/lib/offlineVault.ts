@@ -256,6 +256,27 @@ async function deleteSnapshot(db: IDBDatabase, id: string): Promise<void> {
   await transactionDone(transaction);
 }
 
+/** Purges every encrypted atelier cache belonging to one account; legacy localStorage is untouched. */
+export async function purgeUserOfflineVault(userId: string): Promise<void> {
+  if (!userId.trim()) return;
+  const db = await openDatabase();
+  try {
+    const transaction = db.transaction([DATA_STORE, KEY_STORE], "readwrite");
+    const prefix = encodeURIComponent(userId) + "::";
+    for (const storeName of [DATA_STORE, KEY_STORE]) {
+      const store = transaction.objectStore(storeName);
+      const request = store.openKeyCursor();
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) return;
+        if (String(cursor.key).startsWith(prefix)) store.delete(cursor.primaryKey);
+        cursor.continue();
+      };
+    }
+    await transactionDone(transaction);
+  } finally { db.close(); }
+}
+
 /** Purges only the specified account/atelier cache; legacy localStorage is untouched. */
 export async function purgeOfflineVault(context: Pick<OfflineVaultContext, "userId" | "atelierId">): Promise<void> {
   if (!context.userId.trim() || !context.atelierId.trim()) return;
