@@ -342,7 +342,7 @@ export default function PublicMarket() {
           <p className="pm-subscription-description">Puis <strong>5 000 FCFA / mois / atelier</strong>, avec toute l’équipe incluse.</p>
         </div>
         <div className="pm-subscription-action">
-          <a className="pm-cta" href="/atelier">Découvrir l’abonnement <span aria-hidden="true">→</span></a>
+          <a className="pm-cta" href="/?espace=professionnel">Découvrir l’abonnement <span aria-hidden="true">→</span></a>
           <small>La souscription et le paiement sont réservés au propriétaire connecté à son atelier.</small>
         </div>
       </section>
