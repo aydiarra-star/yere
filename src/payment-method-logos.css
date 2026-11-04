@@ -38,8 +38,9 @@
   object-fit: contain;
 }
 .payment-logo-wave img {
-  width: 34px;
-  height: 34px;
+  width: 84px;
+  height: auto;
+  max-height: 34px;
 }
 .payment-logo-orange img {
   width: 74px;
