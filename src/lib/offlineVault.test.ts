@@ -40,6 +40,20 @@ describe("offline vault snapshot protection", () => {
     expect(() => sanitizeOfflineSnapshot("stock", { items: [], movements: "invalid" })).toThrow();
   });
 
+  it("excludes free-text measurement notes and rejects malformed client history", () => {
+    const result = sanitizeOfflineSnapshot("clients", [{
+      id: "client-2", name: "Moussa", phone: "780000000", createdAt: "2026-11-01",
+      measurement: { bust: "90", note: "private note", garmentType: "Boubou" },
+      measurementHistory: [{ id: "v1", measuredAt: "2026-11-01", measurement: { waist: "80", note: "private history" } }]
+    }]) as Array<Record<string, unknown>>;
+    expect(result[0].measurement).toEqual({ bust: "90", garmentType: "Boubou" });
+    expect(result[0].measurementHistory).toEqual([{ id: "v1", measuredAt: "2026-11-01", measurement: { waist: "80" } }]);
+    expect(() => sanitizeOfflineSnapshot("clients", [{
+      id: "client-3", name: "Awa", phone: "770000000", createdAt: "2026-11-01", measurement: {},
+      measurementHistory: "invalid"
+    }])).toThrow();
+  });
+
   it("encrypts payloads and binds ciphertext to the user, atelier and dataset", async () => {
     const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
     const payload = [{ id: "client-1", name: "Awa", phone: "770000000" }];
