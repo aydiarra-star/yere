@@ -3,6 +3,7 @@ import {
   decryptOfflinePayload,
   encryptOfflinePayload,
   OFFLINE_CACHE_TTL_MS,
+  isOfflineCacheFresh,
   isAtelierOfflineVaultKey,
   isUserOfflineVaultKey,
   sanitizeOfflineSnapshot
@@ -67,6 +68,18 @@ describe("offline vault snapshot protection", () => {
 
   it("uses a bounded 24-hour maximum cache lifetime", () => {
     expect(OFFLINE_CACHE_TTL_MS).toBe(24 * 60 * 60 * 1000);
+  });
+
+  it("rejects invalid clocks and cache envelopes outside the verified 24-hour window", () => {
+    const verifiedAt = 1_000_000;
+    const syncedAt = verifiedAt + 1_000;
+    const expiresAt = verifiedAt + OFFLINE_CACHE_TTL_MS;
+    expect(isOfflineCacheFresh(syncedAt, expiresAt, verifiedAt, syncedAt)).toBe(true);
+    expect(isOfflineCacheFresh(syncedAt, expiresAt, verifiedAt, Number.NaN)).toBe(false);
+    expect(isOfflineCacheFresh(syncedAt, expiresAt + 1, verifiedAt, syncedAt)).toBe(false);
+    expect(isOfflineCacheFresh(syncedAt, expiresAt, verifiedAt, expiresAt + 1)).toBe(false);
+    expect(isOfflineCacheFresh(syncedAt - 1, expiresAt, verifiedAt, syncedAt)).toBe(false);
+    expect(isOfflineCacheFresh(syncedAt, expiresAt, verifiedAt, syncedAt - 1)).toBe(false);
   });
 
   it("matches only the exact account and atelier cache scopes", () => {
