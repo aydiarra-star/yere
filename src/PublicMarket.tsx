@@ -9,7 +9,7 @@ import {
 } from "./lib/marketplace";
 import {
   consumeAuthCallback, listMyAteliers, readSession, refreshSession, signIn, signOut, signUp,
-  supabaseReady, type YereSession
+  supabaseReady, requestPasswordRecovery, updatePassword, type YereSession
 } from "./lib/supabaseAuth";
 import { listAtelierMembers } from "./lib/atelierTeam";
 import "./marketplace-public.css";
@@ -37,7 +37,10 @@ export default function PublicMarket() {
   const [notice, setNotice] = useState("");
   const [category, setCategory] = useState("Tout le Market");
   const [query, setQuery] = useState("");
-  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [authMode, setAuthMode] = useState<"login" | "signup" | "recovery">("login");
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showAccount, setShowAccount] = useState(false);
   const [showSellerForm, setShowSellerForm] = useState(false);
   const [showSellerEdit, setShowSellerEdit] = useState(false);
@@ -51,7 +54,7 @@ export default function PublicMarket() {
   const [sellerForm, setSellerForm] = useState({ sellerType: "fournisseur" as "fournisseur" | "atelier", atelierId: "", businessName: "", contactName: "", phone: "", city: "", category: "Tissus & mercerie", description: "" });
   const [listingForm, setListingForm] = useState({ title: "", category: "Tissus", description: "", price: "", stock: "" });
   const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
-  const [orderForm, setOrderForm] = useState({ quantity: "1", name: "", phone: "", city: "", note: "" });
+  const [orderForm, setOrderForm] = useState({ quantity: "1", name: "", phone: "", city: "", country: "Sénégal", note: "" });
 
   async function refreshCatalogue() {
     const items = await listPublicMarketplaceListings();
@@ -81,6 +84,8 @@ export default function PublicMarket() {
     void (async () => {
       try {
         if (!supabaseReady) throw new Error("Le Market n’est pas encore configuré sur ce déploiement.");
+        const recoveryCallback = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") === "recovery";
+        if (recoveryCallback) { setPasswordRecovery(true); setShowAccount(true); }
         const callback = await consumeAuthCallback();
         let current = callback ?? readSession();
         if (current && current.expires_at * 1000 <= Date.now() + 60_000) current = await refreshSession(current);
@@ -117,6 +122,12 @@ export default function PublicMarket() {
     event.preventDefault();
     setBusy(true); setError(""); setNotice("");
     try {
+      if (authMode === "recovery") {
+        await requestPasswordRecovery(email.trim().toLowerCase());
+        setNotice("Si un compte YÉRÉ correspond à cette adresse, un lien de récupération sera envoyé. Vérifiez aussi vos courriers indésirables.");
+        setAuthMode("login");
+        return;
+      }
       const next = authMode === "login"
         ? await signIn(email.trim().toLowerCase(), password)
         : (await signUp(email.trim().toLowerCase(), password, "/")).session;
@@ -133,6 +144,21 @@ export default function PublicMarket() {
       setNotice("Connexion réussie. Vous pouvez maintenant commander ou gérer votre boutique.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Connexion impossible.");
+    } finally { setBusy(false); }
+  }
+
+  async function submitRecoveredPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!session) { setError("Le lien de récupération a expiré. Demandez un nouveau lien."); return; }
+    if (newPassword.length < 8) { setError("Le nouveau mot de passe doit contenir au moins 8 caractères."); return; }
+    if (newPassword !== confirmPassword) { setError("Les deux mots de passe ne correspondent pas."); return; }
+    setBusy(true); setError(""); setNotice("");
+    try {
+      await updatePassword(session, newPassword);
+      setPasswordRecovery(false); setNewPassword(""); setConfirmPassword(""); setPassword(""); setAuthMode("login");
+      setNotice("Votre mot de passe a été modifié. Vous pouvez continuer sur YÉRÉ Market.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Impossible de modifier le mot de passe. Demandez un nouveau lien.");
     } finally { setBusy(false); }
   }
 
@@ -243,7 +269,7 @@ export default function PublicMarket() {
     try {
       const id = await createMarketplaceOrder(session, {
         listingId: selectedListing.id, quantity, buyerName: orderForm.name.trim(),
-        buyerPhone: orderForm.phone.trim(), deliveryCity: orderForm.city.trim(), buyerNote: orderForm.note.trim()
+        buyerPhone: orderForm.phone.trim(), deliveryCity: orderForm.city.trim(), buyerNote: [orderForm.note.trim(), "Pays de résidence : " + orderForm.country].filter(Boolean).join("\n")
       });
       const ownOrders = await listMyMarketplaceOrders(session);
       setOrders(ownOrders);
@@ -348,7 +374,7 @@ export default function PublicMarket() {
         </div>
       </section>
 
-      {showAccount && <section className="pm-panel pm-account-panel"><div><span className="pm-eyebrow">ESPACE CLIENT</span><h2>{authMode === "login" ? "Heureux de vous retrouver." : "Créer un compte Market"}</h2><p>Un compte est nécessaire pour passer commande et retrouver vos achats. Aucun atelier n’est requis.</p></div><form onSubmit={submitAuth}><label>E-mail<input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label><label>Mot de passe<input type="password" minLength={8} required autoComplete={authMode === "login" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} /></label><button className="pm-cta" type="submit" disabled={busy}>{busy ? "Veuillez patienter…" : authMode === "login" ? "Se connecter" : "Créer mon compte"}</button><button type="button" className="pm-text-button" onClick={() => setAuthMode(authMode === "login" ? "signup" : "login")}>{authMode === "login" ? "Créer un compte" : "J’ai déjà un compte"}</button></form></section>}
+      {showAccount && <section className="pm-panel pm-account-panel"><div><span className="pm-eyebrow">ESPACE CLIENT · SÉNÉGAL & DIASPORA</span><h2>{authMode === "recovery" ? "Récupérer mon compte" : authMode === "login" ? "Heureux de vous retrouver." : "Créer un compte Market"}</h2><p>Inscrivez-vous depuis votre pays avec une adresse e-mail. Aucun numéro sénégalais, atelier ou boutique n’est nécessaire.</p></div>{passwordRecovery ? <form onSubmit={submitRecoveredPassword}><label>Nouveau mot de passe<input type="password" minLength={8} required autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></label><label>Confirmer le mot de passe<input type="password" minLength={8} required autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} /></label><button className="pm-cta" type="submit" disabled={busy}>{busy ? "Modification…" : "Enregistrer le nouveau mot de passe"}</button></form> : <form onSubmit={submitAuth}><label>E-mail<input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>{authMode !== "recovery" && <label>Mot de passe<input type="password" minLength={8} required autoComplete={authMode === "login" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} /></label>}<button className="pm-cta" type="submit" disabled={busy}>{busy ? "Veuillez patienter…" : authMode === "recovery" ? "Envoyer le lien de récupération" : authMode === "login" ? "Se connecter" : "Créer mon compte"}</button>{authMode === "login" && <button type="button" className="pm-text-button" onClick={() => setAuthMode("recovery")}>Mot de passe oublié ?</button>}<button type="button" className="pm-text-button" onClick={() => setAuthMode(authMode === "signup" ? "login" : "signup")}>{authMode === "signup" ? "J’ai déjà un compte" : "Créer un compte"}</button></form>}</section>}
 
       {error && <p className="pm-alert pm-error" role="alert">{error}</p>}
       {notice && <p className="pm-alert pm-notice" role="status">{notice}</p>}
@@ -373,7 +399,7 @@ export default function PublicMarket() {
 
       {contactListing && <div className="pm-modal-backdrop" role="presentation" onClick={() => setContactListing(null)}><section className="pm-modal" role="dialog" aria-modal="true" aria-labelledby="pm-contact-title" onClick={(e) => e.stopPropagation()}><button className="pm-modal-close" type="button" onClick={() => setContactListing(null)} aria-label="Fermer">×</button><span className="pm-eyebrow">MESSAGERIE YÉRÉ</span><h2 id="pm-contact-title">Contacter {contactListing.sellerName}</h2><p>À propos de : {contactListing.title}. Votre numéro et votre adresse e-mail ne sont pas transmis au vendeur.</p>{session ? <form onSubmit={submitContact}><label className="pm-wide">Votre message<textarea required minLength={1} maxLength={2000} value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} placeholder="Bonjour, je souhaite avoir des précisions sur cet article…" /></label><button className="pm-cta" disabled={busy || !contactMessage.trim()}>{busy ? "Envoi…" : "Envoyer le message"}</button></form> : <> <p>Vous n’avez pas encore de compte ? Créez gratuitement un compte acheteur. Aucun atelier ni boutique n’est nécessaire.</p><div className="pm-contact-auth-actions"><button type="button" className="pm-cta" onClick={() => { setPendingContactListing(contactListing); setContactListing(null); setAuthMode("signup"); setShowAccount(true); setError(""); }}>Créer mon compte acheteur</button><button type="button" className="pm-text-button" onClick={() => { setPendingContactListing(contactListing); setContactListing(null); setAuthMode("login"); setShowAccount(true); setError(""); }}>J’ai déjà un compte : me connecter</button></div></>}</section></div>}
 
-      {selectedListing && <div className="pm-modal-backdrop" role="presentation" onClick={() => setSelectedListing(null)}><section className="pm-modal" role="dialog" aria-modal="true" aria-labelledby="pm-order-title" onClick={(e) => e.stopPropagation()}><button className="pm-modal-close" type="button" onClick={() => setSelectedListing(null)} aria-label="Fermer">×</button><span className="pm-eyebrow">PASSER COMMANDE</span><h2 id="pm-order-title">{selectedListing.title}</h2><p>{money(selectedListing.priceXof)} · {selectedListing.sellerName}</p>{session ? <form onSubmit={submitOrder}><label>Quantité<input required type="number" min="1" step="1" value={orderForm.quantity} onChange={(e) => setOrderForm({ ...orderForm, quantity: e.target.value })}/></label><label>Votre nom<input required maxLength={120} value={orderForm.name} onChange={(e) => setOrderForm({ ...orderForm, name: e.target.value })}/></label><label>Téléphone<input required type="tel" maxLength={40} value={orderForm.phone} onChange={(e) => setOrderForm({ ...orderForm, phone: e.target.value })}/></label><label>Ville de livraison<input value={orderForm.city} maxLength={100} onChange={(e) => setOrderForm({ ...orderForm, city: e.target.value })}/></label><label>Note (facultative)<textarea maxLength={500} value={orderForm.note} onChange={(e) => setOrderForm({ ...orderForm, note: e.target.value })}/></label><button className="pm-cta" disabled={busy}>{busy ? "Enregistrement…" : "Confirmer la commande"}</button></form> : <p>Connectez-vous ou créez un compte pour commander. Aucun atelier n’est nécessaire.</p>}</section></div>}
+      {selectedListing && <div className="pm-modal-backdrop" role="presentation" onClick={() => setSelectedListing(null)}><section className="pm-modal" role="dialog" aria-modal="true" aria-labelledby="pm-order-title" onClick={(e) => e.stopPropagation()}><button className="pm-modal-close" type="button" onClick={() => setSelectedListing(null)} aria-label="Fermer">×</button><span className="pm-eyebrow">PASSER COMMANDE</span><h2 id="pm-order-title">{selectedListing.title}</h2><p>{money(selectedListing.priceXof)} · {selectedListing.sellerName}</p>{session ? <form onSubmit={submitOrder}><label>Quantité<input required type="number" min="1" step="1" value={orderForm.quantity} onChange={(e) => setOrderForm({ ...orderForm, quantity: e.target.value })}/></label><label>Votre nom<input required maxLength={120} value={orderForm.name} onChange={(e) => setOrderForm({ ...orderForm, name: e.target.value })}/></label><label>Téléphone<input required type="tel" maxLength={40} value={orderForm.phone} onChange={(e) => setOrderForm({ ...orderForm, phone: e.target.value })}/></label><label>Ville / destination de livraison<input value={orderForm.city} maxLength={100} onChange={(e) => setOrderForm({ ...orderForm, city: e.target.value })} placeholder="Ex. Dakar, Sénégal"/></label><label>Pays depuis lequel vous commandez<select value={orderForm.country} onChange={(e) => setOrderForm({ ...orderForm, country: e.target.value })}><option>Sénégal</option><option>France</option><option>Italie</option><option>Espagne</option><option>États-Unis</option><option>Canada</option><option>Royaume-Uni</option><option>Autre pays</option></select></label><p className="pm-form-note">Vous pouvez commander depuis l’étranger. Confirmez avec le vendeur la destination, les frais et les possibilités de livraison avant tout paiement.</p><label>Note (facultative)<textarea maxLength={500} value={orderForm.note} onChange={(e) => setOrderForm({ ...orderForm, note: e.target.value })}/></label><button className="pm-cta" disabled={busy}>{busy ? "Enregistrement…" : "Confirmer la commande"}</button></form> : <p>Connectez-vous ou créez un compte pour commander. Aucun atelier n’est nécessaire.</p>}</section></div>}
 
       {session && <section id="commandes" className="pm-orders"><div className="pm-section-heading"><div><span className="pm-eyebrow">VOTRE ESPACE</span><h2>Commandes & suivi</h2><p>Vos achats et les commandes reçues par votre boutique.</p></div></div>{orders.length === 0 ? <div className="pm-empty">Aucune commande pour le moment.</div> : <div className="pm-order-list">{orders.map((order) => <article className="pm-order" key={order.id}><div><b>{order.reference}</b><span>{order.buyerName} · {order.quantity} article(s)</span><small>{new Date(order.createdAt).toLocaleDateString("fr-FR")}</small></div><strong>{money(order.totalXof)}</strong><span className="pm-order-status">{order.status}</span>{seller?.id === order.sellerId && <select aria-label={"Statut de la commande " + order.reference} value={order.status} disabled={busy} onChange={(e) => void moveOrder(order, e.target.value as MarketplaceOrder["status"])}><option value="recue">Reçue</option><option value="acceptee">Acceptée</option><option value="preparee">Préparée</option><option value="expediee">Expédiée</option><option value="livree">Livrée</option><option value="annulee">Annulée</option></select>}</article>)}</div>}</section>}
 
