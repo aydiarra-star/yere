@@ -168,6 +168,7 @@ export default function PublicMarket() {
     try {
       await signOut(session);
       setSession(null); setSeller(null); setOrders([]); setConversations([]); setMessages([]); setSelectedConversationId(null);
+      setError("");
       setNotice("Vous êtes déconnecté du Market.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Déconnexion impossible.");
