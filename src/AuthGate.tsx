@@ -41,6 +41,7 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [workspaceError, setWorkspaceError] = useState("");
 
   useEffect(() => {
     const findTarget = () => setProfileControlsTarget(document.getElementById("yere-profile-account-controls"));
@@ -57,15 +58,22 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
   }, [pendingInvitations.length]);
 
   async function loadWorkspace(activeSession: YereSession) {
-    const [workspaces, invitations] = await Promise.all([
-      listMyAteliers(activeSession), listMyAtelierInvitations(activeSession)
-    ]);
+    // Atelier access is essential; the invitation inbox is optional. A temporary
+    // invitation endpoint/RLS failure must not block an owner or member from
+    // opening an atelier whose membership was loaded successfully.
+    const workspaces = await listMyAteliers(activeSession);
     setWorkspaces(workspaces);
-    setPendingInvitations(invitations.filter((item) =>
-      item.email.toLowerCase() === (activeSession.user.email ?? "").toLowerCase()
-      && !item.declinedAt
-      && new Date(item.expiresAt).getTime() > Date.now()
-    ));
+    try {
+      const invitations = await listMyAtelierInvitations(activeSession);
+      setPendingInvitations(invitations.filter((item) =>
+        item.email.toLowerCase() === (activeSession.user.email ?? "").toLowerCase()
+        && !item.declinedAt
+        && new Date(item.expiresAt).getTime() > Date.now()
+      ));
+    } catch (cause) {
+      setPendingInvitations([]);
+      setError(cause instanceof Error ? cause.message : "Impossible de charger les invitations reçues.");
+    }
     const savedAtelierId = window.sessionStorage.getItem("yere-active-atelier");
     const selectedAtelier = workspaces.find((item) => item.id === savedAtelierId) ?? workspaces[0];
     if (selectedAtelier) {
@@ -125,25 +133,31 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
     let active = true;
     async function initialize() {
       if (!supabaseReady) { setReady(true); return; }
+      let current: YereSession | null = null;
       try {
         const recoveryCallback = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") === "recovery";
         if (recoveryCallback) setPasswordRecovery(true);
         const callbackSession = await consumeAuthCallback();
         const saved = callbackSession ?? readSession();
-        if (!saved) { setReady(true); return; }
-        const current = saved.expires_at * 1000 <= Date.now() + 60_000 ? await refreshSession(saved) : saved;
-        if (!active) return;
-        setSession(current);
-        await loadWorkspace(current);
+        if (!saved) { if (active) setReady(true); return; }
+        current = saved.expires_at * 1000 <= Date.now() + 60_000 ? await refreshSession(saved) : saved;
       } catch (cause) {
         clearSession();
         if (active) {
           setSession(null); setAtelier(null);
           setError(cause instanceof Error ? cause.message : "La confirmation du compte a échoué. Demandez un nouveau lien.");
         }
-      } finally {
-        if (active) setReady(true);
       }
+      if (current && active) {
+        setSession(current);
+        try {
+          await loadWorkspace(current);
+          if (active) setWorkspaceError("");
+        } catch (cause) {
+          if (active) setWorkspaceError(cause instanceof Error ? cause.message : "Impossible de charger votre atelier. Réessayez.");
+        }
+      }
+      if (active) setReady(true);
     }
     void initialize();
     return () => { active = false; };
@@ -177,7 +191,8 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
 
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setBusy(true); setError(""); setMessage("");
+    let authenticatedSessionEstablished = false;
+    setBusy(true); setError(""); setMessage(""); setWorkspaceError("");
     try {
       if (mode === "recovery") {
         await requestPasswordRecovery(email.trim().toLowerCase());
@@ -189,16 +204,27 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
           setMode("login");
         } else {
           setSession(result.session);
+          authenticatedSessionEstablished = true;
           await loadWorkspace(result.session);
         }
       } else {
         const next = await signIn(email.trim().toLowerCase(), password);
         setSession(next);
+        authenticatedSessionEstablished = true;
         await loadWorkspace(next);
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Connexion impossible. Réessayez.");
+      if (authenticatedSessionEstablished || session) setWorkspaceError(cause instanceof Error ? cause.message : "Impossible de charger votre atelier. Réessayez.");
+      else setError(cause instanceof Error ? cause.message : "Connexion impossible. Réessayez.");
     } finally { setBusy(false); }
+  }
+
+  async function retryWorkspaceLoad() {
+    if (!session) return;
+    setBusy(true); setWorkspaceError("");
+    try { await loadWorkspace(session); }
+    catch (cause) { setWorkspaceError(cause instanceof Error ? cause.message : "Impossible de charger votre atelier. Réessayez."); }
+    finally { setBusy(false); }
   }
 
   async function submitNewPassword(event: FormEvent<HTMLFormElement>) {
@@ -213,7 +239,8 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
       setPasswordRecovery(false);
       setNewPassword(""); setConfirmPassword(""); setPassword("");
       setMessage("Votre mot de passe a été modifié. Vous êtes connecté à YÉRÉ.");
-      await loadWorkspace(session);
+      try { await loadWorkspace(session); }
+      catch (cause) { setWorkspaceError(cause instanceof Error ? cause.message : "Impossible de charger votre atelier après la modification du mot de passe. Réessayez."); }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Impossible de modifier le mot de passe. Demandez un nouveau lien.");
     } finally { setBusy(false); }
@@ -222,9 +249,11 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
   async function submitAtelier(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!session) return;
-    setBusy(true); setError("");
+    let atelierCreated = false;
+    setBusy(true); setError(""); setWorkspaceError("");
     try {
       const id = await createAtelier(session, { nom: atelierName.trim(), telephone: phone.trim(), ville: city.trim() });
+      atelierCreated = true;
       const workspaces = await listMyAteliers(session);
       setWorkspaces(workspaces);
       const created = workspaces.find((item) => item.id === id);
@@ -237,7 +266,9 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
       // is initialized with the new tenant ID and its owner role.
       window.location.reload();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Création de l'atelier impossible.");
+      const detail = cause instanceof Error ? cause.message : "Création de l'atelier impossible.";
+      if (atelierCreated) setWorkspaceError(detail);
+      else setError(detail);
     } finally { setBusy(false); }
   }
 
@@ -298,6 +329,20 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
         <p className="auth-footnote">Votre compte est protégé par Supabase Auth. Ne partagez jamais votre mot de passe.</p>
         <a className="auth-market-link" href="/market">Accéder au catalogue complet →</a>
         <p className="auth-switch"><button type="button" onClick={() => { setShowProfessionalAuth(false); setMode("login"); setError(""); setMessage(""); }}>← Retour à YÉRÉ Market</button></p>
+      </section>
+    </main>
+  );
+
+  if (session && workspaceError) return (
+    <main className="auth-shell">
+      <section className="auth-card auth-workspace-card">
+        <div className="auth-brand"><img className="auth-mark" src="/images/yere-logo.png" alt="YÉRÉ" /><span><strong>YÉRÉ</strong><small>ATELIER</small></span></div>
+        <p className="eyebrow">CHARGEMENT DE VOTRE ESPACE</p>
+        <h1>Votre compte est connecté.</h1>
+        <p className="auth-intro">YÉRÉ n’arrive pas à charger vos ateliers pour le moment. Votre session est conservée : réessayez sans créer un nouvel atelier.</p>
+        <p className="auth-error" role="alert">{workspaceError}</p>
+        <button className="primary-button auth-submit" type="button" disabled={busy} onClick={() => void retryWorkspaceLoad()}>{busy ? "Nouvel essai…" : "Réessayer"} <span>→</span></button>
+        <button className="secondary-button" type="button" onClick={() => void handleSignOut()}>Se déconnecter</button>
       </section>
     </main>
   );
