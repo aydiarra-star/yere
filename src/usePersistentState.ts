@@ -39,8 +39,8 @@ export function preserveRejectedStorageValue(
 }
 
 /**
- * Browser-local persistence for the prototype only.
- * This is not a substitute for authenticated, server-side storage.
+ * Browser persistence for user-scoped preferences and atelier-scoped UI/profile cache only.
+ * Server-owned business records must use the dedicated Supabase data layer and the `server` scope.
  */
 export function usePersistentState<T>(
   key: string,
@@ -48,7 +48,7 @@ export function usePersistentState<T>(
   isValid?: (value: unknown) => value is T,
   scope: PersistenceScope = "user"
 ): [T, Dispatch<SetStateAction<T>>] {
-  // Authenticated accounts get isolated browser caches while cloud sync is being rolled out.
+  // Non-server state is isolated by signed-in user and, when applicable, active atelier.
   const storageKey = typeof window !== "undefined"
     ? resolvePersistentStorageKey(key, window.sessionStorage.getItem("yere-user-scope"), window.sessionStorage.getItem("yere-active-atelier"), scope)
     : key;
