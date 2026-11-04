@@ -1,0 +1,25 @@
+.home-subscription{margin:0 0 22px;padding:20px 22px;border:1px solid #dce2ed;border-radius:16px;background:#fff;box-shadow:0 5px 18px rgba(16,31,58,.06);color:#17233e}
+.home-subscription-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:15px;border-bottom:1px solid #edf0f5}
+.home-subscription-kicker{display:block;margin-bottom:6px;color:#8a6b2e;font-size:10px;font-weight:800;letter-spacing:.12em}
+.home-subscription-heading h2{margin:0;color:#0b1f3a;font-size:21px;line-height:1.2}
+.home-subscription-heading p{margin:5px 0 0;color:#687386;font-size:13px}
+.home-subscription-price{flex-shrink:0;padding:9px 12px;border-radius:10px;background:#f5f1e8;color:#0b1f3a;font-size:16px;font-weight:850;white-space:nowrap}
+.home-subscription-price small{font-size:11px;font-weight:600}
+.home-subscription-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:16px 0}
+.home-subscription-facts>div{display:grid;align-content:start;gap:5px;min-width:0}
+.home-subscription-facts span{color:#758095;font-size:11px;font-weight:700}
+.home-subscription-facts strong{color:#14264a;font-size:14px}
+.home-subscription-facts small,.home-subscription-history p{color:#687386;font-size:12px;line-height:1.5}
+.home-subscription-history{padding-top:12px;border-top:1px solid #edf0f5}
+.home-subscription-history h3{margin:0 0 8px;color:#17233e;font-size:13px}
+.home-subscription-history p{margin:0}
+.home-subscription-payments{display:grid;gap:7px}
+.home-subscription-payments>div{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:8px;background:#f7f8fb;font-size:12px}
+.home-subscription-payments strong{margin-left:auto;color:#14264a}
+.home-subscription-payments small{color:#687386}
+.home-subscription-payment{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:14px;padding-top:14px;border-top:1px solid #edf0f5}
+.home-subscription-payment .paytech-subscription-action{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.home-subscription-payment .paytech-subscription-action .primary-button{min-height:42px}
+.home-subscription-payment .privacy-note{max-width:430px;margin:0;font-size:11px;line-height:1.45}
+.home-subscription-payment>p{max-width:280px;margin:0;color:#687386;font-size:11px;line-height:1.45}
+@media(max-width:760px){.home-subscription{margin-bottom:16px;padding:16px 14px;border-radius:13px}.home-subscription-heading{gap:8px}.home-subscription-heading h2{font-size:18px}.home-subscription-heading p{max-width:210px;font-size:11px}.home-subscription-price{padding:8px;font-size:13px}.home-subscription-facts{grid-template-columns:1fr 1fr;gap:12px}.home-subscription-facts>div:first-child{grid-column:1/-1}.home-subscription-payment{display:grid;gap:7px}.home-subscription-payment .paytech-subscription-action{display:grid;width:100%}.home-subscription-payment .paytech-subscription-action .primary-button{width:100%;white-space:normal}.home-subscription-payment .privacy-note,.home-subscription-payment>p{max-width:none}}
