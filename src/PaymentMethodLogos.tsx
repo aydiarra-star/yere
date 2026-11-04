@@ -3,7 +3,7 @@ import "./payment-method-logos.css";
 const methods = [
   {
     name: "Wave",
-    src: "https://oqsf.sn/wp-content/uploads/2023/04/wave-300x300.webp",
+    src: "/images/payments/wave.svg",
     className: "payment-logo-wave",
   },
   {
@@ -30,7 +30,14 @@ export default function PaymentMethodLogos() {
       <div className="payment-methods-list">
         {methods.map((method) => (
           <div className={`payment-method-logo ${method.className}`} key={method.name}>
-            <img src={method.src} alt={method.name} loading="lazy" />
+            <img
+              src={method.src}
+              alt={method.name}
+              loading="lazy"
+              onError={(event) => {
+                event.currentTarget.style.display = "none";
+              }}
+            />
           </div>
         ))}
       </div>
