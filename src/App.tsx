@@ -1303,7 +1303,7 @@ function App() {
             <div className="account-secondary"><div><b>Relances clients</b><p>Consultez les suggestions de relance manuelle, sans envoi automatique.</p></div><button className="secondary-button" onClick={() => setView("reminders")}>Ouvrir les relances →</button></div>
             <p className="privacy-note">Le nom, le téléphone, la ville et l’organisation du travail de votre atelier sont enregistrés sur Supabase. Les données métier restent synchronisées dans leurs modules dédiés.</p>
           </section>}
-          {view === "settings" && <SettingsCenter role={isAtelierOwner ? "proprietaire" : teamMembers.some((member) => member.userId === currentUserId && member.active && member.role === "gestionnaire") ? "gestionnaire" : "employe"} onBack={() => setView("account")} />}
+          {view === "settings" && <SettingsCenter role={isAtelierOwner ? "proprietaire" : teamMembers.some((member) => member.userId === currentUserId && member.active && member.role === "gestionnaire") ? "gestionnaire" : "employe"} serverSyncStatus={serverSyncStatus} onBack={() => setView("account")} />}
           {view === "stock" && <section className="stock-page">
             <div className="cash-summary-grid">
               <article className="content-card cash-summary"><span>Articles suivis</span><strong>{stockItems.length}</strong><small>Articles synchronisés sur le serveur</small></article>
