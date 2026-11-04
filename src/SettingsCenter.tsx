@@ -5,6 +5,7 @@ type AtelierRole = "proprietaire" | "gestionnaire" | "employe";
 type Props = {
   role: AtelierRole;
   onBack: () => void;
+  serverSyncStatus: "idle" | "loading" | "ready" | "error";
 };
 
 const sections = [
@@ -35,7 +36,7 @@ const sections = [
   }
 ];
 
-export default function SettingsCenter({ role, onBack }: Props) {
+export default function SettingsCenter({ role, onBack, serverSyncStatus }: Props) {
   const [online, setOnline] = useState(() => typeof navigator === "undefined" ? true : navigator.onLine);
 
   useEffect(() => {
@@ -63,8 +64,12 @@ export default function SettingsCenter({ role, onBack }: Props) {
 
       <div className="dtech-settings-status" role="status">
         <span className={online ? "dtech-status-dot is-online" : "dtech-status-dot is-offline"} />
-        <span>{online ? "Connexion Internet détectée" : "Vous êtes hors ligne"}</span>
-        <small>{online ? "La disponibilité des données dépend de leur confirmation par le serveur." : "Seule l’interface déjà chargée peut être disponible. La synchronisation métier hors ligne n’est pas encore activée."}</small>
+        <span>{online ? "Connexion Internet détectée" : "Vous êtes hors ligne — consultation en lecture seule"}</span>
+        <small>{online
+          ? "Les données affichées sont celles confirmées par Supabase."
+          : serverSyncStatus === "ready"
+            ? "Les informations déjà chargées restent consultables tant que cet écran reste ouvert. Aucune modification ne peut être enregistrée hors ligne. Ne fermez pas et ne rechargez pas cette page avant de retrouver Internet."
+            : "Aucune donnée métier n’est disponible hors ligne pour cette session. Reconnectez-vous pour charger les informations depuis Supabase."}</small>
       </div>
 
       <div className="dtech-settings-grid">
@@ -81,13 +86,13 @@ export default function SettingsCenter({ role, onBack }: Props) {
         <div>
           <p className="eyebrow">FONCTIONNALITÉ EN PRÉPARATION</p>
           <h3 id="dtech-offline-title">Mode hors ligne sécurisé</h3>
-          <p>Le mode hors ligne complet est en cours de développement. YÉRÉ ne prétend pas avoir synchronisé des modifications tant que Supabase ne les a pas confirmées.</p>
+          <p>Première étape sécurisée : les données déjà chargées restent consultables en mémoire pendant une coupure réseau. Toutes les écritures sont bloquées avant envoi. Aucune modification hors ligne n’est mise en attente ou présentée comme enregistrée.</p>
         </div>
         <ul>
           <li>Supabase reste la source officielle des données.</li>
           <li>Les anciennes archives locales ne sont ni importées ni supprimées.</li>
-          <li>La caisse, les paiements et les dépenses ne sont pas disponibles hors ligne pour les rôles non autorisés.</li>
-          <li>Marketplace, paiements en ligne et invitations nécessitent Internet.</li>
+          <li>La caisse, les paiements et les dépenses ne sont jamais mis en cache par cette étape.</li>
+          <li>Marketplace, paiements en ligne, invitations et toute modification nécessitent Internet.</li>
         </ul>
       </section>
 
@@ -97,8 +102,11 @@ export default function SettingsCenter({ role, onBack }: Props) {
         <div><span>Votre rôle</span><strong>{roleLabel}</strong></div>
       </div>
 
-      <p className="privacy-note">Certaines rubriques sont présentées comme repères et seront activées après leur réalisation et validation. Aucun réglage sensible n’est modifié depuis cet écran.</p>
-      <button type="button" className="secondary-button" onClick={onBack}>Retour à mon atelier</button>
+      <p className="privacy-note">Les données métier ne sont pas enregistrées localement. Si vous rechargez ou fermez l’application hors ligne, elles ne seront plus disponibles jusqu’à la reconnexion. Les anciennes archives locales restent séparées et ne sont jamais réimportées automatiquement.</p>
+      <div className="dtech-settings-actions">
+        <button type="button" className="secondary-button" onClick={onBack}>Retour à mon atelier</button>
+        {online && serverSyncStatus === "ready" && <button type="button" className="primary-button" onClick={() => window.location.reload()}>Actualiser les données du serveur</button>}
+      </div>
     </section>
   );
 }
