@@ -23,23 +23,25 @@ function jsonResponse(value: unknown, status = 200): Response {
   });
 }
 
-const publicSellerRow = {
+const ownSellerRow = {
   id: "seller-123",
   type_vendeur: "fournisseur",
+  atelier_id: null,
   nom_entreprise: "Mercerie Test",
+  nom_contact: "Awa",
+  telephone: "770000000",
   ville: "Dakar",
   categorie: "Tissus",
   description: "Fournitures de couture",
+  logo_path: null,
   statut: "actif"
 };
 
 describe("marketplace seller privacy boundary", () => {
   beforeEach(() => authenticatedFetch.mockReset());
 
-  it("loads only public seller columns and obtains private contact through the owner RPC", async () => {
-    authenticatedFetch
-      .mockResolvedValueOnce(jsonResponse([publicSellerRow]))
-      .mockResolvedValueOnce(jsonResponse([{ nom_contact: "Awa", telephone: "770000000" }]));
+  it("loads the current user's seller profile and private contacts through the owner-scoped RPC", async () => {
+    authenticatedFetch.mockResolvedValueOnce(jsonResponse([ownSellerRow]));
 
     const seller = await getMyMarketplaceSeller(session);
 
@@ -48,16 +50,14 @@ describe("marketplace seller privacy boundary", () => {
       userId: "user-123",
       businessName: "Mercerie Test",
       contactName: "Awa",
-      phone: "770000000"
+      phone: "770000000",
+      atelierId: null
     });
-    const profileRequest = authenticatedFetch.mock.calls[0][1] as string;
-    expect(profileRequest).toContain("select=id,type_vendeur,nom_entreprise,ville,categorie,description,logo_path,statut");
-    expect(profileRequest).not.toMatch(/atelier_id|nom_contact|telephone|user_id/);
-    expect(authenticatedFetch.mock.calls[1][1]).toBe("rest/v1/rpc/get_my_marketplace_seller_contact");
-    expect(authenticatedFetch.mock.calls[1][2]).toMatchObject({ method: "POST", body: "{}" });
+    expect(authenticatedFetch.mock.calls[0][1]).toBe("rest/v1/rpc/get_my_marketplace_seller_profile");
+    expect(authenticatedFetch.mock.calls[0][2]).toMatchObject({ method: "POST", body: "{}" });
   });
 
-  it("does not call the private contact RPC when the account has no seller profile", async () => {
+  it("returns null for a buyer account without a seller profile", async () => {
     authenticatedFetch.mockResolvedValueOnce(jsonResponse([]));
 
     await expect(getMyMarketplaceSeller(session)).resolves.toBeNull();
@@ -67,8 +67,7 @@ describe("marketplace seller privacy boundary", () => {
   it("creates a seller without requesting restricted contact columns in the insert response", async () => {
     authenticatedFetch
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
-      .mockResolvedValueOnce(jsonResponse([publicSellerRow]))
-      .mockResolvedValueOnce(jsonResponse([{ nom_contact: "Awa", telephone: "770000000" }]));
+      .mockResolvedValueOnce(jsonResponse([ownSellerRow]));
 
     const seller = await createMarketplaceSeller(session, {
       sellerType: "fournisseur",
@@ -84,7 +83,7 @@ describe("marketplace seller privacy boundary", () => {
     expect(seller.contactName).toBe("Awa");
     expect(authenticatedFetch.mock.calls[0][1]).toBe("rest/v1/marketplace_vendeur");
     expect(authenticatedFetch.mock.calls[0][2]).toMatchObject({ method: "POST", headers: { Prefer: "return=minimal" } });
-    expect(String(authenticatedFetch.mock.calls[1][1])).not.toMatch(/nom_contact|telephone|user_id|atelier_id/);
+    expect(authenticatedFetch.mock.calls[1][1]).toBe("rest/v1/rpc/get_my_marketplace_seller_profile");
   });
 });
 
