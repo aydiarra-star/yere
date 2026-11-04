@@ -123,7 +123,7 @@ export function sanitizeOfflineSnapshot(dataset: OfflineDataset, value: unknown)
   }
   return {
     items: value.items.map((item) => pick(item, ["id", "name", "unit", "quantity", "minimumQuantity", "createdAt"])),
-    movements: value.movements.map((item) => pick(item, ["id", "itemId", "type", "quantity", "movedAt", "note"]))
+    movements: value.movements.map((item) => pick(item, ["id", "itemId", "type", "quantity", "movedAt"]))
   };
 }
 
