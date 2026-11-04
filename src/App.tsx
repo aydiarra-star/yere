@@ -142,15 +142,11 @@ function App() {
   useEffect(() => {
     const session = readSession();
     const atelierId = window.sessionStorage.getItem("yere-active-atelier");
-    if (!session || !atelierId) {
-      setServerSyncStatus("idle");
-      return;
-    }
     let active = true;
-    setServerSyncStatus("loading");
+    // Always clear the previous workspace, including when the session or selected
+    // atelier is missing. Legacy localStorage archives are deliberately untouched.
+    setServerSyncStatus(session && atelierId ? "loading" : "idle");
     setServerSyncError("");
-    // Never keep a previous atelier's records visible while the next server
-    // membership and workspace are being verified.
     setClients([]);
     setOrders([]);
     setExpenses([]);
@@ -164,8 +160,13 @@ function App() {
     setSupplier(emptySupplier);
     setAtelierSubscription(null);
     setSubscriptionPayments([]);
+    setSubscriptionLoadError("");
+    setSubscriptionLoading(false);
     setSelectedClient(null);
+    setTaskOrderId("");
+    setTaskAssigneeId("");
     setNotice("");
+    if (!session || !atelierId) return () => { active = false; };
     void (async () => {
       try {
         // Load membership first: financial requests must never start before the role is known.
