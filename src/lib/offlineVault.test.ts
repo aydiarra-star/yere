@@ -127,7 +127,7 @@ describe("offline vault snapshot protection", () => {
       await purgeUserOfflineVault(accountAAtelierA.userId);
       await purgeUserOfflineVault(accountBAtelierA.userId);
       if (previousLocalStorage) Object.defineProperty(globalThis, "localStorage", previousLocalStorage);
-      else delete (globalThis as typeof globalThis & { localStorage?: Storage }).localStorage;
+      else Reflect.deleteProperty(globalThis, "localStorage");
     }
   });
   it("matches only the exact account and atelier cache scopes", () => {
