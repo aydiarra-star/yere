@@ -113,9 +113,9 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
       const accepted = workspaces.find((item) => item.id === atelierId);
       if (!accepted) throw new Error("Invitation acceptée, mais l’atelier n’est pas encore accessible. Reconnectez-vous.");
       seedLocalProfile(session.user.id, accepted);
-      setAtelier(accepted);
-      setPendingInvitations((current) => current.filter((item) => item.id !== invitation.id));
-      setMessage("Vous avez rejoint l’atelier " + accepted.nom + ".");
+      // The atelier application owns server data in component state. Reload after
+      // switching tenants so no records from the previous atelier remain visible.
+      window.location.reload();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Impossible d’accepter cette invitation.");
     } finally { setBusy(false); }
