@@ -232,9 +232,10 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
       setPasswordRecovery(false);
       setNewPassword(""); setConfirmPassword(""); setPassword("");
       setMessage("Votre mot de passe a été modifié. Vous êtes connecté à YÉRÉ.");
-      await loadWorkspace(session);
+      try { await loadWorkspace(session); }
+      catch (cause) { setWorkspaceError(cause instanceof Error ? cause.message : "Impossible de charger votre atelier après la modification du mot de passe. Réessayez."); }
     } catch (cause) {
-      setWorkspaceError(cause instanceof Error ? cause.message : "Impossible de charger votre atelier après la modification du mot de passe. Réessayez.");
+      setError(cause instanceof Error ? cause.message : "Impossible de modifier le mot de passe. Demandez un nouveau lien.");
     } finally { setBusy(false); }
   }
 
