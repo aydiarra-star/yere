@@ -184,7 +184,8 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
 
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setBusy(true); setError(""); setMessage("");
+    let authenticatedSessionEstablished = false;
+    setBusy(true); setError(""); setMessage(""); setWorkspaceError("");
     try {
       if (mode === "recovery") {
         await requestPasswordRecovery(email.trim().toLowerCase());
@@ -196,15 +197,17 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
           setMode("login");
         } else {
           setSession(result.session);
+          authenticatedSessionEstablished = true;
           await loadWorkspace(result.session);
         }
       } else {
         const next = await signIn(email.trim().toLowerCase(), password);
         setSession(next);
+        authenticatedSessionEstablished = true;
         await loadWorkspace(next);
       }
     } catch (cause) {
-      if (session) setWorkspaceError(cause instanceof Error ? cause.message : "Impossible de charger votre atelier. Réessayez.");
+      if (authenticatedSessionEstablished || session) setWorkspaceError(cause instanceof Error ? cause.message : "Impossible de charger votre atelier. Réessayez.");
       else setError(cause instanceof Error ? cause.message : "Connexion impossible. Réessayez.");
     } finally { setBusy(false); }
   }
