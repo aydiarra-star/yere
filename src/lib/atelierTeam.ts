@@ -12,9 +12,9 @@ export type AtelierMember = {
   experienceLevel: "debutant" | "intermediaire" | "experimente" | "maitre" | null;
   presentation: string;
 };
-/** Fail closed before loading any atelier data when the current account has no active membership. */
-export function requireActiveAtelierMember(members: AtelierMember[], userId: string): AtelierMember {
-  const member = members.find((item) => item.userId === userId && item.active);
+/** Fail closed unless the current account has an active membership in the exact selected atelier. */
+export function requireActiveAtelierMember(members: AtelierMember[], userId: string, atelierId: string): AtelierMember {
+  const member = members.find((item) => item.userId === userId && item.atelierId === atelierId && item.active);
   if (!member) throw new Error("Votre accès à cet atelier n’est pas actif. Les données de cet atelier restent bloquées.");
   return member;
 }
