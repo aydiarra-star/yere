@@ -26,7 +26,7 @@ describe("offline vault snapshot protection", () => {
 
   it("keeps only approved client and measurement fields", () => {
     const result = sanitizeOfflineSnapshot("clients", [{
-      id: "client-1", name: "Awa", phone: "770000000", legacySecret: "remove",
+      id: "client-1", name: "Awa", phone: "770000000", createdAt: "2026-11-01", legacySecret: "remove",
       measurement: { bust: "90", waist: "70", secret: "remove" },
       measurementHistory: [{ id: "m-1", measuredAt: "2026-11-01", measurement: { hips: "95", secret: "remove" }, extra: "remove" }]
     }]) as Array<Record<string, unknown>>;
@@ -56,7 +56,7 @@ describe("offline vault snapshot protection", () => {
 
   it("encrypts payloads and binds ciphertext to the user, atelier and dataset", async () => {
     const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
-    const payload = [{ id: "client-1", name: "Awa", phone: "770000000" }];
+    const payload = [{ id: "client-1", name: "Awa", phone: "770000000", createdAt: "2026-11-01" }];
     const encrypted = await encryptOfflinePayload(context, "clients", payload, key);
     await expect(decryptOfflinePayload(context, "clients", encrypted, key)).resolves.toEqual(payload);
     await expect(decryptOfflinePayload({ ...context, atelierId: "atelier-b" }, "clients", encrypted, key)).rejects.toThrow();
