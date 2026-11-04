@@ -31,6 +31,19 @@
 - Le chiffrement local, l'expiration/effacement des données locales et les tests de fuite entre deux comptes ou deux ateliers.
 - La validation sur iPhone et ordinateur en mode avion.
 
+### Coffre chiffré — fondation technique ajoutée, non activée
+
+- Nouveau module `src/lib/offlineVault.ts` : stockage IndexedDB distinct des archives historiques localStorage.
+- Chiffrement AES-GCM 256 bits ; clé CryptoKey non extractible conservée dans IndexedDB ; données liées cryptographiquement à l'identifiant du compte, de l'atelier et du jeu de données.
+- Durée maximale de conservation : 24 heures après la dernière vérification serveur ; aucune durée illimitée.
+- Périmètre préparé : clients/mensurations, commandes sans montants ni versements, stock. Les champs non explicitement autorisés sont retirés avant chiffrement.
+- Les jeux de données financiers (caisse, dépenses, paiements, soldes) ne font pas partie de la liste autorisée ; les champs prix/acompte/paiements des commandes sont exclus.
+- Le rôle est attaché au snapshot et doit correspondre au rôle fourni à la lecture ; un contexte sans appartenance active est refusé.
+- Fonction de purge limitée au compte et à l'atelier indiqués ; elle ne touche jamais les clés/archives localStorage historiques.
+- Tests : chiffrement/déchiffrement, séparation cryptographique entre ateliers et types de données, suppression des champs financiers, filtrage des champs personnels et validation des formats.
+
+**Limite essentielle :** cette fondation n'est pas encore reliée aux chargements de données de l'application et ne remplit donc aucun cache métier en production. Aucun écran ne propose encore l'ouverture hors ligne des dossiers. La révocation d'un membre ne peut pas être connue pendant une coupure réseau ; la fenêtre de 24 heures est une limite de risque, pas une garantie de révocation instantanée. Avant activation, il faudra intégrer une vérification serveur au moment du remplissage du cache, une politique d'accès hors ligne explicitement acceptée, la purge au changement de compte/atelier et à la déconnexion, puis des essais sur iPhone et ordinateur.
+
 ### Démarrage et vérification de session — correctif appliqué
 
 - Au démarrage, une session déjà enregistrée n'est plus effacée simplement parce que la vérification du compte ou de l'atelier échoue temporairement (par exemple en cas de coupure réseau).
