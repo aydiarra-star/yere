@@ -3,7 +3,7 @@ import "./payment-method-logos.css";
 const methods = [
   {
     name: "Wave",
-    src: "https://www.droitmediasfinance.com/images/juin/WAVE.png",
+    src: "https://www.povertyactionlab.org/sites/default/files/2026-06/Wave%20Logo.png",
     className: "payment-logo-wave",
   },
   {
