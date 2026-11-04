@@ -132,7 +132,7 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
         if (recoveryCallback) setPasswordRecovery(true);
         const callbackSession = await consumeAuthCallback();
         const saved = callbackSession ?? readSession();
-        if (!saved) { setReady(true); return; }
+        if (!saved) { if (active) setReady(true); return; }
         current = saved.expires_at * 1000 <= Date.now() + 60_000 ? await refreshSession(saved) : saved;
       } catch (cause) {
         clearSession();
