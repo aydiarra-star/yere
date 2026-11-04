@@ -3,6 +3,7 @@ import { formatXof, type Order } from "./domain";
 import { illustrationUrl } from "./illustrations";
 import type { AtelierSubscription, SubscriptionPayment } from "./lib/atelierSubscription";
 import PayTechSubscriptionButton from "./PayTechSubscriptionButton";
+import "./home-subscription.css";
 
 type HomeDashboardProps = {
   atelierName: string;
