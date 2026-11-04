@@ -62,7 +62,6 @@ function App() {
   const [onboardingComplete, setOnboardingComplete] = usePersistentState<boolean>("yere-demo-onboarding-complete-v1", false, isBooleanValue);
   const [onboardingStartedAt, setOnboardingStartedAt] = usePersistentState<number | null>("yere-demo-onboarding-started-at-v1", null, isNullableTimestamp);
   const [view, setView] = useState<View>("overview");
-  const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -1088,8 +1087,7 @@ function App() {
 
   function openAccount() {
     setMobileMoreOpen(false);
-    if (!onboardingComplete && !atelierDisplayName) setOnboardingOpen(true);
-    else setView("account");
+    setView("account");
   }
 
   function createOrder() {
@@ -1118,20 +1116,6 @@ function App() {
         <button className="primary-button auth-submit" type="button" onClick={() => window.location.reload()}>Réessayer la connexion</button>
       </section>
     </main>;
-  }
-
-  if (onboardingOpen) {
-    return <Onboarding
-      atelier={atelier}
-      onAtelierChange={setAtelier}
-      onCancel={() => setOnboardingOpen(false)}
-      onFinish={() => {
-        setOnboardingComplete(true);
-        setOnboardingOpen(false);
-        setView("overview");
-        setNotice("");
-      }}
-    />;
   }
 
   return (
@@ -1179,11 +1163,11 @@ function App() {
             onCreateOrder={createOrder}
             onOpenMeasurements={() => { setQuery(""); setSelectedClient(null); setView("clients"); setMobileMoreOpen(false); }}
             onOpenTools={() => setMobileMoreOpen(true)}
-            onConfigure={() => setOnboardingOpen(true)}
+            onConfigure={() => setView("account")}
           />}
 
           {view === "clients" && <section className="content-card clients-card"><div className="section-heading"><div><h2>Répertoire clients</h2><p>{clients.length} fiche{clients.length > 1 ? "s" : ""} dans cet atelier</p></div><label className="search-box"><span>⌕</span><input autoFocus={view === "clients"} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher par nom ou téléphone" aria-label="Rechercher un client" /></label></div>
-            {showForm && <form className="new-client-form" onSubmit={addClient}><div><h3>Créer une fiche client</h3><p>Les mensurations pourront être complétées ensuite. Prototype local : n’utilisez pas encore de données clients réelles.</p></div><label>Nom complet<input required autoFocus value={clientName} onChange={(event) => setClientName(event.target.value)} placeholder="Ex. Mariama Diallo" /></label><label>Téléphone<input value={clientPhone} onChange={(event) => setClientPhone(event.target.value)} placeholder="+221 77 000 00 00" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>Annuler</button><button type="submit" className="primary-button">Enregistrer le client</button></div></form>}
+            {showForm && <form className="new-client-form" onSubmit={addClient}><div><h3>Créer une fiche client</h3><p>Les mensurations pourront être complétées ensuite. Les fiches clients sont enregistrées dans l’atelier connecté et synchronisées avec le serveur.</p></div><label>Nom complet<input required autoFocus value={clientName} onChange={(event) => setClientName(event.target.value)} placeholder="Ex. Mariama Diallo" /></label><label>Téléphone<input value={clientPhone} onChange={(event) => setClientPhone(event.target.value)} placeholder="+221 77 000 00 00" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>Annuler</button><button type="submit" className="primary-button">Enregistrer le client</button></div></form>}
             <div className="client-list">{visibleClients.map((client, index) => <button key={client.id} className={selectedClient === client.id ? "client-row selected" : "client-row"} onClick={() => setSelectedClient(selectedClient === client.id ? null : client.id)}><span className={`client-avatar avatar-${index % 4}`}>{client.name.split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</span><span className="client-main"><b>{client.name}</b><small>{client.phone || "Pas de téléphone renseigné"}</small></span><span className="client-measurements"><b>{[client.measurement.bust, client.measurement.waist, client.measurement.hips, client.measurement.shoulder, client.measurement.sleeve, client.measurement.length, client.measurement.arm, client.measurement.neck, client.measurement.thigh, client.measurement.legLength].filter(Boolean).length}/10</b><small>mesures saisies</small></span><span className="row-chevron">›</span></button>)}
               {visibleClients.length === 0 && <div className="empty-state"><span>⌕</span><b>Aucun client trouvé</b><p>Essayez un autre nom ou numéro.</p></div>}
             </div>
@@ -1509,7 +1493,7 @@ function Onboarding({ atelier, onAtelierChange, onCancel, onFinish }: {
           <label>Ville<input value={draft.city} onChange={(event) => update("city", event.target.value)} placeholder="Ville" /></label>
           <button className="primary-button onboarding-primary" type="submit">Créer mon espace YÉRÉ <span>→</span></button>
         </form>
-        <p className="onboarding-privacy">Prototype : les données sont conservées dans ce navigateur. Aucun compte serveur n'est créé. N’utilisez pas encore de données réelles.</p>
+        <p className="onboarding-privacy">Votre espace atelier est connecté à YÉRÉ. Les informations du profil sont enregistrées sur le serveur.</p>
       </section>
     </div>
   </main>;
