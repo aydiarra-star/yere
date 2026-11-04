@@ -79,15 +79,16 @@ export function sanitizeOfflineSnapshot(dataset: OfflineDataset, value: unknown)
   }
   if (dataset === "orders") {
     if (!Array.isArray(value)) throw new Error("Liste de commandes invalide.");
-    return value.map((item) => pick(item, [
-      "id", "serverId", "clientId", "garment", "dueDate", "orderedAt", "status", "kind",
-      "retouchStage", "measurementSnapshot", "measurementSnapshotAt"
-    ]).map((order) => {
+    return value.map((item) => {
+      const order = pick(item, [
+        "id", "serverId", "clientId", "garment", "dueDate", "orderedAt", "status", "kind",
+        "retouchStage", "measurementSnapshot", "measurementSnapshotAt"
+      ]);
       if (order.measurementSnapshot !== undefined) order.measurementSnapshot = pick(order.measurementSnapshot, [
         "bust", "waist", "hips", "shoulder", "sleeve", "length", "arm", "neck", "thigh", "legLength", "garmentType", "note"
       ]);
       return order;
-    }));
+    });
   }
   if (!object(value) || !Array.isArray(value.items) || !Array.isArray(value.movements)) {
     throw new Error("Données de stock invalides.");
@@ -171,7 +172,7 @@ export async function saveOfflineSnapshot(
   now = Date.now()
 ): Promise<void> {
   validContext(context);
-  const safe = sanitizeOfflineSnapshot(dataset, snapshot);
+  sanitizeOfflineSnapshot(dataset, snapshot);
   if (!Number.isFinite(now) || now < context.serverVerifiedAt || now - context.serverVerifiedAt > OFFLINE_CACHE_TTL_MS) {
     throw new Error("La vérification serveur est trop ancienne : reconnectez-vous avant de préparer le cache.");
   }
