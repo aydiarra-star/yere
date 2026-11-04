@@ -36,6 +36,7 @@ const KEY_STORE = "keys";
 const DATA_STORE = "snapshots";
 export const OFFLINE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const datasets: OfflineDataset[] = ["clients", "orders", "stock"];
+const measurementFields = ["bust", "waist", "hips", "shoulder", "sleeve", "length", "arm", "neck", "thigh", "legLength", "garmentType"];
 
 function validContext(context: OfflineVaultContext): void {
   if (!context.userId.trim() || !context.atelierId.trim()) throw new Error("Compte ou atelier absent : cache hors ligne refusé.");
@@ -64,16 +65,20 @@ export function sanitizeOfflineSnapshot(dataset: OfflineDataset, value: unknown)
     if (!Array.isArray(value)) throw new Error("Liste de clients invalide.");
     return value.map((item) => {
       const client = pick(item, ["id", "name", "phone", "createdAt", "measurement", "measurementHistory"]);
-      if (client.measurement !== undefined) client.measurement = pick(client.measurement, [
-        "bust", "waist", "hips", "shoulder", "sleeve", "length", "arm", "neck", "thigh", "legLength", "garmentType", "note"
-      ]);
-      if (Array.isArray(client.measurementHistory)) client.measurementHistory = client.measurementHistory.map((entry) => {
-        const version = pick(entry, ["id", "measuredAt", "measurement"]);
-        if (version.measurement !== undefined) version.measurement = pick(version.measurement, [
-          "bust", "waist", "hips", "shoulder", "sleeve", "length", "arm", "neck", "thigh", "legLength", "garmentType", "note"
-        ]);
-        return version;
-      });
+      if (typeof client.id !== "string" || !client.id || typeof client.name !== "string"
+        || typeof client.phone !== "string" || typeof client.createdAt !== "string") {
+        throw new Error("Fiche client incomplète : cache hors ligne refusé.");
+      }
+      if (client.measurement !== undefined) client.measurement = pick(client.measurement, measurementFields);
+      if (client.measurementHistory !== undefined) {
+        if (!Array.isArray(client.measurementHistory)) throw new Error("Historique de mensurations invalide.");
+        client.measurementHistory = client.measurementHistory.map((entry) => {
+          const version = pick(entry, ["id", "measuredAt", "measurement"]);
+          if (typeof version.id !== "string" || typeof version.measuredAt !== "string") throw new Error("Version de mensurations incomplète.");
+          if (version.measurement !== undefined) version.measurement = pick(version.measurement, measurementFields);
+          return version;
+        });
+      }
       return client;
     });
   }
@@ -84,9 +89,11 @@ export function sanitizeOfflineSnapshot(dataset: OfflineDataset, value: unknown)
         "id", "serverId", "clientId", "garment", "dueDate", "orderedAt", "status", "kind",
         "retouchStage", "measurementSnapshot", "measurementSnapshotAt"
       ]);
-      if (order.measurementSnapshot !== undefined) order.measurementSnapshot = pick(order.measurementSnapshot, [
-        "bust", "waist", "hips", "shoulder", "sleeve", "length", "arm", "neck", "thigh", "legLength", "garmentType", "note"
-      ]);
+      if (typeof order.id !== "string" || !order.id || typeof order.clientId !== "string" || !order.clientId
+        || typeof order.garment !== "string" || typeof order.dueDate !== "string") {
+        throw new Error("Commande incomplète : cache hors ligne refusé.");
+      }
+      if (order.measurementSnapshot !== undefined) order.measurementSnapshot = pick(order.measurementSnapshot, measurementFields);
       return order;
     });
   }
