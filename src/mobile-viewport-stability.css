@@ -1,0 +1,53 @@
+/* YÉRÉ — stabilité du viewport mobile et prévention du zoom automatique au focus.
+   iOS Safari agrandit la page lorsqu'un champ de saisie a une police calculée
+   inférieure à 16px. On conserve les tailles actuelles sur ordinateur. */
+:root {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+body {
+  overflow-x: clip;
+}
+
+.app-shell,
+.yere-app,
+.yere-market-app,
+.onboarding-shell {
+  max-width: 100%;
+  min-width: 0;
+}
+
+img,
+video,
+canvas {
+  max-width: 100%;
+}
+
+@media screen and (max-width: 760px) {
+  /* Empêche Safari iPhone de zoomer la page à chaque focus/clavier.
+     Couvre connexion, recherche, formulaires, sélecteurs et commentaires. */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Les cadres restent contenus dans la largeur réelle du téléphone. */
+  .app-shell,
+  .yere-app,
+  .yere-market-app,
+  .onboarding-shell {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+}
