@@ -10,7 +10,7 @@ import { readSession, updateAtelierProfile } from "./lib/supabaseAuth";
 import { getAtelierSubscription, listAtelierSubscriptionPayments, type AtelierSubscription, type SubscriptionPayment } from "./lib/atelierSubscription";
 import PayTechSubscriptionButton from "./PayTechSubscriptionButton";
 import { createAtelierTask, listAtelierTasks, updateAtelierTask, type AtelierTask, type AtelierTaskStatus } from "./lib/atelierTasks";
-import { cancelAtelierInvitation, createAtelierInvitation, deactivateAtelierMember, reactivateAtelierMember, listAtelierInvitations, listAtelierMembers, updateAtelierMemberRole, updateAtelierMemberProfile, type AtelierInvitation, type AtelierMember } from "./lib/atelierTeam";
+import { cancelAtelierInvitation, createAtelierInvitation, deactivateAtelierMember, reactivateAtelierMember, listAtelierInvitations, listAtelierMembers, updateAtelierMemberRole, updateAtelierMemberProfile, type AtelierInvitation, type AtelierMember, requireActiveAtelierMember } from "./lib/atelierTeam";
 import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, getAtelierSupplierProfile, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, saveAtelierSupplierProfile, type AtelierSupplier } from "./lib/atelierSuppliers";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
@@ -152,14 +152,15 @@ function App() {
     void (async () => {
       try {
         // Load membership first: financial requests must never start before the role is known.
-        const [serverMembers, serverInvitations] = await Promise.all([
-          listAtelierMembers(session, atelierId), listAtelierInvitations(session, atelierId)
-        ]);
+        const serverMembers = await listAtelierMembers(session, atelierId);
         if (!active) return;
-        const currentMember = serverMembers.find((member) => member.userId === session.user.id && member.active);
-        const ownerAccess = currentMember?.role === "proprietaire";
-        const [serverClients, serverOrders, serverStock, serverSuppliers, serverSupplierProfile,
+        // Fail closed: no atelier records (especially financial records) are requested
+        // until the server confirms this account still has an active membership.
+        const currentMember = requireActiveAtelierMember(serverMembers, session.user.id);
+        const ownerAccess = currentMember.role === "proprietaire";
+        const [serverInvitations, serverClients, serverOrders, serverStock, serverSuppliers, serverSupplierProfile,
           serverExpenses, serverPurchases, serverTasks] = await Promise.all([
+          listAtelierInvitations(session, atelierId),
           listAtelierClients(session, atelierId),
           listAtelierOrders(session, atelierId, ownerAccess),
           listAtelierStock(session, atelierId),
