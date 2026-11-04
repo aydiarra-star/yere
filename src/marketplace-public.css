@@ -229,3 +229,48 @@
   .yere-market-app .pm-subscription-action .pm-cta{width:100%;white-space:normal}
   .yere-market-app .pm-subscription-action small{max-width:none;text-align:left}
 }
+
+
+/* Compact lower Market sections: keep empty states useful without oversized blank panels. */
+.yere-market-app .pm-orders{
+  padding:34px 28px;
+}
+.yere-market-app .pm-orders + .pm-orders{
+  padding-top:4px;
+}
+.yere-market-app .pm-messaging{
+  min-height:230px;
+}
+.yere-market-app .pm-chat-empty{
+  min-height:150px;
+  padding:18px;
+}
+.yere-market-app .pm-market-benefits{
+  padding-top:38px;
+  padding-bottom:38px;
+}
+.yere-market-app .pm-benefits-grid article{
+  min-height:160px;
+}
+@media(max-width:620px){
+  .yere-market-app .pm-orders{
+    padding:25px 17px;
+  }
+  .yere-market-app .pm-orders + .pm-orders{
+    padding-top:2px;
+  }
+  .yere-market-app .pm-messaging{
+    min-height:0;
+  }
+  .yere-market-app .pm-chat-empty{
+    min-height:120px;
+    padding:16px;
+  }
+  .yere-market-app .pm-market-benefits{
+    padding-top:30px;
+    padding-bottom:30px;
+  }
+  .yere-market-app .pm-benefits-grid article{
+    min-height:0;
+  }
+}
