@@ -145,12 +145,19 @@ Deno.serve(async (req: Request) => {
       if (payment.statut !== "confirme" && payment.statut !== "rembourse") {
         return json({ message: "Paiement non remboursable dans son état actuel." }, 409);
       }
-      const refunded = await fetch(`${supabaseUrl}/rest/v1/abonnement_paiement?id=eq.${encodeURIComponent(payment.id)}&statut=eq.confirme`, {
-        method: "PATCH",
-        headers: { ...adminHeaders, Prefer: "return=minimal" },
-        body: JSON.stringify({ statut: "rembourse", details: { ...(payment.details && typeof payment.details === "object" ? payment.details : {}), provider: "paytech", env, event: "refund_complete" } }),
+      const refunded = await fetch(`${supabaseUrl}/rest/v1/rpc/refund_paytech_subscription_payment`, {
+        method: "POST",
+        headers: adminHeaders,
+        body: JSON.stringify({
+          p_reference: reference,
+          p_amount: amount,
+          p_environment: env,
+        }),
       });
-      if (!refunded.ok) throw new Error("Impossible d'enregistrer le remboursement PayTech.");
+      if (!refunded.ok) {
+        console.error("PayTech IPN: rapprochement atomique du remboursement refusé.");
+        return json({ message: "Remboursement reçu, mais rapprochement de l'abonnement impossible." }, 409);
+      }
       return new Response("IPN OK", { status: 200 });
     }
 
