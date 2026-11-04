@@ -128,13 +128,24 @@ export default function PublicMarket() {
         setAuthMode("login");
         return;
       }
-      const next = authMode === "login"
-        ? await signIn(email.trim().toLowerCase(), password)
-        : (await signUp(email.trim().toLowerCase(), password, "/")).session;
-      if (!next) {
-        setNotice("Compte créé. Consultez votre e-mail pour confirmer l’adresse, puis revenez sur le Market pour vous connecter.");
-        setAuthMode("login");
-        return;
+      if (authMode === "signup") {
+        const result = await signUp(email.trim().toLowerCase(), password, "/");
+        if (result.alreadyRegistered) {
+          setNotice("Cette adresse semble déjà associée à un compte. Essayez de vous connecter ou utilisez « Mot de passe oublié ? » pour récupérer l’accès.");
+          setAuthMode("login");
+          return;
+        }
+        if (!result.session) {
+          setNotice("Inscription enregistrée. Si cette adresse est nouvelle, consultez votre boîte de réception et vos courriers indésirables pour confirmer votre adresse.");
+          setAuthMode("login");
+          return;
+        }
+        setSession(result.session);
+        await loadAccount(result.session);
+      } else {
+        const next = await signIn(email.trim().toLowerCase(), password);
+        setSession(next);
+        await loadAccount(next);
       }
       setSession(next);
       await loadAccount(next);
