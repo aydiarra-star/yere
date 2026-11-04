@@ -59,10 +59,9 @@ function App() {
   const [listingDraft, setListingDraft] = useState<Omit<MarketplaceListing, "id">>({ ...emptyListing });
   const [listingFormOpen, setListingFormOpen] = useState(false);
   const [editingListingId, setEditingListingId] = useState<string | null>(null);
-  const [onboardingComplete, setOnboardingComplete] = usePersistentState<boolean>("yere-demo-onboarding-complete-v1", false, isBooleanValue);
+  const [onboardingComplete] = usePersistentState<boolean>("yere-demo-onboarding-complete-v1", false, isBooleanValue);
   const [onboardingStartedAt, setOnboardingStartedAt] = usePersistentState<number | null>("yere-demo-onboarding-started-at-v1", null, isNullableTimestamp);
   const [view, setView] = useState<View>("overview");
-  const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -1088,8 +1087,7 @@ function App() {
 
   function openAccount() {
     setMobileMoreOpen(false);
-    if (!onboardingComplete && !atelierDisplayName) setOnboardingOpen(true);
-    else setView("account");
+    setView("account");
   }
 
   function createOrder() {
@@ -1118,20 +1116,6 @@ function App() {
         <button className="primary-button auth-submit" type="button" onClick={() => window.location.reload()}>Réessayer la connexion</button>
       </section>
     </main>;
-  }
-
-  if (onboardingOpen) {
-    return <Onboarding
-      atelier={atelier}
-      onAtelierChange={setAtelier}
-      onCancel={() => setOnboardingOpen(false)}
-      onFinish={() => {
-        setOnboardingComplete(true);
-        setOnboardingOpen(false);
-        setView("overview");
-        setNotice("");
-      }}
-    />;
   }
 
   return (
@@ -1179,11 +1163,11 @@ function App() {
             onCreateOrder={createOrder}
             onOpenMeasurements={() => { setQuery(""); setSelectedClient(null); setView("clients"); setMobileMoreOpen(false); }}
             onOpenTools={() => setMobileMoreOpen(true)}
-            onConfigure={() => setOnboardingOpen(true)}
+            onConfigure={() => setView("account")}
           />}
 
           {view === "clients" && <section className="content-card clients-card"><div className="section-heading"><div><h2>Répertoire clients</h2><p>{clients.length} fiche{clients.length > 1 ? "s" : ""} dans cet atelier</p></div><label className="search-box"><span>⌕</span><input autoFocus={view === "clients"} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher par nom ou téléphone" aria-label="Rechercher un client" /></label></div>
-            {showForm && <form className="new-client-form" onSubmit={addClient}><div><h3>Créer une fiche client</h3><p>Les mensurations pourront être complétées ensuite. Prototype local : n’utilisez pas encore de données clients réelles.</p></div><label>Nom complet<input required autoFocus value={clientName} onChange={(event) => setClientName(event.target.value)} placeholder="Ex. Mariama Diallo" /></label><label>Téléphone<input value={clientPhone} onChange={(event) => setClientPhone(event.target.value)} placeholder="+221 77 000 00 00" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>Annuler</button><button type="submit" className="primary-button">Enregistrer le client</button></div></form>}
+            {showForm && <form className="new-client-form" onSubmit={addClient}><div><h3>Créer une fiche client</h3><p>Les mensurations pourront être complétées ensuite. Les fiches clients sont enregistrées dans l’atelier connecté et synchronisées avec le serveur.</p></div><label>Nom complet<input required autoFocus value={clientName} onChange={(event) => setClientName(event.target.value)} placeholder="Ex. Mariama Diallo" /></label><label>Téléphone<input value={clientPhone} onChange={(event) => setClientPhone(event.target.value)} placeholder="+221 77 000 00 00" /></label><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>Annuler</button><button type="submit" className="primary-button">Enregistrer le client</button></div></form>}
             <div className="client-list">{visibleClients.map((client, index) => <button key={client.id} className={selectedClient === client.id ? "client-row selected" : "client-row"} onClick={() => setSelectedClient(selectedClient === client.id ? null : client.id)}><span className={`client-avatar avatar-${index % 4}`}>{client.name.split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</span><span className="client-main"><b>{client.name}</b><small>{client.phone || "Pas de téléphone renseigné"}</small></span><span className="client-measurements"><b>{[client.measurement.bust, client.measurement.waist, client.measurement.hips, client.measurement.shoulder, client.measurement.sleeve, client.measurement.length, client.measurement.arm, client.measurement.neck, client.measurement.thigh, client.measurement.legLength].filter(Boolean).length}/10</b><small>mesures saisies</small></span><span className="row-chevron">›</span></button>)}
               {visibleClients.length === 0 && <div className="empty-state"><span>⌕</span><b>Aucun client trouvé</b><p>Essayez un autre nom ou numéro.</p></div>}
             </div>
@@ -1476,43 +1460,6 @@ function NavIcon({ name }: { name: string }) {
     "tailor-scissors": <><circle cx="5.8" cy="18.2" r="2.7" /><circle cx="17" cy="18.2" r="2.7" /><path d="M7.8 16.2 17.7 3.4c.4-.6 1.2-.5 1.5.1.3.7.1 1.4-.3 2.1L8.5 19M15 16.2 5.1 3.4c-.4-.6-1.2-.5-1.5.1-.3.7-.1 1.4.3 2.1L14.3 19" /><circle cx="11.4" cy="11.7" r=".7" /><path d="M19 10.7h3v4h-3M20.5 10.7v1.2M20.5 13.3v1.4" /></>
   };
   return <svg {...common}>{paths[name] ?? paths.store}</svg>;
-}
-
-function Onboarding({ atelier, onAtelierChange, onCancel, onFinish }: {
-  atelier: AtelierProfile;
-  onAtelierChange: (value: AtelierProfile) => void;
-  onCancel: () => void;
-  onFinish: () => void;
-}) {
-  const [draft, setDraft] = useState<AtelierProfile>(() => normalizeAtelierProfile(atelier));
-  function update(field: "name" | "phone" | "city", value: string) {
-    setDraft((previous) => ({ ...previous, [field]: value }));
-  }
-  return <main className="onboarding-shell">
-    <header className="onboarding-brand"><img className="brand-mark" src="/images/yere-logo.png" alt="" aria-hidden="true" /><span><strong>YÉRÉ</strong><small>ATELIER</small></span><button type="button" className="onboarding-back" onClick={onCancel}>← Retour à l’accueil</button></header>
-    <div className="onboarding-layout onboarding-layout-simple">
-      <section className="onboarding-copy">
-        <p className="eyebrow">CONFIGURATION</p>
-        <h1>Configurez votre espace YÉRÉ</h1>
-        <h2>Un seul outil, adapté à votre métier.</h2>
-        <p className="onboarding-body">YÉRÉ est conçu pour les tailleurs. Configurez votre atelier et votre façon de travailler.</p>
-        <form className="onboarding-form" onSubmit={(event) => { event.preventDefault(); onAtelierChange(normalizeAtelierProfile(draft)); onFinish(); }}>
-          <div className="profile-profession" aria-label="Métier YÉRÉ"><span>Métier</span><strong>Tailleur</strong><small>YÉRÉ est réservé aux tailleurs pour son lancement.</small></div>
-          
-          <label>Comment travaillez-vous ?
-            <select required value={draft.workMode ?? "independent"} onChange={(event) => setDraft((previous) => ({ ...previous, workMode: event.target.value as WorkMode }))}>
-              {workModes.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}
-            </select>
-          </label>
-          <label>Nom de l'atelier ou de votre activité<input required value={draft.name} onChange={(event) => update("name", event.target.value)} placeholder="Nom de l'atelier ou de l'activité" /></label>
-          <label>Téléphone<input type="tel" value={draft.phone} onChange={(event) => update("phone", event.target.value)} placeholder="Téléphone" /></label>
-          <label>Ville<input value={draft.city} onChange={(event) => update("city", event.target.value)} placeholder="Ville" /></label>
-          <button className="primary-button onboarding-primary" type="submit">Créer mon espace YÉRÉ <span>→</span></button>
-        </form>
-        <p className="onboarding-privacy">Prototype : les données sont conservées dans ce navigateur. Aucun compte serveur n'est créé. N’utilisez pas encore de données réelles.</p>
-      </section>
-    </div>
-  </main>;
 }
 
 function OrderTable({ orders, clients, onStatusChange, onRetouchStageChange, onView, onSetFinancialTerms, showFinancials = true, canEditWorkflow = true }: { orders: Order[]; clients: Client[]; onStatusChange: (id: string, status: OrderStatus) => void; onRetouchStageChange: (id: string, stage: RetouchStage) => void; onView?: (order: Order) => void; onSetFinancialTerms: (order: Order) => void; showFinancials?: boolean; canEditWorkflow?: boolean }) {
