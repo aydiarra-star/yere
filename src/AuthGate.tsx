@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { clearSession, consumeAuthCallback, createAtelier, listMyAteliers, readSession, refreshSession, requestPasswordRecovery, signIn, signOut, signUp, supabaseReady, updatePassword, type YereSession } from "./lib/supabaseAuth";
 import { acceptAtelierInvitation, declineAtelierInvitation, listMyAtelierInvitations, type AtelierInvitation } from "./lib/atelierTeam";
-import { resolvePersistentStorageKey } from "./usePersistentState";
+import { resolvePersistentStorageKey, writeServerSeedPreservingArchive } from "./usePersistentState";
 import { purgeUserOfflineVault } from "./lib/offlineVault";
 import PublicMarketplace from "./PublicMarketplace";
 import "./auth-gate.css";
@@ -14,9 +14,13 @@ function seedLocalProfile(userId: string, atelier: Atelier) {
   const suffix = `::${userId}`;
   window.sessionStorage.setItem("yere-user-scope", userId);
   window.sessionStorage.setItem("yere-active-atelier", atelier.id);
-  window.localStorage.setItem(resolvePersistentStorageKey("yere-demo-atelier-v1", userId, atelier.id, "atelier"), JSON.stringify({
+  const profileKey = resolvePersistentStorageKey("yere-demo-atelier-v1", userId, atelier.id, "atelier");
+  const profileValue = JSON.stringify({
     name: atelier.nom, phone: atelier.telephone ?? "", city: atelier.ville ?? "", activity: "tailleur", workMode: atelier.mode_organisation, secondaryActivities: []
-  }));
+  });
+  // Preserve any pre-existing local profile as a recovery archive before replacing it
+  // with server-confirmed metadata. Never destroy the only copy if storage is full.
+  writeServerSeedPreservingArchive(window.localStorage, profileKey, profileValue);
   window.localStorage.setItem(`yere-demo-onboarding-complete-v1${suffix}`, "true");
 }
 
