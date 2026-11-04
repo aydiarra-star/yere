@@ -3,6 +3,8 @@ import {
   decryptOfflinePayload,
   encryptOfflinePayload,
   OFFLINE_CACHE_TTL_MS,
+  isAtelierOfflineVaultKey,
+  isUserOfflineVaultKey,
   sanitizeOfflineSnapshot
 } from "./offlineVault";
 
@@ -65,5 +67,16 @@ describe("offline vault snapshot protection", () => {
 
   it("uses a bounded 24-hour maximum cache lifetime", () => {
     expect(OFFLINE_CACHE_TTL_MS).toBe(24 * 60 * 60 * 1000);
+  });
+
+  it("matches only the exact account and atelier cache scopes", () => {
+    const accountKey = "user-a::atelier-a::clients";
+    const otherAccountKey = "user-ab::atelier-a::clients";
+    const otherAtelierKey = "user-a::atelier-ab::clients";
+    expect(isUserOfflineVaultKey(accountKey, "user-a")).toBe(true);
+    expect(isUserOfflineVaultKey(otherAccountKey, "user-a")).toBe(false);
+    expect(isAtelierOfflineVaultKey(accountKey, "user-a", "atelier-a")).toBe(true);
+    expect(isAtelierOfflineVaultKey(otherAtelierKey, "user-a", "atelier-a")).toBe(false);
+    expect(isAtelierOfflineVaultKey("user%3Aa::atelier%3Aa::stock", "user:a", "atelier:a")).toBe(true);
   });
 });
