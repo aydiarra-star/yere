@@ -1,0 +1,111 @@
+/* YÉRÉ — correctif mobile durable.
+   iOS Safari zooms the page automatically when a focused form control uses
+   a font smaller than 16px. Keep controls at 16px on touch screens and
+   constrain layout width without disabling user-initiated zoom. */
+html {
+  width: 100%;
+  min-width: 320px;
+  max-width: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-top: 16px;
+}
+body, #root {
+  width: 100%;
+  min-width: 320px;
+  max-width: 100%;
+  margin-inline: 0;
+}
+#root { min-height: 100vh; min-height: 100dvh; }
+img, video, canvas, svg { max-width: 100%; }
+.app-shell, .yere-app, .main-content, .page-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+.app-shell { width: 100%; min-height: 100vh; min-height: 100dvh; }
+.app-shell :is(*, *::before, *::after) { box-sizing: border-box; }
+
+@media (max-width: 760px) {
+  html, body, #root {
+    overflow-x: clip;
+  }
+  .app-shell, .yere-app, .main-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  .main-content { min-height: 100vh; min-height: 100dvh; }
+  .page-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-inline: auto !important;
+    padding-left: clamp(12px, 3.8vw, 18px) !important;
+    padding-right: clamp(12px, 3.8vw, 18px) !important;
+    padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* Critical iPhone fix: 16px prevents Safari's automatic input zoom. */
+  :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
+    font-size: 16px !important;
+    line-height: 1.4 !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    scroll-margin-block: 16px;
+  }
+  :is(input, select, textarea, button) {
+    max-width: 100%;
+  }
+
+  /* Keep cards and grids inside the actual phone width. */
+  .app-shell :is(.content-card, .stat-card, .tailor-priority-card, .order-card,
+    .marketplace-page, .marketplace-hero, .marketplace-listing-form,
+    .account-page, .supplier-page, .stock-page, .new-client-form,
+    .new-order-form, .team-panel, .team-invite-form) {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .app-shell :is(.stats-grid, .bottom-grid, .measurement-grid,
+    .today-snapshot, .tailor-priority-grid, .marketplace-photo-grid) {
+    grid-template-columns: minmax(0, 1fr) !important;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .app-shell :is(.welcome-row, .section-heading, .form-actions) {
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+  .app-shell :is(h1, h2, h3, p, label, small, strong, span, a, button) {
+    overflow-wrap: anywhere;
+  }
+  .app-shell .table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Fixed bottom navigation respects the iPhone home-indicator safe area. */
+  .app-shell .mobile-bottom-nav {
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .app-shell .page-wrap {
+    padding-left: 11px !important;
+    padding-right: 11px !important;
+  }
+  .app-shell .mobile-nav-item > small {
+    font-size: 10px !important;
+    white-space: nowrap;
+  }
+}
