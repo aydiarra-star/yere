@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authenticatedFetch } = vi.hoisted(() => ({
-  authenticatedFetch: vi.fn()
+const { authenticatedFetch, publicFetch } = vi.hoisted(() => ({
+  authenticatedFetch: vi.fn(),
+  publicFetch: vi.fn()
 }));
 
-vi.mock("./supabaseAuth", () => ({ authenticatedFetch }));
+vi.mock("./supabaseAuth", () => ({ authenticatedFetch, publicFetch, projectUrl: "https://supabase.example.test" }));
 
 import { createMarketplaceSeller, getMyMarketplaceSeller, saveMarketplaceListing } from "./marketplace";
 import type { YereSession } from "./supabaseAuth";
@@ -55,6 +56,25 @@ describe("marketplace seller privacy boundary", () => {
     });
     expect(authenticatedFetch.mock.calls[0][1]).toBe("rest/v1/rpc/get_my_marketplace_seller_profile");
     expect(authenticatedFetch.mock.calls[0][2]).toMatchObject({ method: "POST", body: "{}" });
+  });
+
+  it("signs the current seller's private logo with the authenticated session", async () => {
+    authenticatedFetch
+      .mockResolvedValueOnce(jsonResponse([{ ...ownSellerRow, logo_path: "user-123/seller-123/logo.jpg" }]))
+      .mockResolvedValueOnce(jsonResponse({
+        signedURL: "/object/sign/yere-market-photos/user-123/seller-123/logo.jpg?token=private"
+      }));
+
+    const seller = await getMyMarketplaceSeller(session);
+
+    expect(seller?.logoUrl).toBe("https://supabase.example.test/storage/v1/object/sign/yere-market-photos/user-123/seller-123/logo.jpg?token=private");
+    expect(authenticatedFetch).toHaveBeenCalledTimes(2);
+    expect(authenticatedFetch.mock.calls[1][1]).toBe("storage/v1/object/sign/yere-market-photos/user-123/seller-123/logo.jpg");
+    expect(authenticatedFetch.mock.calls[1][2]).toMatchObject({
+      method: "POST",
+      body: JSON.stringify({ expiresIn: 3600 })
+    });
+    expect(publicFetch).not.toHaveBeenCalled();
   });
 
   it("returns null for a buyer account without a seller profile", async () => {
