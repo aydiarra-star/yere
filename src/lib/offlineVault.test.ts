@@ -78,7 +78,7 @@ describe("offline vault snapshot protection", () => {
     expect(isOfflineCacheFresh(syncedAt, expiresAt, verifiedAt, Number.NaN)).toBe(false);
     expect(isOfflineCacheFresh(syncedAt, expiresAt + 1, verifiedAt, syncedAt)).toBe(false);
     expect(isOfflineCacheFresh(syncedAt, expiresAt, verifiedAt, expiresAt + 1)).toBe(false);
-    expect(isOfflineCacheFresh(syncedAt - 1, expiresAt, verifiedAt, syncedAt)).toBe(false);
+    expect(isOfflineCacheFresh(verifiedAt - 1, expiresAt, verifiedAt, syncedAt)).toBe(false);
     expect(isOfflineCacheFresh(syncedAt, expiresAt, verifiedAt, syncedAt - 1)).toBe(false);
   });
 
