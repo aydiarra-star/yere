@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { clearSession, consumeAuthCallback, createAtelier, listMyAteliers, readSession, refreshSession, requestPasswordRecovery, signIn, signOut, signUp, supabaseReady, updatePassword, type YereSession } from "./lib/supabaseAuth";
 import { acceptAtelierInvitation, declineAtelierInvitation, listMyAtelierInvitations, type AtelierInvitation } from "./lib/atelierTeam";
 import { resolvePersistentStorageKey } from "./usePersistentState";
+import { purgeUserOfflineVault } from "./lib/offlineVault";
 import PublicMarketplace from "./PublicMarketplace";
 import "./auth-gate.css";
 
@@ -283,8 +284,18 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
   }
 
   async function handleSignOut() {
-    if (session) await signOut(session);
-    setSession(null); setAtelier(null); setWorkspaces([]); setMessage(""); setError(""); setBootstrapError("");
+    let cleanupWarning = "";
+    if (session) {
+      try {
+        await purgeUserOfflineVault(session.user.id);
+      } catch {
+        cleanupWarning = "La déconnexion a eu lieu, mais le nettoyage du cache chiffré n’a pas pu être confirmé. Reconnectez-vous à Internet et réessayez.";
+      }
+      try { await signOut(session); } catch {
+        // signOut clears the local Supabase session in its finally block.
+      }
+    }
+    setSession(null); setAtelier(null); setWorkspaces([]); setMessage(""); setError(cleanupWarning); setBootstrapError("");
     setShowProfessionalAuth(false);
   }
 
