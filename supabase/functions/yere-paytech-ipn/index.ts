@@ -148,7 +148,7 @@ Deno.serve(async (req: Request) => {
       const refunded = await fetch(`${supabaseUrl}/rest/v1/abonnement_paiement?id=eq.${encodeURIComponent(payment.id)}&statut=eq.confirme`, {
         method: "PATCH",
         headers: { ...adminHeaders, Prefer: "return=minimal" },
-        body: JSON.stringify({ statut: "rembourse", details: { provider: "paytech", env, event: "refund_complete" } }),
+        body: JSON.stringify({ statut: "rembourse", details: { ...(payment.details && typeof payment.details === "object" ? payment.details : {}), provider: "paytech", env, event: "refund_complete" } }),
       });
       if (!refunded.ok) throw new Error("Impossible d'enregistrer le remboursement PayTech.");
       return new Response("IPN OK", { status: 200 });
