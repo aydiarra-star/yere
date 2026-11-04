@@ -13,6 +13,7 @@ import "./indigo-design-system.css";
 import "./premium-atelier.css";
 import "./marketplace-harmony.css";
 import "./yere-global-harmony.css";
+import "./mobile-viewport-fix.css";
 
 // Public storefront is the default entry point. The professional atelier space
 // remains available explicitly at /atelier and keeps its existing authentication.
