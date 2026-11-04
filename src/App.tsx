@@ -173,7 +173,7 @@ function App() {
         if (!active) return;
         // Fail closed: no atelier records (especially financial records) are requested
         // until the server confirms this account still has an active membership.
-        const currentMember = requireActiveAtelierMember(serverMembers, session.user.id);
+        const currentMember = requireActiveAtelierMember(serverMembers, session.user.id, atelierId);
         const ownerAccess = currentMember.role === "proprietaire";
         const [serverInvitations, serverClients, serverOrders, serverStock, serverSuppliers, serverSupplierProfile,
           serverExpenses, serverPurchases, serverTasks] = await Promise.all([
