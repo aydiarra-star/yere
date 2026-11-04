@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type Re
 import HomeDashboard from "./HomeDashboard";
 import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, filterOrdersByDelivery, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, retouchStages, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderDeliveryFilter, type OrderStatus, type RetouchStage, type StockItem, type StockMovement } from "./domain";
 import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, workModes, type AtelierProfile, type WorkMode } from "./atelierProfile";
-import { normalizeBackupOnboardingState, normalizeBackupMarketplaceListings } from "./localBackup";
 import { isMarketplaceListingListValid, type MarketplaceListing } from "./marketplace";
 import { usePersistentState } from "./usePersistentState";
 import { createAtelierClient, createAtelierOrder, saveAtelierOrderFinancialTerms, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
@@ -499,8 +498,6 @@ function App() {
         throw new Error("Format de sauvegarde YÉRÉ non reconnu.");
       }
       const data = parsed.data;
-      const onboardingState = normalizeBackupOnboardingState(parsed.schemaVersion as number, data);
-      const marketplaceListingsForRestore = normalizeBackupMarketplaceListings(parsed.schemaVersion as number, data);
       if (!isClientListValid(data.clients)
         || !isOrderListValid(data.orders)
         || !areClientOrderRelationsValid(data.clients, data.orders)
@@ -509,25 +506,14 @@ function App() {
           || !isStockMovementListValid(data.stockMovements)
           || !areStockRelationsValid(data.stockItems, data.stockMovements)))
         || ([4, 5].includes(parsed.schemaVersion as number) && !isSupplierPurchaseListValid(data.supplierPurchases))
-        || (parsed.schemaVersion === 5 && !isMarketplaceListingListValid(marketplaceListingsForRestore))
+        || (parsed.schemaVersion === 5 && !isMarketplaceListingListValid(data.marketplaceListings))
         || !isAtelierProfileValid(data.atelier)
-        || (data.supplier !== undefined && !isSupplierProfileValid(data.supplier))
-        || !isBooleanValue(onboardingState.onboardingComplete)
-        || !isNullableTimestamp(onboardingState.onboardingStartedAt)) {
+        || (data.supplier !== undefined && !isSupplierProfileValid(data.supplier))) {
         throw new Error("La sauvegarde est incomplète ou contient des données invalides. Aucune donnée n'a été modifiée.");
       }
-      // Business records from local backups remain in the selected file only.
-      // They are not loaded into live state because Supabase is the sole operational source.
-      // Atelier identity/onboarding metadata may be restored locally.
-      // The supplier profile is server-owned and must only come from Supabase.
-      setAtelier(data.atelier);
-      setOnboardingComplete(onboardingState.onboardingComplete);
-      setOnboardingStartedAt(onboardingState.onboardingStartedAt);
-      setSelectedClient(null);
-      setShowForm(false);
-      setShowOrderForm(false);
-      setView("overview");
-      setNotice("Sauvegarde locale vérifiée, mais ses anciennes données métier restent dans le fichier : elles ne sont pas mélangées aux données officielles de l’atelier. Une importation contrôlée vers le serveur sera nécessaire.");
+      // Archives are read-only: never restore any field into the active atelier.
+      // Supabase remains the sole source of operational and atelier profile data.
+      setNotice("Archive vérifiée. Elle reste un fichier de consultation : aucune donnée, aucun profil et aucun réglage n’a été réinjecté dans votre atelier. Vos données serveur sont intactes.");
     }).catch((error: unknown) => {
       const message = error instanceof Error ? error.message : "Fichier impossible à lire.";
       setNotice(`Restauration refusée : ${message}`);
