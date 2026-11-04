@@ -77,11 +77,11 @@ async function readJson(response: Response): Promise<unknown> {
   return body;
 }
 
-async function mapSeller(row: SellerRow, userId: string): Promise<MarketplaceSeller> {
+async function mapSeller(row: SellerRow, userId: string, session: YereSession): Promise<MarketplaceSeller> {
   return { id: row.id, userId, sellerType: row.type_vendeur, atelierId: row.atelier_id,
     businessName: row.nom_entreprise, contactName: row.nom_contact, phone: row.telephone, city: row.ville,
     category: row.categorie, description: row.description, logoPath: row.logo_path ?? null,
-    logoUrl: row.logo_path ? await createMarketplacePhotoSignedUrl(row.logo_path) : null, status: row.statut };
+    logoUrl: row.logo_path ? await createMarketplacePhotoSignedUrl(row.logo_path, session) : null, status: row.statut };
 }
 function mapListing(row: ListingRow): MarketplaceListing {
   return { id: row.id, sellerId: row.vendeur_id, title: row.titre, category: row.categorie,
@@ -105,7 +105,7 @@ export async function getMyMarketplaceSeller(session: YereSession): Promise<Mark
   const data = await readJson(response);
   if (!Array.isArray(data)) throw new Error("Profil vendeur invalide.");
   if (!data.length) return null;
-  return await mapSeller(data[0] as SellerRow, session.user.id);
+  return await mapSeller(data[0] as SellerRow, session.user.id, session);
 }
 
 export async function createMarketplaceSeller(session: YereSession, input: { sellerType: MarketplaceSeller["sellerType"]; atelierId: string | null; businessName: string; contactName: string; phone: string; city: string; category: string; description: string }): Promise<MarketplaceSeller> {
@@ -220,12 +220,15 @@ export async function deleteMarketplacePhotos(session: YereSession, paths: strin
   }));
 }
 
-async function createMarketplacePhotoSignedUrl(path: string): Promise<string | null> {
+async function createMarketplacePhotoSignedUrl(path: string, session?: YereSession): Promise<string | null> {
   try {
-    const response = await publicFetch(
-      `storage/v1/object/sign/${MARKETPLACE_PHOTO_BUCKET}/${storageObjectPath(path)}`,
-      { method: "POST", body: JSON.stringify({ expiresIn: 3600 }) }
-    );
+    const signPath = `storage/v1/object/sign/${MARKETPLACE_PHOTO_BUCKET}/${storageObjectPath(path)}`;
+    const request = { method: "POST", body: JSON.stringify({ expiresIn: 3600 }) };
+    // A seller's own private logo is readable only with their authenticated session.
+    // Public catalogue photos continue to use the anonymous, published-listing policy.
+    const response = session
+      ? await authenticatedFetch(session, signPath, request)
+      : await publicFetch(signPath, request);
     const data = await readJson(response) as { signedURL?: unknown };
     if (typeof data.signedURL !== "string" || !projectUrl) return null;
     const signedPath = data.signedURL;
@@ -366,7 +369,7 @@ export async function listPublicMarketplaceListings(): Promise<PublicMarketplace
   });
   return Promise.all(publicListings.map(async (listing) => ({
     ...listing,
-    photoUrls: (await Promise.all(listing.photos.map(createMarketplacePhotoSignedUrl)))
+    photoUrls: (await Promise.all(listing.photos.map((path) => createMarketplacePhotoSignedUrl(path))))
       .filter((url): url is string => url !== null)
   })));
 }
