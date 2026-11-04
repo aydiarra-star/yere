@@ -107,9 +107,11 @@ export async function signUp(email: string, password: string, redirectPath = "/"
   const redirectTo = `${window.location.origin}${safePath}`;
   const response = await fetch(apiUrl(`auth/v1/signup?redirect_to=${encodeURIComponent(redirectTo)}`), { method: "POST", headers: headers(), body: JSON.stringify({ email, password }) });
   const body = await parseResponse(response);
+  const payload = body as { user?: { identities?: unknown[] } };
+  const alreadyRegistered = Array.isArray(payload.user?.identities) && payload.user.identities.length === 0;
   const session = toSession(body);
   if (session) saveSession(session);
-  return { session };
+  return { session, alreadyRegistered };
 }
 
 export async function signIn(email: string, password: string): Promise<YereSession> {
