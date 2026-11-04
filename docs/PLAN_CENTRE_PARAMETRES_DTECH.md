@@ -31,6 +31,14 @@
 - Le chiffrement local, l'expiration/effacement des données locales et les tests de fuite entre deux comptes ou deux ateliers.
 - La validation sur iPhone et ordinateur en mode avion.
 
+### Démarrage et vérification de session — correctif appliqué
+
+- Au démarrage, une session déjà enregistrée n'est plus effacée simplement parce que la vérification du compte ou de l'atelier échoue temporairement (par exemple en cas de coupure réseau).
+- Dans ce cas, l'application conserve la session et affiche un écran de vérification avec une action « Réessayer » et une possibilité de déconnexion.
+- Aucun atelier ni aucune donnée métier ne sont affichés tant que le serveur n'a pas confirmé l'accès à l'atelier.
+- Une session absente ou un retour d'authentification invalide ne donne pas accès à l'espace professionnel.
+- Ce correctif évite une déconnexion locale intempestive ; il ne fournit pas encore un accès métier hors ligne et ne remplace pas la validation des droits par Supabase.
+
 ### Architecture obligatoire avant d'activer l'écriture hors ligne
 
 1. Supabase reste l'unique source de vérité. Le navigateur conserve seulement une copie locale bornée, explicitement marquée comme synchronisée ou en attente.
