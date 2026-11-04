@@ -129,6 +129,7 @@ Deno.serve(async (req: Request) => {
         target_payment: "Orange Money, Wave, Free Money, Carte Bancaire",
         env,
         ipn_url: ipnUrl,
+        refund_notif_url: ipnUrl,
         success_url: `${appOrigin}/atelier?abonnement=retour`,
         cancel_url: `${appOrigin}/atelier?abonnement=annule`,
         custom_field: JSON.stringify({ product: "yere_atelier_subscription", reference }),

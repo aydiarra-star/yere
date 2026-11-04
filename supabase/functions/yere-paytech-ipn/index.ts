@@ -18,6 +18,25 @@ async function hmacSha256(secret: string, message: string): Promise<string> {
   return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+async function sha256(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function verifyNotification(data: Record<string, unknown>, apiKey: string, apiSecret: string, amount: string, reference: string): Promise<boolean> {
+  const receivedHmac = typeof data.hmac_compute === "string" ? data.hmac_compute : "";
+  if (receivedHmac) {
+    const expected = await hmacSha256(apiSecret, amount + "|" + reference + "|" + apiKey);
+    return constantTimeEqual(expected.toLowerCase(), receivedHmac.toLowerCase());
+  }
+  const receivedKeyHash = typeof data.api_key_sha256 === "string" ? data.api_key_sha256 : "";
+  const receivedSecretHash = typeof data.api_secret_sha256 === "string" ? data.api_secret_sha256 : "";
+  if (!receivedKeyHash || !receivedSecretHash) return false;
+  const hashes = await Promise.all([sha256(apiKey), sha256(apiSecret)]);
+  return constantTimeEqual(hashes[0], receivedKeyHash.toLowerCase())
+    && constantTimeEqual(hashes[1], receivedSecretHash.toLowerCase());
+}
+
 async function readPayload(req: Request): Promise<Record<string, unknown>> {
   const raw = await req.text();
   const contentType = req.headers.get("content-type") ?? "";
@@ -50,13 +69,11 @@ Deno.serve(async (req: Request) => {
     const data = await readPayload(req);
     const typeEvent = String(data.type_event ?? "");
     const reference = String(data.ref_command ?? "");
-    const receivedHmac = String(data.hmac_compute ?? "");
     const signedAmount = String(data.final_item_price ?? data.item_price ?? "");
-    if (!reference || !signedAmount || !receivedHmac) return json({ message: "Notification non authentifiée." }, 403);
+    if (!reference || !signedAmount) return json({ message: "Notification non authentifiée." }, 403);
 
-    // PayTech HMAC-SHA256: final_item_price (or item_price) | ref_command | API_KEY.
-    const expected = await hmacSha256(apiSecret, `${signedAmount}|${reference}|${apiKey}`);
-    if (!constantTimeEqual(expected.toLowerCase(), receivedHmac.toLowerCase())) {
+    // Prefer HMAC; use documented SHA256 key hashes only when HMAC is absent.
+    if (!await verifyNotification(data, apiKey, apiSecret, signedAmount, reference)) {
       console.warn("PayTech IPN: HMAC invalide.");
       return json({ message: "Signature invalide." }, 403);
     }
@@ -82,10 +99,11 @@ Deno.serve(async (req: Request) => {
       : methodText.includes("carte") || methodText.includes("bank") ? "carte" : "autre";
     const providerReference = typeof data.token === "string" ? data.token : null;
     const amount = Number(signedAmount);
+    const currency = String(data.currency ?? "").toUpperCase();
     const env = String(data.env ?? "unknown");
 
     if (typeEvent === "sale_complete") {
-      if (!Number.isSafeInteger(amount) || amount !== Number(payment.montant_fcfa) || amount !== 5000) {
+      if (currency !== "XOF" || !Number.isSafeInteger(amount) || amount !== Number(payment.montant_fcfa) || amount !== 5000) {
         console.error("PayTech IPN: montant non conforme pour", reference);
         return json({ message: "Montant de paiement non conforme." }, 409);
       }
@@ -120,10 +138,17 @@ Deno.serve(async (req: Request) => {
     }
 
     if (typeEvent === "refund_complete") {
+      if (currency !== "XOF" || !Number.isSafeInteger(amount) || amount !== Number(payment.montant_fcfa) || amount !== 5000) {
+        console.error("PayTech IPN: remboursement non conforme pour", reference);
+        return json({ message: "Montant ou devise du remboursement non conforme." }, 409);
+      }
+      if (payment.statut !== "confirme" && payment.statut !== "rembourse") {
+        return json({ message: "Paiement non remboursable dans son état actuel." }, 409);
+      }
       const refunded = await fetch(`${supabaseUrl}/rest/v1/abonnement_paiement?id=eq.${encodeURIComponent(payment.id)}&statut=eq.confirme`, {
         method: "PATCH",
         headers: { ...adminHeaders, Prefer: "return=minimal" },
-        body: JSON.stringify({ statut: "rembourse", details: { provider: "paytech", env, event: "refund_complete" } }),
+        body: JSON.stringify({ statut: "rembourse", details: { ...(payment.details && typeof payment.details === "object" ? payment.details : {}), provider: "paytech", env, event: "refund_complete" } }),
       });
       if (!refunded.ok) throw new Error("Impossible d'enregistrer le remboursement PayTech.");
       return new Response("IPN OK", { status: 200 });
