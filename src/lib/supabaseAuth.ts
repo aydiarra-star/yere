@@ -101,7 +101,7 @@ async function parseResponse(response: Response): Promise<unknown> {
   return body;
 }
 
-export async function signUp(email: string, password: string, redirectPath = "/"): Promise<{ session: YereSession | null }> {
+export async function signUp(email: string, password: string, redirectPath = "/"): Promise<{ session: YereSession | null; alreadyRegistered: boolean }> {
   // The redirect path keeps public-market signups on the public market after email confirmation.
   const safePath = redirectPath.startsWith("/") && !redirectPath.startsWith("//") ? redirectPath : "/";
   const redirectTo = `${window.location.origin}${safePath}`;
