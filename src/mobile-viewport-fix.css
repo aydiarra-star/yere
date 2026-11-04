@@ -48,18 +48,14 @@ img, video, canvas, svg { max-width: 100%; }
   }
 
   /* Critical iPhone fix: 16px prevents Safari's automatic input zoom. */
-  .app-shell :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea),
-  .yere-app :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea),
-  .yere-market-app :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea),
-  .onboarding-shell :is(input, select, textarea) {
+  :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
     font-size: 16px !important;
     line-height: 1.4 !important;
     max-width: 100% !important;
     min-width: 0 !important;
     scroll-margin-block: 16px;
   }
-  .app-shell :is(input, select, textarea, button),
-  .yere-market-app :is(input, select, textarea, button) {
+  :is(input, select, textarea, button) {
     max-width: 100%;
   }
 
