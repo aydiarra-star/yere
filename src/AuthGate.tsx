@@ -234,16 +234,18 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
       setMessage("Votre mot de passe a été modifié. Vous êtes connecté à YÉRÉ.");
       await loadWorkspace(session);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Impossible de modifier le mot de passe. Demandez un nouveau lien.");
+      setWorkspaceError(cause instanceof Error ? cause.message : "Impossible de charger votre atelier après la modification du mot de passe. Réessayez.");
     } finally { setBusy(false); }
   }
 
   async function submitAtelier(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!session) return;
-    setBusy(true); setError("");
+    let atelierCreated = false;
+    setBusy(true); setError(""); setWorkspaceError("");
     try {
       const id = await createAtelier(session, { nom: atelierName.trim(), telephone: phone.trim(), ville: city.trim() });
+      atelierCreated = true;
       const workspaces = await listMyAteliers(session);
       setWorkspaces(workspaces);
       const created = workspaces.find((item) => item.id === id);
@@ -256,7 +258,9 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
       // is initialized with the new tenant ID and its owner role.
       window.location.reload();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Création de l'atelier impossible.");
+      const detail = cause instanceof Error ? cause.message : "Création de l'atelier impossible.";
+      if (atelierCreated) setWorkspaceError(detail);
+      else setError(detail);
     } finally { setBusy(false); }
   }
 
