@@ -47,6 +47,13 @@ function validContext(context: OfflineVaultContext): void {
 function recordId(userId: string, atelierId: string, dataset: OfflineDataset): string {
   return [userId, atelierId, dataset].map(encodeURIComponent).join("::");
 }
+/** Exact encoded-key scopes prevent one account or atelier prefix matching another. */
+export function isUserOfflineVaultKey(key: string, userId: string): boolean {
+  return key.startsWith(encodeURIComponent(userId) + "::");
+}
+export function isAtelierOfflineVaultKey(key: string, userId: string, atelierId: string): boolean {
+  return key.startsWith([userId, atelierId].map(encodeURIComponent).join("::") + "::");
+}
 function additionalData(userId: string, atelierId: string, dataset: OfflineDataset): Uint8Array {
   return new TextEncoder().encode(`yere-offline-v1|${userId}|${atelierId}|${dataset}`);
 }
@@ -262,14 +269,13 @@ export async function purgeUserOfflineVault(userId: string): Promise<void> {
   const db = await openDatabase();
   try {
     const transaction = db.transaction([DATA_STORE, KEY_STORE], "readwrite");
-    const prefix = encodeURIComponent(userId) + "::";
     for (const storeName of [DATA_STORE, KEY_STORE]) {
       const store = transaction.objectStore(storeName);
       const request = store.openKeyCursor();
       request.onsuccess = () => {
         const cursor = request.result;
         if (!cursor) return;
-        if (String(cursor.key).startsWith(prefix)) store.delete(cursor.primaryKey);
+        if (isUserOfflineVaultKey(String(cursor.key), userId)) store.delete(cursor.primaryKey);
         cursor.continue();
       };
     }
@@ -283,14 +289,13 @@ export async function purgeOfflineVault(context: Pick<OfflineVaultContext, "user
   const db = await openDatabase();
   try {
     const transaction = db.transaction([DATA_STORE, KEY_STORE], "readwrite");
-    const prefix = [context.userId, context.atelierId].map(encodeURIComponent).join("::") + "::";
     for (const storeName of [DATA_STORE, KEY_STORE]) {
       const store = transaction.objectStore(storeName);
       const request = store.openKeyCursor();
       request.onsuccess = () => {
         const cursor = request.result;
         if (!cursor) return;
-        if (String(cursor.key).startsWith(prefix)) store.delete(cursor.primaryKey);
+        if (isAtelierOfflineVaultKey(String(cursor.key), context.userId, context.atelierId)) store.delete(cursor.primaryKey);
         cursor.continue();
       };
     }
