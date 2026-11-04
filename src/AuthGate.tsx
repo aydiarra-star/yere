@@ -20,8 +20,16 @@ function seedLocalProfile(userId: string, atelier: Atelier) {
   });
   // Preserve any pre-existing local profile as a recovery archive before replacing it
   // with server-confirmed metadata. Never destroy the only copy if storage is full.
-  writeServerSeedPreservingArchive(window.localStorage, profileKey, profileValue);
-  window.localStorage.setItem(`yere-demo-onboarding-complete-v1${suffix}`, "true");
+  if (!writeServerSeedPreservingArchive(window.localStorage, profileKey, profileValue)) {
+    throw new Error("YÉRÉ ne peut pas préserver les anciennes informations locales de cet atelier. Par sécurité, l’espace reste fermé. Libérez de l’espace de stockage puis réessayez.");
+  }
+  // This flag is only a local presentation hint; it must never prevent access
+  // after the server has already confirmed the account and atelier.
+  try {
+    window.localStorage.setItem(`yere-demo-onboarding-complete-v1${suffix}`, "true");
+  } catch {
+    // The server remains the source of truth; ignore a nonessential UI hint failure.
+  }
 }
 
 export default function AuthGate({ children, initialProfessionalLogin = false }: Props) {
