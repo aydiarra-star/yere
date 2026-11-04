@@ -3167,3 +3167,8 @@ main.main-content .page-wrap .tailor-priority-card .tailor-card-art{
 .dtech-settings-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .dtech-settings-actions .primary-button,.dtech-settings-actions .secondary-button{min-height:44px}
 @media(max-width:640px){.dtech-settings-actions{display:grid;grid-template-columns:1fr}.dtech-settings-actions button{width:100%}}
+
+/* Contraste renforcé pour l’accès au centre des paramètres */
+.account-section-heading > .secondary-button { background: #0B1F3A; border-color: #0B1F3A; color: #fff; font-weight: 700; }
+.account-section-heading > .secondary-button:hover { background: #13294B; border-color: #13294B; }
+.account-section-heading > .secondary-button:focus-visible { outline: 3px solid #D8B46A; outline-offset: 3px; }
