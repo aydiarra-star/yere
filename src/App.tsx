@@ -1230,7 +1230,7 @@ function App() {
           {view === "cash" && isAtelierOwner && <section className="cash-page">
             <div className="cash-summary-grid">
               <article className="content-card cash-summary"><span>Reste à encaisser</span><strong>{formatXof(outstanding)}</strong><small>Soldes des commandes non réglées</small></article>
-              <article className="content-card cash-summary"><span>Total encaissé</span><strong>{formatXof(totalCollected)}</strong><small>Versements enregistrés dans ce prototype</small></article>
+              <article className="content-card cash-summary"><span>Total encaissé</span><strong>{formatXof(totalCollected)}</strong><small>Versements enregistrés dans l’atelier connecté</small></article>
               <article className="content-card cash-summary"><span>Dépenses enregistrées</span><strong>{formatXof(totalExpenses)}</strong><small>Dépenses actives synchronisées sur le serveur, hors règlements fournisseurs suivis séparément</small></article>
               <article className="content-card cash-summary"><span>Règlements fournisseurs</span><strong>{formatXof(totalSupplierPayments)}</strong><small>Sorties enregistrées dans le module Achats fournisseurs</small></article>
               <article className="content-card cash-summary"><span>Encaissements − sorties suivies</span><strong>{formatXof(totalCollected - totalCashOutflows)}</strong><small>Indicateur de trésorerie simplifié, pas un solde comptable</small></article>
