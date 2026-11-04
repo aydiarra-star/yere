@@ -100,7 +100,17 @@ Deno.serve(async (req: Request) => {
     const providerReference = typeof data.token === "string" ? data.token : null;
     const amount = Number(signedAmount);
     const currency = String(data.currency ?? "").toUpperCase();
-    const env = String(data.env ?? "unknown");
+    // The environment is trusted from server configuration and the stored checkout,
+    // never from the notification alone. PayTech's HMAC does not include the env field.
+    const configuredEnv = Deno.env.get("PAYTECH_ENV") === "prod" ? "prod" : "test";
+    const storedEnv = payment.details && typeof payment.details === "object"
+      ? (payment.details as Record<string, unknown>).env
+      : null;
+    if (storedEnv !== configuredEnv || (typeof data.env === "string" && data.env !== configuredEnv)) {
+      console.warn("PayTech IPN: environnement de paiement non conforme.");
+      return json({ message: "Environnement de paiement non conforme." }, 409);
+    }
+    const env = configuredEnv;
 
     if (typeEvent === "sale_complete") {
       if (currency !== "XOF" || !Number.isSafeInteger(amount) || amount !== Number(payment.montant_fcfa) || amount !== 5000) {
