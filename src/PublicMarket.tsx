@@ -334,6 +334,19 @@ export default function PublicMarket() {
         <div className="pm-hero-art" aria-hidden="true"><div className="pm-art-circle"></div><div className="pm-art-card pm-art-card-one"><span>YÉRÉ</span><b>Le savoir-faire<br/>à l’honneur</b><small>MODE · TISSUS · MERCERIE</small></div><div className="pm-art-card pm-art-card-two"><span>✦</span><b>Créé avec soin</b><small>PAR LES ARTISANS</small></div></div>
       </section>
 
+      <section className="pm-subscription-promo" aria-labelledby="pm-subscription-title">
+        <div className="pm-subscription-copy">
+          <span className="pm-eyebrow">POUR LES ATELIERS DE COUTURE</span>
+          <h2 id="pm-subscription-title">Abonnement YÉRÉ</h2>
+          <p className="pm-subscription-trial">2 mois d’essai gratuit</p>
+          <p className="pm-subscription-description">Puis <strong>5 000 FCFA / mois / atelier</strong>, avec toute l’équipe incluse.</p>
+        </div>
+        <div className="pm-subscription-action">
+          <a className="pm-cta" href="/atelier">Découvrir l’abonnement <span aria-hidden="true">→</span></a>
+          <small>La souscription et le paiement sont réservés au propriétaire connecté à son atelier.</small>
+        </div>
+      </section>
+
       {showAccount && <section className="pm-panel pm-account-panel"><div><span className="pm-eyebrow">ESPACE CLIENT</span><h2>{authMode === "login" ? "Heureux de vous retrouver." : "Créer un compte Market"}</h2><p>Un compte est nécessaire pour passer commande et retrouver vos achats. Aucun atelier n’est requis.</p></div><form onSubmit={submitAuth}><label>E-mail<input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label><label>Mot de passe<input type="password" minLength={8} required autoComplete={authMode === "login" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} /></label><button className="pm-cta" type="submit" disabled={busy}>{busy ? "Veuillez patienter…" : authMode === "login" ? "Se connecter" : "Créer mon compte"}</button><button type="button" className="pm-text-button" onClick={() => setAuthMode(authMode === "login" ? "signup" : "login")}>{authMode === "login" ? "Créer un compte" : "J’ai déjà un compte"}</button></form></section>}
 
       {error && <p className="pm-alert pm-error" role="alert">{error}</p>}
