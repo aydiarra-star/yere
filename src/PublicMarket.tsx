@@ -128,6 +128,7 @@ export default function PublicMarket() {
         setAuthMode("login");
         return;
       }
+      let next: YereSession;
       if (authMode === "signup") {
         const result = await signUp(email.trim().toLowerCase(), password, "/");
         if (result.alreadyRegistered) {
@@ -140,12 +141,9 @@ export default function PublicMarket() {
           setAuthMode("login");
           return;
         }
-        setSession(result.session);
-        await loadAccount(result.session);
+        next = result.session;
       } else {
-        const next = await signIn(email.trim().toLowerCase(), password);
-        setSession(next);
-        await loadAccount(next);
+        next = await signIn(email.trim().toLowerCase(), password);
       }
       setSession(next);
       await loadAccount(next);
