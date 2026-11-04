@@ -23,3 +23,17 @@
 .home-subscription-payment .privacy-note{max-width:430px;margin:0;font-size:11px;line-height:1.45}
 .home-subscription-payment>p{max-width:280px;margin:0;color:#687386;font-size:11px;line-height:1.45}
 @media(max-width:760px){.home-subscription{margin-bottom:16px;padding:16px 14px;border-radius:13px}.home-subscription-heading{gap:8px}.home-subscription-heading h2{font-size:18px}.home-subscription-heading p{max-width:210px;font-size:11px}.home-subscription-price{padding:8px;font-size:13px}.home-subscription-facts{grid-template-columns:1fr 1fr;gap:12px}.home-subscription-facts>div:first-child{grid-column:1/-1}.home-subscription-payment{display:grid;gap:7px}.home-subscription-payment .paytech-subscription-action{display:grid;width:100%}.home-subscription-payment .paytech-subscription-action .primary-button{width:100%;white-space:normal}.home-subscription-payment .privacy-note,.home-subscription-payment>p{max-width:none}}
+
+/* Accueil plus dense : réduire les grands espacements sans supprimer les repères utiles. */
+@media(min-width:761px){
+  .home-layout{grid-template-columns:minmax(0,1.8fr) minmax(230px,.65fr);gap:20px}
+  .home-greeting{padding-bottom:14px}
+  .priority-list{gap:9px}
+  .priority-card{min-height:145px}
+}
+@media(max-width:760px){
+  .home-greeting{padding-bottom:12px}
+  .home-priorities{margin-top:0}
+  .priority-list{gap:8px}
+  .priority-card{min-height:132px}
+}
