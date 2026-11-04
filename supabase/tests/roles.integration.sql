@@ -248,7 +248,7 @@ begin
 end $$;
 update public.commande_tache set statut='en_cours', note_avancement='Début du travail'
 where id='60000000-0000-4000-8000-000000000001';
-do $
+do $employee_order_update$
 declare
   v_updated_rows integer;
 begin
@@ -262,7 +262,7 @@ begin
   exception when insufficient_privilege or check_violation then
     null;
   end;
-end $;
+end $employee_order_update$;
 update public.commande_tache set statut='terminee', note_avancement='Travail terminé'
 where id='60000000-0000-4000-8000-000000000001';
 reset role;
