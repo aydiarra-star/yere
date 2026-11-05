@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import HomeDashboard from "./HomeDashboard";
-import YereSubscriptionCard from "./YereSubscriptionCard";
 import SettingsCenter from "./SettingsCenter";
 import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, filterOrdersByDelivery, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, retouchStages, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderDeliveryFilter, type OrderStatus, type RetouchStage, type StockItem, type StockMovement } from "./domain";
 import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, workModes, type AtelierProfile, type WorkMode } from "./atelierProfile";
@@ -8,7 +7,6 @@ import { isMarketplaceListingListValid, type MarketplaceListing } from "./market
 import { usePersistentState } from "./usePersistentState";
 import { createAtelierClient, createAtelierOrder, saveAtelierOrderFinancialTerms, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
 import { readSession, updateAtelierProfile } from "./lib/supabaseAuth";
-import { getAtelierSubscription, listAtelierSubscriptionPayments, type AtelierSubscription, type SubscriptionPayment } from "./lib/atelierSubscription";
 import { createAtelierTask, listAtelierTasks, updateAtelierTask, type AtelierTask, type AtelierTaskStatus } from "./lib/atelierTasks";
 import { cancelAtelierInvitation, createAtelierInvitation, deactivateAtelierMember, reactivateAtelierMember, listAtelierInvitations, listAtelierMembers, updateAtelierMemberRole, updateAtelierMemberProfile, type AtelierInvitation, type AtelierMember, requireActiveAtelierMember } from "./lib/atelierTeam";
 import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, getAtelierSupplierProfile, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, saveAtelierSupplierProfile, type AtelierSupplier } from "./lib/atelierSuppliers";
@@ -130,10 +128,6 @@ function App() {
     readSession() && typeof window !== "undefined" && window.sessionStorage.getItem("yere-active-atelier") ? "loading" : "idle"
   );
   const [serverSyncError, setServerSyncError] = useState("");
-  const [atelierSubscription, setAtelierSubscription] = useState<AtelierSubscription | null>(null);
-  const [subscriptionPayments, setSubscriptionPayments] = useState<SubscriptionPayment[]>([]);
-  const [subscriptionLoadError, setSubscriptionLoadError] = useState("");
-  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
   useEffect(() => {
     if (onboardingStartedAt === null) setOnboardingStartedAt(Date.now());
@@ -158,10 +152,6 @@ function App() {
     setAtelierTasks([]);
     setSupplierPurchases([]);
     setSupplier(emptySupplier);
-    setAtelierSubscription(null);
-    setSubscriptionPayments([]);
-    setSubscriptionLoadError("");
-    setSubscriptionLoading(false);
     setSelectedClient(null);
     setTaskOrderId("");
     setTaskAssigneeId("");
@@ -233,8 +223,6 @@ function App() {
           setAtelierTasks([]);
           setSupplierPurchases([]);
           setSupplier(emptySupplier);
-          setAtelierSubscription(null);
-          setSubscriptionPayments([]);
           setSelectedClient(null);
           setServerSyncError(message);
           setServerSyncStatus("error");
@@ -244,36 +232,6 @@ function App() {
     })();
     return () => { active = false; };
   }, [setClients, setOrders, setSupplierPurchases]);
-
-  useEffect(() => {
-    const ownerAccess = teamMembers.some((member) => member.userId === readSession()?.user.id && member.active && member.role === "proprietaire");
-    if (serverSyncStatus !== "ready" || !ownerAccess) {
-      setAtelierSubscription(null);
-      setSubscriptionPayments([]);
-      setSubscriptionLoadError("");
-      return;
-    }
-    const session = readSession();
-    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
-    if (!session || !atelierId) return;
-    let active = true;
-    setSubscriptionLoading(true);
-    setSubscriptionLoadError("");
-    void (async () => {
-      try {
-        const subscription = await getAtelierSubscription(session, atelierId);
-        if (!active) return;
-        setAtelierSubscription(subscription);
-        const payments = subscription ? await listAtelierSubscriptionPayments(session, subscription.id) : [];
-        if (active) setSubscriptionPayments(payments);
-      } catch (cause) {
-        if (active) setSubscriptionLoadError(cause instanceof Error ? cause.message : "Impossible de lire l’abonnement.");
-      } finally {
-        if (active) setSubscriptionLoading(false);
-      }
-    })();
-    return () => { active = false; };
-  }, [serverSyncStatus, teamMembers]);
 
   useEffect(() => {
     if (!taskOrderId) setTaskOrderId(orders.find((order) => order.serverId)?.serverId ?? "");
@@ -1281,7 +1239,7 @@ function App() {
           </section>}
 
           {view === "account" && <section className="content-card account-page">
-            <div className="section-heading account-section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div></div>
+            <div className="section-heading account-section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div><button type="button" className="secondary-button" onClick={() => setView("settings")}>⚙ Paramètres de l’atelier</button></div>
             <div id="yere-profile-account-controls" className="profile-account-controls-slot" />
             <form className="account-form" onSubmit={(event) => { event.preventDefault(); void (async () => { const session = readSession(); const atelierId = window.sessionStorage.getItem("yere-active-atelier"); const profile = normalizeAtelierProfile(atelier); if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; } if (!profile.name.trim()) { setNotice("Le nom de l’atelier est obligatoire."); return; } try { await updateAtelierProfile(session, atelierId, { nom: profile.name, telephone: profile.phone, ville: profile.city, mode_organisation: profile.workMode ?? "independent" }); setAtelier(profile); setNotice("Profil de l’atelier enregistré et confirmé par Supabase."); } catch (cause) { setNotice(cause instanceof Error ? `Profil non enregistré : ${cause.message}` : "Impossible d’enregistrer le profil sur le serveur."); } })(); }}>
               <div className="profile-profession" aria-label="Métier YÉRÉ"><span>Métier</span><strong>Tailleur</strong><small>YÉRÉ est actuellement dédié aux tailleurs.</small></div>
@@ -1292,20 +1250,6 @@ function App() {
               <label>Ville<input value={atelier.city} onChange={(event) => setAtelier((current) => ({ ...current, city: event.target.value }))} /></label>
               <button type="submit" className="primary-button">Enregistrer le profil</button>
             </form>
-            {isAtelierOwner && <section className="team-panel" aria-labelledby="subscription-title">
-              <YereSubscriptionCard />
-              <div className="content-card team-panel">
-                <div className="section-heading"><div><h3 id="subscription-title">Votre abonnement</h3><p>Un abonnement par atelier, toute l’équipe incluse.</p></div><button type="button" className="secondary-button" onClick={() => setView("settings")}>⚙ Paramètres de l’atelier</button></div>
-                {subscriptionLoading ? <p role="status">Chargement du statut de l’abonnement…</p>
-                  : subscriptionLoadError ? <p role="alert">Statut indisponible : {subscriptionLoadError}</p>
-                  : atelierSubscription ? <>
-                    <p><strong>Statut :</strong> {({essai:"Période d’essai",actif:"Actif",paiement_requis:"Paiement requis",en_retard:"Paiement en retard",suspendu:"Suspendu",resilie:"Résilié"} as Record<AtelierSubscription["status"],string>)[atelierSubscription.status]}</p>
-                    <p><strong>Fin de l’essai :</strong> {new Date(atelierSubscription.trialEndsAt).toLocaleDateString("fr-FR")}</p>
-                    {atelierSubscription.nextDueAt && <p><strong>Prochaine échéance :</strong> {new Date(atelierSubscription.nextDueAt).toLocaleDateString("fr-FR")}</p>}
-                    <p className="privacy-note">Votre abonnement et son échéance sont suivis ici. Les détails des transactions ne sont pas affichés dans cet espace.</p>
-                    </>
-              </div>
-            </section>}
             <section className="content-card team-panel" aria-labelledby="team-title">
               <div className="section-heading"><div><h3 id="team-title">Équipe et accès à l’atelier</h3><p>Les droits sont contrôlés sur le serveur et chaque membre reste limité à cet atelier.</p></div><span className="marketplace-listing-count">{teamMembers.filter((member) => member.active).length} membre(s)</span></div>
               <div className="table-wrap"><table><thead><tr><th>Profil professionnel / compte</th><th>Rôle</th><th>État</th><th>Depuis</th>{isAtelierOwner ? <th>Actions</th> : null}</tr></thead><tbody>{teamMembers.map((member) => <tr key={member.userId}><td><strong>{member.professionalName || (member.role === "proprietaire" ? "Propriétaire de l’atelier" : member.role === "gestionnaire" ? "Gestionnaire" : "Profil à compléter")}</strong>{member.specialties.length ? <small>{member.specialties.join(" · ")}</small> : null}{member.experienceLevel ? <small>{({debutant:"Débutant",intermediaire:"Intermédiaire",experimente:"Expérimenté",maitre:"Maître tailleur"} as const)[member.experienceLevel]}</small> : null}{member.presentation ? <small>{member.presentation}</small> : null}<code>{member.userId.slice(0,8)}…{member.userId.slice(-4)}</code>{member.userId === currentUserId ? <small>Votre compte</small> : null}{isAtelierOwner && member.active && member.role === "employe" ? <TailorProfileEditor member={member} busy={teamBusy} onSave={saveTailorProfessionalProfile} /> : null}</td><td>{member.role === "proprietaire" ? "Propriétaire" : member.role === "gestionnaire" ? "Gestionnaire" : "Tailleur"}</td><td>{member.active ? "Actif" : "Désactivé"}</td><td>{new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(member.createdAt))}</td>{isAtelierOwner ? <td>{member.role !== "proprietaire" ? <div className="team-member-actions">{member.active ? <>{editingTeamRoleUserId === member.userId ? <><select aria-label={`Nouveau rôle de ${member.professionalName || "ce membre"}`} value={teamRoleDraft} disabled={teamBusy} onChange={(event) => setTeamRoleDraft(event.target.value as "gestionnaire" | "employe")}><option value="employe">Tailleur</option><option value="gestionnaire">Gestionnaire</option></select><button type="button" className="text-button" disabled={teamBusy || teamRoleDraft === member.role} onClick={() => void saveTeamMemberRole(member)}>Confirmer</button><button type="button" className="text-button" disabled={teamBusy} onClick={() => setEditingTeamRoleUserId(null)}>Annuler</button></> : <><button type="button" className="text-button" disabled={teamBusy} onClick={() => { setTeamRoleDraft(member.role === "gestionnaire" ? "gestionnaire" : "employe"); setEditingTeamRoleUserId(member.userId); }}>Modifier le rôle</button><button type="button" className="text-button" disabled={teamBusy} onClick={() => void deactivateTeamMember(member)}>Désactiver</button></>}</> : <><span className="privacy-note">Accès retiré</span><button type="button" className="text-button" disabled={teamBusy} onClick={() => void reactivateTeamMember(member)}>Rétablir l’accès</button></>}</div> : <span className="privacy-note">Compte propriétaire protégé</span>}</td> : null}</tr>)}</tbody></table></div>
