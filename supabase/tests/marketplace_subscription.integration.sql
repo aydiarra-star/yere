@@ -200,7 +200,20 @@ begin
   if (select count(*) from public.marketplace_message) <> 0 then
     raise exception 'FAIL: unrelated account can read marketplace messages';
   end if;
-end $$;
+
+  -- A non-participant must not be able to send into a conversation by guessing its UUID.
+  begin
+    perform public.envoyer_message_marketplace(
+      (select id from public.marketplace_conversation
+       where acheteur_user_id='71000000-0000-4000-8000-000000000002'
+       limit 1),
+      'Message interdit depuis un compte tiers'
+    );
+    raise exception 'FAIL: unrelated account sent a message into another conversation';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $;
 reset role;
 
 rollback;
