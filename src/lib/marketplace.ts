@@ -481,7 +481,7 @@ export async function createMarketplaceReview(session: YereSession, input: {
   for (const [label, value] of Object.entries(input.criteria)) {
     if (!Number.isInteger(value) || value < 1 || value > 5) throw new Error(`Note invalide pour : ${label}.`);
   }
-  const data = await readJson(await authenticatedFetch(session, "rest/v1/marketplace_avis", {
+  const data = await readJson(await authenticatedFetch(session, "rest/v1/marketplace_avis?select=id", {
     method: "POST", headers: { Prefer: "return=representation" },
     body: JSON.stringify({ commande_id: input.orderId, vendeur_id: input.sellerId, note: input.rating,
       criteres: input.criteria, commentaire: input.comment.trim() })
@@ -493,7 +493,7 @@ export async function replyToMarketplaceReview(session: YereSession, reviewId: s
   const text = reply.trim();
   if (!text || text.length > 1200) throw new Error("La réponse doit contenir entre 1 et 1 200 caractères.");
   const data = await readJson(await authenticatedFetch(session,
-    `rest/v1/marketplace_avis?id=eq.${encodeURIComponent(reviewId)}`,
+    `rest/v1/marketplace_avis?id=eq.${encodeURIComponent(reviewId)}&select=id,reponse_vendeur,repondu_at`,
     { method: "PATCH", headers: { Prefer: "return=representation" },
       body: JSON.stringify({ reponse_vendeur: text, repondu_at: new Date().toISOString() }) }));
   if (!Array.isArray(data) || !data[0]?.id) throw new Error("La réponse du vendeur n'a pas été enregistrée.");
