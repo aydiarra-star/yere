@@ -1200,10 +1200,6 @@ function App() {
             onOpenMeasurements={() => { setQuery(""); setSelectedClient(null); setView("clients"); setMobileMoreOpen(false); }}
             onOpenTools={() => setMobileMoreOpen(true)}
             onConfigure={() => setView("account")}
-            subscription={isAtelierOwner ? atelierSubscription : undefined}
-            subscriptionPayments={isAtelierOwner ? subscriptionPayments : []}
-            subscriptionLoading={isAtelierOwner && subscriptionLoading}
-            subscriptionLoadError={isAtelierOwner ? subscriptionLoadError : ""}
           />}
 
           {view === "clients" && <section className="content-card clients-card"><div className="section-heading"><div><h2>Répertoire clients</h2><p>{clients.length} fiche{clients.length > 1 ? "s" : ""} dans cet atelier</p></div><label className="search-box"><span>⌕</span><input autoFocus={view === "clients"} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher par nom ou téléphone" aria-label="Rechercher un client" /></label></div>
