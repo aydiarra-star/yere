@@ -24,7 +24,7 @@ const methods = [
   },
   {
     name: "Free Money",
-    src: "https://www.boasenegal.com/wp-content/uploads/2020/04/fee-money-768x608.png",
+    src: "https://www.boasenegal.com/wp-content/uploads/2020/04/fee-money.png",
     className: "payment-logo-free",
   },
 ];
