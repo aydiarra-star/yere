@@ -1,0 +1,1 @@
+revoke execute on function private.reactivate_atelier_member_impl(uuid, uuid) from public, anon;
