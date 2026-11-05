@@ -1,1 +1,0 @@
-grant execute on function private.reactivate_atelier_member_impl(uuid, uuid) to authenticated;
