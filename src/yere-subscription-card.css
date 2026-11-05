@@ -17,3 +17,12 @@
 .yere-subscription-access{display:flex;align-items:center;justify-content:center;gap:12px;width:min(100%,560px);min-height:54px;margin:18px auto 0;padding:12px 20px;border-radius:12px;background:#0b1f3a;color:#fff;text-decoration:none;text-align:center;font-size:17px;font-weight:800;box-shadow:0 6px 16px rgba(11,31,58,.18)}
 .yere-subscription-access:hover{background:#13294b}
 .yere-subscription-access span{color:#d8b46a;font-size:22px}
+
+/* CTA abonnement : bleu nuit franc, texte blanc et flèche dorée */
+.yere-market-app .yere-subscription-card a.yere-subscription-access,
+.yere-subscription-card a.yere-subscription-access,
+a.yere-subscription-access:link,
+a.yere-subscription-access:visited{background-color:#0b1f3a!important;color:#fff!important;text-decoration:none!important}
+.yere-market-app .yere-subscription-card a.yere-subscription-access:hover,
+.yere-subscription-card a.yere-subscription-access:hover{background-color:#13294b!important;color:#fff!important}
+.yere-subscription-card a.yere-subscription-access span{color:#d8b46a!important}
