@@ -369,13 +369,13 @@ export default function PublicMarket() {
   }
 
   async function removeMarketplaceListing(listing: Awaited<ReturnType<typeof listMyMarketplaceListings>>[number]) {
-    if (!session || !window.confirm("Supprimer « " + listing.title + " » ? Si une commande existe déjà, l'annonce sera archivée pour préserver l'historique.")) return;
+    if (!session || !window.confirm("Supprimer « " + listing.title + " » ? Si une commande ou une conversation existe déjà, l'annonce sera archivée pour préserver l'historique.")) return;
     setBusy(true); setError(""); setNotice("");
     try {
       const result = await deleteMarketplaceListing(session, listing);
       setMyListings(await listMyMarketplaceListings(session, listing.sellerId));
       await refreshCatalogue();
-      if (result.archived) setNotice("Cette annonce possède déjà des commandes : elle a été archivée et retirée du Market pour conserver l'historique.");
+      if (result.archived) setNotice("Cette annonce est liée à une commande ou une conversation : elle a été archivée et retirée du Market pour conserver l'historique.");
       else setNotice(result.photosCleaned ? "Votre annonce a été supprimée." : "Votre annonce a été supprimée. Certaines anciennes photos n'ont pas pu être nettoyées automatiquement.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Suppression impossible.");
