@@ -520,3 +520,33 @@
  .yere-market-app .pm-account-tile-copy p{font-size:9px}
  .yere-market-app .pm-account-empty{font-size:9px}
 }
+
+
+/* Seller-owned Marketplace listing management */
+.pm-listing-manager{scroll-margin-top:24px}
+.pm-manager-count{display:inline-grid;place-items:center;min-width:28px;height:28px;margin-left:8px;padding:0 8px;border-radius:99px;background:#edf0fa;color:#283568;font-size:13px;vertical-align:middle}
+.pm-managed-listings{display:grid;gap:12px;margin-top:20px}
+.pm-managed-listing{display:grid;grid-template-columns:92px minmax(0,1fr) auto;align-items:center;gap:16px;padding:14px;border:1px solid #e5e8f1;border-radius:12px;background:#fff}
+.pm-managed-listing-photo,.pm-managed-listing-placeholder{width:92px;height:92px;object-fit:cover;border-radius:9px;background:#edf0f8}
+.pm-managed-listing-placeholder{display:grid;place-items:center;color:#536293;font:42px Georgia,serif}
+.pm-managed-listing-info{display:grid;justify-items:start;gap:5px;min-width:0}
+.pm-managed-listing-info h3{margin:2px 0;color:#171e49;font-size:14px;overflow-wrap:anywhere}
+.pm-managed-listing-info strong{color:#171e49;font-size:13px}
+.pm-managed-listing-info small{color:#77819b;font-size:10px}
+.pm-listing-status{display:inline-flex;padding:5px 8px;border-radius:99px;background:#edf0fa;color:#344477;font-size:9px;font-weight:800}
+.pm-status-indisponible,.pm-status-archivee{background:#f1f2f5;color:#626b80}
+.pm-status-brouillon{background:#f7f2e8;color:#7a6237}
+.pm-managed-listing-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px}
+.pm-manager-action{background:#fff;color:#283568;border-color:#d9deed;padding:8px 10px}
+.pm-manager-action:hover{background:#f4f6fc;color:#171e49}
+.pm-manager-delete{border:1px solid #e4cfd2;border-radius:8px;padding:8px 10px;background:#fff;color:#8b3c4b;font-size:10px;font-weight:800;cursor:pointer}
+.pm-manager-delete:hover{background:#fff6f7}
+.pm-existing-photos{display:flex;flex-wrap:wrap;gap:12px}
+.pm-existing-photo{display:grid;gap:5px;justify-items:center}
+.pm-existing-photo img{width:82px;height:82px;object-fit:cover;border-radius:8px;background:#edf0f8}
+@media(max-width:720px){
+  .pm-managed-listing{grid-template-columns:70px minmax(0,1fr);gap:10px;padding:11px}
+  .pm-managed-listing-photo,.pm-managed-listing-placeholder{width:70px;height:70px}
+  .pm-managed-listing-actions{grid-column:1/-1;justify-content:flex-start}
+  .pm-manager-action,.pm-manager-delete{font-size:10px;padding:9px 10px}
+}

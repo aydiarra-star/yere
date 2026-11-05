@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   createMarketplaceOrder, createMarketplaceSeller, getMyMarketplaceSeller,
-  listMyMarketplaceOrders, listMyMarketplaceConversations, listMarketplaceMessages,
-  openMarketplaceConversation, sendMarketplaceMessage, listPublicMarketplaceListings, saveMarketplaceListing,
+  listMyMarketplaceOrders, listMyMarketplaceConversations, listMarketplaceMessages, listMyMarketplaceListings,
+  openMarketplaceConversation, sendMarketplaceMessage, listPublicMarketplaceListings, saveMarketplaceListing, deleteMarketplaceListing,
   updateMarketplaceOrderStatus, uploadMarketplacePhotos, deleteMarketplacePhotos, updateMarketplaceSeller,
   type MarketplaceConversation, type MarketplaceMessage, type MarketplaceOrder, type MarketplaceSeller,
   type PublicMarketplaceListing
@@ -25,6 +25,10 @@ export default function PublicMarket() {
   const [atelierChoices, setAtelierChoices] = useState<Array<{ id: string; nom: string; ville: string | null }>>([]);
   const [listings, setListings] = useState<PublicMarketplaceListing[]>([]);
   const [orders, setOrders] = useState<MarketplaceOrder[]>([]);
+  const [myListings, setMyListings] = useState<Awaited<ReturnType<typeof listMyMarketplaceListings>>>([]);
+  const [editingListingId, setEditingListingId] = useState<string | null>(null);
+  const [existingListingPhotos, setExistingListingPhotos] = useState<string[]>([]);
+  const [existingListingPhotoUrls, setExistingListingPhotoUrls] = useState<string[]>([]);
   const [conversations, setConversations] = useState<MarketplaceConversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MarketplaceMessage[]>([]);
@@ -76,6 +80,7 @@ export default function PublicMarket() {
     }));
     setAtelierChoices(owned.filter((item): item is NonNullable<typeof item> => item !== null));
     setSeller(ownSeller);
+    setMyListings(ownSeller ? await listMyMarketplaceListings(active, ownSeller.id) : []);
     setOrders(ownOrders);
     setConversations(ownConversations);
   }
@@ -111,6 +116,7 @@ export default function PublicMarket() {
           clearSession();
           setSession(null);
           setSeller(null);
+          setMyListings([]);
           setAtelierChoices([]);
           setOrders([]);
           setConversations([]);
@@ -187,6 +193,7 @@ export default function PublicMarket() {
         clearSession();
         setSession(null);
         setSeller(null);
+        setMyListings([]);
         setAtelierChoices([]);
         setOrders([]);
         setConversations([]);
@@ -217,7 +224,7 @@ export default function PublicMarket() {
     setBusy(true);
     try {
       await signOut(session);
-      setSession(null); setSeller(null); setOrders([]); setConversations([]); setMessages([]); setSelectedConversationId(null);
+      setSession(null); setSeller(null); setMyListings([]); setOrders([]); setConversations([]); setMessages([]); setSelectedConversationId(null);
       setError("");
       setNotice("Vous êtes déconnecté du Market.");
     } catch (cause) {
@@ -279,6 +286,28 @@ export default function PublicMarket() {
     } finally { setBusy(false); }
   }
 
+  function resetListingEditor() {
+    setShowListingForm(false);
+    setEditingListingId(null);
+    setExistingListingPhotos([]);
+    setExistingListingPhotoUrls([]);
+    setSelectedPhotos([]);
+    setListingForm({ title: "", category: "Tissus", description: "", price: "", stock: "" });
+  }
+
+  function editMarketplaceListing(listing: Awaited<ReturnType<typeof listMyMarketplaceListings>>[number]) {
+    setEditingListingId(listing.id);
+    setListingForm({ title: listing.title, category: listing.category, description: listing.description,
+      price: String(listing.priceXof), stock: listing.stockAvailable === null ? "" : String(listing.stockAvailable) });
+    setExistingListingPhotos([...listing.photos]);
+    setExistingListingPhotoUrls([...listing.photoUrls]);
+    setSelectedPhotos([]);
+    setShowListingForm(true);
+    setError("");
+    setNotice("");
+    document.getElementById("gestion-annonces")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   async function submitListing(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!session || !seller) return;
@@ -288,26 +317,68 @@ export default function PublicMarket() {
       setError("Vérifiez le prix et la quantité en stock.");
       return;
     }
+    if (existingListingPhotos.length + selectedPhotos.length > 5) {
+      setError("Une annonce peut contenir cinq photos maximum.");
+      return;
+    }
+    const wasEditing = editingListingId !== null;
     setBusy(true); setError(""); setNotice("");
     let uploadedPhotos: string[] = [];
     try {
       uploadedPhotos = await uploadMarketplacePhotos(session, seller.id, selectedPhotos);
+      const listingBeforeEdit = myListings.find((item) => item.id === editingListingId);
+      const photos = [...existingListingPhotos, ...uploadedPhotos];
       await saveMarketplaceListing(session, {
-        sellerId: seller.id, title: listingForm.title, category: listingForm.category,
+        id: editingListingId ?? undefined, sellerId: seller.id, title: listingForm.title, category: listingForm.category,
         description: listingForm.description, priceXof: price, unit: "piece",
-        city: seller.city, photos: uploadedPhotos, saleMode: "commande_yere", status: "publiee", stockAvailable: stock
+        city: seller.city, photos, saleMode: "commande_yere",
+        status: listingBeforeEdit?.status === "indisponible" || listingBeforeEdit?.status === "archivee"
+          ? listingBeforeEdit.status : "publiee",
+        stockAvailable: stock
       });
       uploadedPhotos = [];
+      const removedPhotos = (listingBeforeEdit?.photos ?? []).filter((path) => !existingListingPhotos.includes(path));
+      if (removedPhotos.length) {
+        try { await deleteMarketplacePhotos(session, removedPhotos); } catch { /* listing is saved; stale files can be cleaned later */ }
+      }
       await refreshCatalogue();
-      setShowListingForm(false);
-      setListingForm({ title: "", category: "Tissus", description: "", price: "", stock: "" });
-      setSelectedPhotos([]);
-      setNotice("Votre offre et ses photos sont publiées dans le Market.");
+      setMyListings(await listMyMarketplaceListings(session, seller.id));
+      resetListingEditor();
+      setNotice(wasEditing ? "Votre annonce a été mise à jour." : "Votre offre et ses photos sont publiées dans le Market.");
     } catch (cause) {
       if (uploadedPhotos.length) {
         try { await deleteMarketplacePhotos(session, uploadedPhotos); } catch { /* keep original listing error */ }
       }
-      setError(cause instanceof Error ? cause.message : "Publication impossible.");
+      setError(cause instanceof Error ? cause.message : "Enregistrement de l'annonce impossible.");
+    } finally { setBusy(false); }
+  }
+
+  async function changeMarketplaceListingStatus(listing: Awaited<ReturnType<typeof listMyMarketplaceListings>>[number], status: "publiee" | "indisponible") {
+    if (!session || !seller) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      await saveMarketplaceListing(session, { id: listing.id, sellerId: seller.id, title: listing.title,
+        category: listing.category, description: listing.description, priceXof: listing.priceXof, unit: listing.unit,
+        city: listing.city, photos: listing.photos, saleMode: listing.saleMode, status, stockAvailable: listing.stockAvailable });
+      setMyListings(await listMyMarketplaceListings(session, seller.id));
+      await refreshCatalogue();
+      setNotice(status === "publiee" ? "Votre annonce est de nouveau visible dans le Market." : "Votre annonce est mise en pause et n'apparaît plus dans le catalogue public.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Le statut de l'annonce n'a pas été modifié.");
+    } finally { setBusy(false); }
+  }
+
+  async function removeMarketplaceListing(listing: Awaited<ReturnType<typeof listMyMarketplaceListings>>[number]) {
+    if (!session || !window.confirm("Supprimer « " + listing.title + " » ? Si une commande existe déjà, l'annonce sera archivée pour préserver l'historique.")) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const result = await deleteMarketplaceListing(session, listing);
+      setMyListings(await listMyMarketplaceListings(session, listing.sellerId));
+      await refreshCatalogue();
+      if (result.archived) setNotice("Cette annonce possède déjà des commandes : elle a été archivée et retirée du Market pour conserver l'historique.");
+      else setNotice(result.photosCleaned ? "Votre annonce a été supprimée." : "Votre annonce a été supprimée. Certaines anciennes photos n'ont pas pu être nettoyées automatiquement.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Suppression impossible.");
     } finally { setBusy(false); }
   }
 
@@ -399,9 +470,9 @@ export default function PublicMarket() {
     <main className="yere-market-app">
       <header className="pm-header">
         <a className="pm-brand" href="/" aria-label="YÉRÉ Market, accueil"><img className="pm-mark" src="/images/yere-logo.png" alt="" /><span><b>YÉRÉ</b><small>MARKET</small></span></a>
-        <nav className="pm-nav"><a href="#catalogue">Catalogue</a><a href="#vendeurs">Vendeurs</a>{session && <><a href="#commandes">Mes commandes</a><a href="#messages">Messages</a></>}</nav>
+        <nav className="pm-nav"><a href="#catalogue">Catalogue</a><a href="#vendeurs">Vendeurs</a>{session && <><a href="#commandes">Mes commandes</a>{seller && <a href="#gestion-annonces">Mes annonces</a>}<a href="#messages">Messages</a></>}</nav>
         <div className="pm-header-actions">
-          {session ? <><span className="pm-user">{session.user.email}</span><button className="pm-outline pm-account-access" type="button" onClick={() => document.getElementById("commandes")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Mon compte</button><button className="pm-outline" type="button" onClick={() => void handleSignOut()} disabled={busy}>Déconnexion</button></> :
+          {session ? <><span className="pm-user">{session.user.email}</span><button className="pm-outline pm-account-access" type="button" onClick={() => document.getElementById(seller ? "gestion-annonces" : "commandes")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Mon compte</button><button className="pm-outline" type="button" onClick={() => void handleSignOut()} disabled={busy}>Déconnexion</button></> :
             <button className="pm-outline" type="button" onClick={() => { setShowAccount((v) => !v); setError(""); }}>Se connecter</button>}
           <a className="pm-outline pm-atelier-link" href="/?espace=professionnel">Espace tailleur</a><a className="pm-cta" href="#vendeurs">Vendre sur YÉRÉ</a>
         </div>
@@ -434,12 +505,24 @@ export default function PublicMarket() {
 
       <section id="vendeurs" className="pm-seller-section">
         <div className="pm-seller-copy"><span className="pm-eyebrow">VOUS ÊTES FOURNISSEUR ?</span><h2>Votre boutique mérite<br/>sa place sur YÉRÉ.</h2><p>Atelier de couture ou fournisseur indépendant : créez votre vitrine, publiez vos créations, tissus, fournitures et accessoires. Un fournisseur peut s’inscrire sans posséder d’atelier.</p><ul><li>Une boutique rattachée à votre compte</li><li>Des annonces visibles dans le catalogue public</li><li>Des commandes regroupées dans votre espace</li></ul></div>
-        <div className="pm-seller-card">{seller?.logoUrl ? <img className="pm-store-logo" src={seller.logoUrl} alt={"Photo de " + seller.businessName}/> : <span className="pm-seller-icon">✦</span>}<h3>{seller ? "Votre boutique est prête" : "Ouvrir une boutique"}</h3><p>{seller ? seller.businessName + " · " + seller.city : "Inscrivez-vous ou connectez-vous, puis renseignez les informations de votre activité."}</p>{seller ? <><button className="pm-cta" type="button" onClick={() => { setSellerForm({ sellerType: seller.sellerType, atelierId: seller.atelierId ?? "", businessName: seller.businessName, contactName: seller.contactName, phone: seller.phone, city: seller.city, category: seller.category, description: seller.description }); setSellerPhotoFile(null); setShowSellerEdit((v) => !v); }}>Modifier ma boutique</button><button className="pm-outline pm-seller-secondary" type="button" onClick={() => setShowListingForm((v) => !v)}>＋ Publier une offre</button></> : <button className="pm-cta" type="button" onClick={() => { setShowSellerForm((v) => !v); if (!session) setShowAccount(true); }}>Créer ma boutique indépendante</button>}</div>
+        <div className="pm-seller-card">{seller?.logoUrl ? <img className="pm-store-logo" src={seller.logoUrl} alt={"Photo de " + seller.businessName}/> : <span className="pm-seller-icon">✦</span>}<h3>{seller ? "Votre boutique est prête" : "Ouvrir une boutique"}</h3><p>{seller ? seller.businessName + " · " + seller.city : "Inscrivez-vous ou connectez-vous, puis renseignez les informations de votre activité."}</p>{seller ? <><button className="pm-cta" type="button" onClick={() => { setSellerForm({ sellerType: seller.sellerType, atelierId: seller.atelierId ?? "", businessName: seller.businessName, contactName: seller.contactName, phone: seller.phone, city: seller.city, category: seller.category, description: seller.description }); setSellerPhotoFile(null); setShowSellerEdit((v) => !v); }}>Modifier ma boutique</button><button className="pm-outline pm-seller-secondary" type="button" onClick={() => { resetListingEditor(); setShowListingForm(true); }}>＋ Publier une offre</button><button className="pm-outline pm-seller-secondary" type="button" onClick={() => document.getElementById("gestion-annonces")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Gérer mes annonces ({myListings.length})</button></> : <button className="pm-cta" type="button" onClick={() => { setShowSellerForm((v) => !v); if (!session) setShowAccount(true); }}>Créer ma boutique indépendante</button>}</div>
       </section>
 
       {((showSellerForm && !seller) || (showSellerEdit && !!seller)) && <section className="pm-panel"><div><span className="pm-eyebrow">{seller ? "GESTION DE LA BOUTIQUE" : "INSCRIPTION VENDEUR"}</span><h2>{seller ? "Modifier les informations de votre boutique" : "Les informations de votre boutique"}</h2><p>Votre compte Market reste indépendant de tout atelier.</p>{seller?.logoUrl && <img className="pm-store-logo pm-store-logo-preview" src={seller.logoUrl} alt="Photo actuelle de la boutique"/>}</div><form onSubmit={submitSeller}><label>Type de vendeur<select value={sellerForm.sellerType} onChange={(e) => setSellerForm({ ...sellerForm, sellerType: e.target.value as "fournisseur" | "atelier", atelierId: "", category: e.target.value === "atelier" ? "Mode & créations" : "Tissus & mercerie" })}><option value="fournisseur">Fournisseur indépendant</option>{atelierChoices.length > 0 && <option value="atelier">Atelier de couture</option>}</select></label>{sellerForm.sellerType === "atelier" && <label>Atelier<select required value={sellerForm.atelierId} onChange={(e) => { const item = atelierChoices.find((atelier) => atelier.id === e.target.value); setSellerForm({ ...sellerForm, atelierId: e.target.value, businessName: sellerForm.businessName || item?.nom || "", city: sellerForm.city || item?.ville || "" }); }}><option value="">Choisir un atelier</option>{atelierChoices.map((item) => <option key={item.id} value={item.id}>{item.nom}{item.ville ? " · " + item.ville : ""}</option>)}</select></label>}<label>Nom de la boutique<input required maxLength={120} value={sellerForm.businessName} onChange={(e) => setSellerForm({ ...sellerForm, businessName: e.target.value })}/></label><label>Nom du responsable<input required maxLength={120} value={sellerForm.contactName} onChange={(e) => setSellerForm({ ...sellerForm, contactName: e.target.value })}/></label><label>Téléphone<input required type="tel" maxLength={40} value={sellerForm.phone} onChange={(e) => setSellerForm({ ...sellerForm, phone: e.target.value })}/></label><label>Ville<input required maxLength={100} value={sellerForm.city} onChange={(e) => setSellerForm({ ...sellerForm, city: e.target.value })}/></label><label>Activité<select value={sellerForm.category} onChange={(e) => setSellerForm({ ...sellerForm, category: e.target.value })}><option>Tissus & mercerie</option><option>Fournitures de couture</option><option>Accessoires de mode</option><option>Prêt-à-porter</option></select></label><label className="pm-wide">Présentation<textarea maxLength={500} value={sellerForm.description} onChange={(e) => setSellerForm({ ...sellerForm, description: e.target.value })}/></label><label className="pm-wide">Photo ou logo de la boutique<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { const file = e.target.files?.[0] ?? null; if (file && (!["image/jpeg","image/png","image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024)) { setError("Choisissez une image JPG, PNG ou WebP de cinq mégaoctets maximum."); e.target.value = ""; return; } setError(""); setSellerPhotoFile(file); }}/></label>{sellerPhotoFile && <p className="pm-form-note pm-wide">Nouvelle photo sélectionnée : {sellerPhotoFile.name}. Elle remplacera la photo actuelle après enregistrement.</p>}<p className="pm-form-note pm-wide">Vous pouvez ajouter une photo dès la création, puis la remplacer à tout moment. Formats JPG, PNG ou WebP, cinq mégaoctets maximum.</p><button className="pm-cta" disabled={busy || !session}>{busy ? "Enregistrement…" : seller ? "Enregistrer les modifications" : "Créer ma boutique"}</button></form></section>}
 
-      {showListingForm && seller && <section className="pm-panel"><div><span className="pm-eyebrow">NOUVELLE ANNONCE</span><h2>Publier une offre</h2><p>Les annonces sont immédiatement visibles après validation par la base.</p></div><form onSubmit={submitListing}><label>Nom de l’article<input required maxLength={140} value={listingForm.title} onChange={(e) => setListingForm({ ...listingForm, title: e.target.value })}/></label><label>Catégorie<select value={listingForm.category} onChange={(e) => setListingForm({ ...listingForm, category: e.target.value })}><option>Boubous & tenues</option><option>Mode femme</option><option>Tissus</option><option>Mercerie</option><option>Fournitures de couture</option></select></label><label>Prix (FCFA)<input type="number" min="1" step="1" required value={listingForm.price} onChange={(e) => setListingForm({ ...listingForm, price: e.target.value })}/></label><label>Stock (facultatif)<input type="number" min="0" step="1" value={listingForm.stock} onChange={(e) => setListingForm({ ...listingForm, stock: e.target.value })}/></label><label className="pm-wide">Description<textarea maxLength={1000} value={listingForm.description} onChange={(e) => setListingForm({ ...listingForm, description: e.target.value })}/></label><label className="pm-wide">Photos de l’article (cinq maximum)<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length > 5) { setError("Vous pouvez sélectionner cinq photos maximum."); e.target.value = ""; return; } const invalid = files.find((file) => !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024); if (invalid) { setError("Utilisez des photos JPG, PNG ou WebP de cinq mégaoctets maximum."); e.target.value = ""; return; } setError(""); setSelectedPhotos(files); }} /></label>{selectedPhotos.length > 0 && <p className="pm-form-note pm-wide">{selectedPhotos.length} photo(s) sélectionnée(s) : {selectedPhotos.map((file) => file.name).join(", ")}</p>}<p className="pm-form-note pm-wide">Photos stockées dans un espace privé. Les liens de consultation sont délivrés uniquement pour les annonces publiées de vendeurs actifs. Formats JPG, PNG ou WebP, cinq mégaoctets maximum par photo.</p><button className="pm-cta" disabled={busy}>{busy ? "Publication…" : "Publier dans le Market"}</button></form></section>}
+      {showListingForm && seller && <section className="pm-panel" id="edition-annonce"><div><span className="pm-eyebrow">{editingListingId ? "MODIFIER UNE ANNONCE" : "NOUVELLE ANNONCE"}</span><h2>{editingListingId ? "Modifier votre annonce" : "Publier une offre"}</h2><p>{editingListingId ? "Mettez à jour les informations, le prix, le stock ou les photos de votre article." : "Les annonces sont immédiatement visibles après validation par la base."}</p><button className="pm-text-button" type="button" onClick={resetListingEditor}>Fermer</button></div><form onSubmit={submitListing}><label>Nom de l’article<input required maxLength={140} value={listingForm.title} onChange={(e) => setListingForm({ ...listingForm, title: e.target.value })}/></label><label>Catégorie<select value={listingForm.category} onChange={(e) => setListingForm({ ...listingForm, category: e.target.value })}><option>Boubous & tenues</option><option>Mode femme</option><option>Tissus</option><option>Mercerie</option><option>Fournitures de couture</option></select></label><label>Prix (FCFA)<input type="number" min="1" step="1" required value={listingForm.price} onChange={(e) => setListingForm({ ...listingForm, price: e.target.value })}/></label><label>Stock (facultatif)<input type="number" min="0" step="1" value={listingForm.stock} onChange={(e) => setListingForm({ ...listingForm, stock: e.target.value })}/></label><label className="pm-wide">Description<textarea maxLength={1000} value={listingForm.description} onChange={(e) => setListingForm({ ...listingForm, description: e.target.value })}/></label><label className="pm-wide">Photos de l’article (cinq maximum)<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length > 5) { setError("Vous pouvez sélectionner cinq photos maximum."); e.target.value = ""; return; } const invalid = files.find((file) => !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024); if (invalid) { setError("Utilisez des photos JPG, PNG ou WebP de cinq mégaoctets maximum."); e.target.value = ""; return; } setError(""); setSelectedPhotos(files); }} /></label>{existingListingPhotos.length > 0 && <div className="pm-existing-photos pm-wide"><p className="pm-form-note">Photos déjà enregistrées — touchez « Retirer » pour les enlever de l'annonce.</p>{existingListingPhotos.map((path, index) => <div className="pm-existing-photo" key={path}><img src={existingListingPhotoUrls[index] ?? ""} alt={"Photo actuelle " + (index + 1)} /><button type="button" className="pm-text-button" onClick={() => { setExistingListingPhotos((items) => items.filter((item) => item !== path)); setExistingListingPhotoUrls((items) => items.filter((_, photoIndex) => photoIndex !== index)); }}>Retirer</button></div>)}</div>}{selectedPhotos.length > 0 && <p className="pm-form-note pm-wide">{selectedPhotos.length} nouvelle(s) photo(s) sélectionnée(s) : {selectedPhotos.map((file) => file.name).join(", ")}</p>}<p className="pm-form-note pm-wide">Photos stockées dans un espace privé. Les liens de consultation sont délivrés uniquement pour les annonces publiées de vendeurs actifs. Formats JPG, PNG ou WebP, cinq mégaoctets maximum par photo.</p><button className="pm-cta" disabled={busy}>{busy ? "Enregistrement…" : editingListingId ? "Enregistrer les modifications" : "Publier dans le Market"}</button></form></section>}
+
+      {session && seller && <section id="gestion-annonces" className="pm-panel pm-listing-manager">
+        <div><span className="pm-eyebrow">ESPACE VENDEUR</span><h2>Mes annonces <small className="pm-manager-count">{myListings.length}</small></h2><p>Modifiez vos offres, mettez-les en pause, republiez-les ou retirez-les du catalogue.</p></div>
+        {myListings.length === 0 ? <div className="pm-empty"><h3>Vous n'avez pas encore publié d'annonce.</h3><p>Votre première offre apparaîtra ici après publication.</p><button type="button" className="pm-cta" onClick={() => { resetListingEditor(); setShowListingForm(true); }}>Publier ma première annonce</button></div> :
+          <div className="pm-managed-listings">{myListings.map((listing) => <article className="pm-managed-listing" key={listing.id}>
+            {listing.photoUrls[0] ? <img className="pm-managed-listing-photo" src={listing.photoUrls[0]} alt={listing.title}/> : <div className="pm-managed-listing-placeholder">Y</div>}
+            <div className="pm-managed-listing-info"><span className={"pm-listing-status pm-status-" + listing.status}>{listing.status === "publiee" ? "En ligne" : listing.status === "indisponible" ? "En pause" : listing.status === "archivee" ? "Archivée" : "Brouillon"}</span><h3>{listing.title}</h3><strong>{money(listing.priceXof)}</strong><small>{listing.stockAvailable === null ? "Stock non renseigné" : listing.stockAvailable + " disponible(s)"}</small></div>
+            <div className="pm-managed-listing-actions"><button type="button" className="pm-outline pm-manager-action" disabled={busy} onClick={() => editMarketplaceListing(listing)}>Modifier</button>
+              {listing.status === "publiee" ? <button type="button" className="pm-outline pm-manager-action" disabled={busy} onClick={() => void changeMarketplaceListingStatus(listing, "indisponible")}>Mettre en pause</button> : <button type="button" className="pm-outline pm-manager-action" disabled={busy} onClick={() => void changeMarketplaceListingStatus(listing, "publiee")}>Republier</button>}
+              <button type="button" className="pm-manager-delete" disabled={busy} onClick={() => void removeMarketplaceListing(listing)}>Supprimer</button></div>
+          </article>)}</div>}
+      </section>}
 
       {detailListing && <div className="pm-modal-backdrop pm-detail-backdrop" role="presentation" onClick={() => setDetailListing(null)}><section className="pm-modal pm-detail-modal" role="dialog" aria-modal="true" aria-labelledby="pm-detail-title" onClick={(e) => e.stopPropagation()}><button className="pm-modal-close" type="button" onClick={() => setDetailListing(null)} aria-label="Fermer">×</button><span className="pm-eyebrow">DÉTAIL DE L’ANNONCE</span><div className="pm-detail-gallery" aria-label="Photos de l’article">{detailListing.photoUrls.length ? detailListing.photoUrls.map((url, index) => <button className="pm-detail-photo-frame" type="button" key={url + index} onClick={() => setDetailPhotoZoomed((value) => !value)} aria-label={detailPhotoZoomed ? "Réduire la photo" : "Agrandir la photo"}><img className={"pm-detail-photo" + (detailPhotoZoomed ? " is-zoomed" : "")} src={url} alt={detailListing.title + " — photo " + (index + 1)} /></button>) : <div className="pm-detail-no-photo">Aucune photo disponible</div>}</div><p className="pm-detail-photo-hint">{detailListing.photoUrls.length > 1 ? "Faites glisser les photos horizontalement. Touchez une photo pour l’agrandir." : "Touchez la photo pour l’agrandir."}</p><small>{detailListing.category}</small><h2 id="pm-detail-title">{detailListing.title}</h2><strong className="pm-detail-price">{money(detailListing.priceXof)}</strong><p className="pm-detail-description">{detailListing.description || "Aucune description complémentaire."}</p><dl className="pm-detail-info"><div><dt>Vendeur</dt><dd>{detailListing.sellerName}</dd></div><div><dt>Ville</dt><dd>{detailListing.city || detailListing.sellerCity || "Non précisée"}</dd></div><div><dt>Disponibilité</dt><dd>{detailListing.stockAvailable === 0 ? "Rupture de stock" : detailListing.stockAvailable == null ? "À confirmer auprès du vendeur" : detailListing.stockAvailable + " disponible(s)"}</dd></div>{detailListing.unit && <div><dt>Unité</dt><dd>{detailListing.unit}</dd></div>}</dl><div className="pm-detail-actions"><button type="button" className="pm-buy" disabled={detailListing.stockAvailable === 0} onClick={() => { const item = detailListing; setDetailListing(null); setSelectedListing(item); setError(""); if (!session) setShowAccount(true); }}>Commander <span>→</span></button><button type="button" className="pm-contact" onClick={() => { const item = detailListing; setDetailListing(null); setContactListing(item); setContactMessage(""); setError(""); }}>Contacter le vendeur</button></div></section></div>}
 

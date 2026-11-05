@@ -7,7 +7,7 @@ const { authenticatedFetch, publicFetch } = vi.hoisted(() => ({
 
 vi.mock("./supabaseAuth", () => ({ authenticatedFetch, publicFetch, projectUrl: "https://supabase.example.test" }));
 
-import { createMarketplaceSeller, getMyMarketplaceSeller, saveMarketplaceListing } from "./marketplace";
+import { createMarketplaceSeller, getMyMarketplaceSeller, saveMarketplaceListing, listMyMarketplaceListings, deleteMarketplaceListing } from "./marketplace";
 import type { YereSession } from "./supabaseAuth";
 
 const session = {
@@ -144,5 +144,60 @@ describe("marketplace listing photo persistence", () => {
 
     await expect(saveMarketplaceListing(session, listingInput))
       .rejects.toThrow("ses photos n'ont pas été confirmées par le serveur");
+  });
+
+  it("lists only the current seller's own listings and signs their private photos", async () => {
+    authenticatedFetch
+      .mockResolvedValueOnce(jsonResponse([{
+        id: "listing-123", vendeur_id: "seller-123", titre: "Tissu sénégalais", categorie: "Tissus",
+        description: "Tissu de démonstration", prix_fcfa: 25000, unite: "piece", ville: "Dakar",
+        photos: ["user-123/seller-123/photo-1.jpg"], mode_vente: "commande_yere",
+        statut: "publiee", stock_disponible: 8, created_at: "2026-11-05T10:00:00Z"
+      }]))
+      .mockResolvedValueOnce(jsonResponse({ signedURL: "/object/sign/yere-market-photos/user-123/seller-123/photo-1.jpg?token=private" }));
+
+    const listings = await listMyMarketplaceListings(session, "seller-123");
+
+    expect(listings).toHaveLength(1);
+    expect(listings[0]).toMatchObject({ id: "listing-123", sellerId: "seller-123", title: "Tissu sénégalais" });
+    expect(listings[0].photoUrls[0]).toContain("?token=private");
+    expect(authenticatedFetch.mock.calls[0][1]).toContain("vendeur_id=eq.seller-123");
+    expect(authenticatedFetch.mock.calls[0][1]).toContain("statut.eq.archivee");
+    expect(authenticatedFetch.mock.calls[1][1]).toContain("storage/v1/object/sign/");
+  });
+
+  it("deletes a seller listing and cleans its stored photos", async () => {
+    authenticatedFetch
+      .mockResolvedValueOnce(jsonResponse([{ id: "listing-123" }]))
+      .mockResolvedValueOnce(jsonResponse({ message: "deleted" }));
+
+    const result = await deleteMarketplaceListing(session, {
+      id: "listing-123", sellerId: "seller-123", title: "Tissu sénégalais", category: "Tissus",
+      description: "Tissu de démonstration", priceXof: 25000, unit: "piece", city: "Dakar",
+      photos: ["user-123/seller-123/photo-1.jpg"], saleMode: "commande_yere",
+      status: "publiee", stockAvailable: 8, createdAt: "2026-11-05T10:00:00Z"
+    });
+
+    expect(result).toEqual({ deleted: true, archived: false, photosCleaned: true });
+    expect(authenticatedFetch.mock.calls[0][1]).toContain("id=eq.listing-123");
+    expect(authenticatedFetch.mock.calls[0][2]).toMatchObject({ method: "DELETE" });
+    expect(authenticatedFetch.mock.calls[1][1]).toBe("storage/v1/object/yere-market-photos");
+  });
+
+  it("archives rather than deleting a listing referenced by an existing order", async () => {
+    authenticatedFetch
+      .mockResolvedValueOnce(jsonResponse({ code: "23503", message: "violates foreign key constraint" }, 409))
+      .mockResolvedValueOnce(jsonResponse([{ id: "listing-123", photos: [] }]));
+
+    const result = await deleteMarketplaceListing(session, {
+      id: "listing-123", sellerId: "seller-123", title: "Tissu sénégalais", category: "Tissus",
+      description: "Tissu de démonstration", priceXof: 25000, unit: "piece", city: "Dakar",
+      photos: [], saleMode: "commande_yere", status: "publiee", stockAvailable: 8,
+      createdAt: "2026-11-05T10:00:00Z"
+    });
+
+    expect(result).toEqual({ deleted: false, archived: true, photosCleaned: true });
+    expect(authenticatedFetch.mock.calls[1][2]).toMatchObject({ method: "PATCH" });
+    expect(JSON.parse(String(authenticatedFetch.mock.calls[1][2].body)).statut).toBe("archivee");
   });
 });
