@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import HomeDashboard from "./HomeDashboard";
+import YereSubscriptionCard from "./YereSubscriptionCard";
 import SettingsCenter from "./SettingsCenter";
 import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, filterOrdersByDelivery, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, retouchStages, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderDeliveryFilter, type OrderStatus, type RetouchStage, type StockItem, type StockMovement } from "./domain";
 import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, workModes, type AtelierProfile, type WorkMode } from "./atelierProfile";
@@ -1296,20 +1297,22 @@ function App() {
               <label>Ville<input value={atelier.city} onChange={(event) => setAtelier((current) => ({ ...current, city: event.target.value }))} /></label>
               <button type="submit" className="primary-button">Enregistrer le profil</button>
             </form>
-            {isAtelierOwner && <section className="content-card team-panel" aria-labelledby="subscription-title">
-              <div className="section-heading"><div><h3 id="subscription-title">Abonnement YÉRÉ</h3><p>Un abonnement par atelier, toute l’équipe incluse.</p></div></div>
-              {subscriptionLoading ? <p role="status">Chargement du statut de l’abonnement…</p>
-                : subscriptionLoadError ? <p role="alert">Statut indisponible : {subscriptionLoadError}</p>
-                : atelierSubscription ? <>
-                  <div className="profile-profession"><span>Formule mensuelle</span><strong>{formatXof(atelierSubscription.monthlyPriceXof)} / mois</strong><small>Deux premiers mois d’essai gratuits, puis 5 000 FCFA par atelier et par mois.</small></div>
-                  <p><strong>Statut :</strong> {({essai:"Période d’essai",actif:"Actif",paiement_requis:"Paiement requis",en_retard:"Paiement en retard",suspendu:"Suspendu",resilie:"Résilié"} as Record<AtelierSubscription["status"],string>)[atelierSubscription.status]}</p>
-                  <p><strong>Fin de l’essai :</strong> {new Date(atelierSubscription.trialEndsAt).toLocaleDateString("fr-FR")}</p>
-                  {atelierSubscription.nextDueAt && <p><strong>Prochaine échéance :</strong> {new Date(atelierSubscription.nextDueAt).toLocaleDateString("fr-FR")}</p>}
-                  <h4>Historique des paiements</h4>
-                  {subscriptionPayments.length === 0 ? <p>Aucun paiement enregistré. Aucun paiement n’est demandé depuis cet écran pour le moment.</p>
-                    : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Montant</th><th>Statut</th><th>Moyen</th></tr></thead><tbody>{subscriptionPayments.map((payment) => <tr key={payment.id}><td>{new Date(payment.createdAt).toLocaleDateString("fr-FR")}</td><td>{formatXof(payment.amountXof)}</td><td>{({en_attente:"En attente",confirme:"Confirmé",echec:"Échec",rembourse:"Remboursé",annule:"Annulé"} as Record<SubscriptionPayment["status"],string>)[payment.status]}</td><td>{payment.method ?? "—"}</td></tr>)}</tbody></table></div>}
-                  <PayTechSubscriptionButton />
-                </> : <p>Aucun abonnement n’est rattaché à cet atelier. Contactez l’assistance avant toute souscription.</p>}
+            {isAtelierOwner && <section className="team-panel" aria-labelledby="subscription-title">
+              <YereSubscriptionCard />
+              <div className="content-card team-panel">
+                <div className="section-heading"><div><h3 id="subscription-title">Votre abonnement</h3><p>Un abonnement par atelier, toute l’équipe incluse.</p></div></div>
+                {subscriptionLoading ? <p role="status">Chargement du statut de l’abonnement…</p>
+                  : subscriptionLoadError ? <p role="alert">Statut indisponible : {subscriptionLoadError}</p>
+                  : atelierSubscription ? <>
+                    <p><strong>Statut :</strong> {({essai:"Période d’essai",actif:"Actif",paiement_requis:"Paiement requis",en_retard:"Paiement en retard",suspendu:"Suspendu",resilie:"Résilié"} as Record<AtelierSubscription["status"],string>)[atelierSubscription.status]}</p>
+                    <p><strong>Fin de l’essai :</strong> {new Date(atelierSubscription.trialEndsAt).toLocaleDateString("fr-FR")}</p>
+                    {atelierSubscription.nextDueAt && <p><strong>Prochaine échéance :</strong> {new Date(atelierSubscription.nextDueAt).toLocaleDateString("fr-FR")}</p>}
+                    <h4>Historique des paiements</h4>
+                    {subscriptionPayments.length === 0 ? <p>Aucun paiement enregistré.</p>
+                      : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Montant</th><th>Statut</th><th>Moyen</th></tr></thead><tbody>{subscriptionPayments.map((payment) => <tr key={payment.id}><td>{new Date(payment.createdAt).toLocaleDateString("fr-FR")}</td><td>{formatXof(payment.amountXof)}</td><td>{({en_attente:"En attente",confirme:"Confirmé",echec:"Échec",rembourse:"Remboursé",annule:"Annulé"} as Record<SubscriptionPayment["status"],string>)[payment.status]}</td><td>{payment.method ?? "—"}</td></tr>)}</tbody></table></div>}
+                    <PayTechSubscriptionButton />
+                  </> : <p>Aucun abonnement n’est rattaché à cet atelier. Contactez l’assistance avant toute souscription.</p>}
+              </div>
             </section>}
             <section className="content-card team-panel" aria-labelledby="team-title">
               <div className="section-heading"><div><h3 id="team-title">Équipe et accès à l’atelier</h3><p>Les droits sont contrôlés sur le serveur et chaque membre reste limité à cet atelier.</p></div><span className="marketplace-listing-count">{teamMembers.filter((member) => member.active).length} membre(s)</span></div>
