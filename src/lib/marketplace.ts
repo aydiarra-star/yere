@@ -210,7 +210,7 @@ export async function deleteMarketplaceListing(
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : String(cause);
     if (!/23503|foreign key|référence|referenced/i.test(message)) throw cause;
-    // Orders keep a permanent reference to their listing. Preserve that history by archiving it.
+    // Orders and conversations keep permanent references to their listing. Preserve that history by archiving it.
     await saveMarketplaceListing(session, {
       id: listing.id, sellerId: listing.sellerId, title: listing.title, category: listing.category,
       description: listing.description, priceXof: listing.priceXof, unit: listing.unit, city: listing.city,
