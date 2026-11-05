@@ -3288,3 +3288,17 @@ main.main-content .page-wrap .tailor-priority-card .tailor-card-art{
 .promotion-message summary{font-size:9px;color:#60718a;cursor:pointer}
 .promotion-message p{font-size:10px;line-height:1.6;color:#45566d;background:#f7f9fc;padding:9px;border-radius:7px}
 @media(max-width:760px){.promotion-form-grid{grid-template-columns:1fr}.promotion-form{padding:13px}.promotion-form-footer{align-items:flex-start;flex-direction:column}.promotion-form-footer .primary-button{width:100%}.promotion-history-toggle{align-items:flex-start;flex-direction:column}.promotion-recipient-actions{align-items:stretch}.promotion-recipient-actions select{max-width:none;flex:1}.promotion-recipient-actions .secondary-button{display:inline-flex;align-items:center;justify-content:center}}
+
+
+/* Promotion WhatsApp — action évidente et confortable sur mobile */
+.promotion-recipients-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #dce5f2;border-radius:10px;background:#f5f8fd}
+.promotion-recipients-heading h4{margin:0;color:#0B1F3A;font-size:13px}
+.promotion-recipients-heading p{margin:5px 0 0;color:#596b83;font-size:10px;line-height:1.5}
+.promotion-recipients-heading>span{flex:none;padding:6px 9px;border-radius:20px;background:#e5edf9;color:#13294B;font-size:10px;font-weight:800}
+.promotion-recipient{padding:13px 0}
+.whatsapp-contact-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:10px 15px;border:2px solid #0B1F3A;border-radius:9px;background:#0B1F3A;color:#fff;text-decoration:none;font-size:11px;font-weight:800;letter-spacing:.01em;box-shadow:0 3px 8px rgba(11,31,58,.16);transition:background .15s,border-color .15s,transform .15s}
+.whatsapp-contact-button:hover{background:#13294B;border-color:#13294B;transform:translateY(-1px)}
+.whatsapp-contact-button:focus-visible{outline:3px solid #D8B46A;outline-offset:3px}
+.whatsapp-contact-button svg{width:20px;height:20px;flex:none;color:#fff}
+.whatsapp-missing-number{display:inline-flex;align-items:center;min-height:40px;padding:8px 11px;border:1px solid #e4c98f;border-radius:8px;background:#fff9ec;color:#6f5422;font-size:10px;line-height:1.45}
+@media(max-width:760px){.promotion-recipients-heading{align-items:flex-start}.promotion-recipient-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.promotion-recipient-actions .whatsapp-contact-button{grid-column:1/-1;width:100%;min-height:48px;font-size:12px}.promotion-recipient-actions select{grid-column:1/-1;width:100%;max-width:none;min-height:42px}.promotion-recipient-actions .secondary-button{min-height:42px}.promotion-recipient-actions .text-button{min-height:40px}}
