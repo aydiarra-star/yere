@@ -112,6 +112,15 @@ end $$;
 reset role;
 
 -- A new atelier receives one two-month trial at the agreed 5,000 FCFA price.
+-- Capture the conversation ID as the database owner before switching to the unrelated user.
+select set_config(
+  'yere.test_conversation_id',
+  (select id::text from public.marketplace_conversation
+   where acheteur_user_id='71000000-0000-4000-8000-000000000002'
+   limit 1),
+  true
+);
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub','71000000-0000-4000-8000-000000000003',true);
 select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
@@ -204,9 +213,7 @@ begin
   -- A non-participant must not be able to send into a conversation by guessing its UUID.
   begin
     perform public.envoyer_message_marketplace(
-      (select id from public.marketplace_conversation
-       where acheteur_user_id='71000000-0000-4000-8000-000000000002'
-       limit 1),
+      current_setting('yere.test_conversation_id')::uuid,
       'Message interdit depuis un compte tiers'
     );
     raise exception 'FAIL: unrelated account sent a message into another conversation';
