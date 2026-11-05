@@ -2,44 +2,43 @@
 
 **La couture, mieux organisée.**
 
-YÉRÉ est une application web mobile-first destinée aux ateliers de tailleurs au Sénégal. Son cœur métier couvre les clients, les mensurations, les commandes, le suivi de confection, les paiements, la caisse, les dépenses, les stocks, les achats fournisseurs et l'organisation du travail en équipe.
+YÉRÉ est une application web mobile-first destinée aux ateliers de tailleurs, avec un espace Market public pour découvrir les annonces. L'application réunit la gestion de l'atelier, de l'équipe et des activités commerciales dans une interface pensée pour le téléphone.
 
-La marketplace est une évolution séparée : elle ne doit pas retarder la gestion quotidienne de l'atelier.
+## État du produit
+
+Les modules applicatifs comprennent :
+- clients et mensurations historisées ;
+- commandes, suivi de confection et paiements ;
+- caisse et dépenses, avec accès financier réservé au propriétaire ;
+- stock, mouvements, fournisseurs et achats fournisseurs ;
+- équipe, invitations et tâches d'atelier ;
+- Market public, avec le catalogue affiché dès l'arrivée sur l'accueil ;
+- présentation de l'abonnement atelier, placée directement sous le catalogue Market.
+
+L'abonnement prévu est de deux mois gratuits, puis 5 000 FCFA par mois et par atelier, pour toute l'équipe. Les opérations de paiement réel et l'activation commerciale doivent être considérées comme non validées tant qu'un test complet auprès du prestataire n'a pas été réalisé.
 
 ## Architecture actuelle
 
 - **Frontend :** React 18, TypeScript et Vite.
-- **Authentification et données :** Supabase Auth et PostgreSQL via l'API Supabase.
+- **Authentification et données métier :** Supabase Auth et PostgreSQL.
 - **Hébergement :** site statique Render, dépôt GitHub `aydiarra-star/yere`, branche `main`.
-- **URL du service :** https://yere-main-preview.onrender.com
-- **Région Supabase :** `eu-west-3` (Europe).
+- **URL officielle :** https://yere-main-preview.onrender.com
+- **Projet Supabase :** `yere` (ID `anphzspjnnhzcqzwhpsg`), région `eu-west-3`.
 
-Les données métier principales sont synchronisées avec Supabase : clients, mensurations, commandes, paiements, dépenses, stock, fournisseurs, achats fournisseurs, membres, invitations et tâches d'atelier. Les données financières sont chargées à travers des fonctions RPC contrôlées côté base ; l'interface masque les informations financières aux rôles qui ne doivent pas y accéder.
+Supabase est la source opérationnelle des données d'atelier synchronisées : clients, mensurations, commandes, paiements, dépenses, stock, fournisseurs, achats fournisseurs, membres, invitations et tâches. Le navigateur peut conserver des éléments locaux de fonctionnement ou d'archive ; ces archives locales ne remplacent pas les données serveur et ne doivent pas être réinjectées automatiquement dans l'atelier actif.
 
-## Authentification, rôles et isolation
-
-L'accès aux données est protégé par les politiques PostgreSQL Row Level Security (RLS). À la dernière vérification de la base de production, les 17 tables du schéma public avaient RLS activé et des politiques associées.
+## Accès, rôles et isolation
 
 Les rôles métier sont :
-- **Propriétaire :** contrôle complet de son atelier, de l'équipe et des données financières.
-- **Gestionnaire :** gestion opérationnelle selon les permissions définies, sans accès aux données financières réservées au propriétaire.
-- **Employé / tailleur :** accès aux informations nécessaires au travail et aux tâches qui lui sont attribuées, selon les règles de l'atelier.
+- **Propriétaire :** contrôle de son atelier, de l'équipe et des données financières.
+- **Gestionnaire :** gestion opérationnelle selon les permissions définies.
+- **Employé / tailleur :** accès aux informations nécessaires au travail et aux tâches autorisées.
 
-Les fonctions privilégiées utilisées pour certaines opérations sensibles sont placées dans le schéma non exposé `private`, avec des contrôles d'identité et de rôle. Les fonctions RPC exposées dans `public` sont réservées au rôle authentifié ; l'accès anonyme aux RPC métier a été contrôlé.
+Les données sont protégées par les politiques PostgreSQL Row Level Security (RLS). Lors du dernier audit, 24 tables du schéma public avaient RLS activé. Cela ne suffit pas à prouver à lui seul l'isolation complète : les scénarios avec plusieurs comptes et plusieurs ateliers doivent continuer à être testés.
 
-**Important :** l'activation de RLS et la présence de politiques ne remplacent pas les essais réels avec plusieurs comptes. Avant une ouverture commerciale large, exécuter les scénarios d'acceptation décrits plus bas.
+Les informations de caisse et les autres données financières doivent rester réservées au propriétaire. Les vérifications automatisées ne remplacent pas les essais manuels de connexion, d'invitation, de changement d'atelier et de permissions sur des comptes de test isolés.
 
-## Persistance locale et précautions
-
-Le navigateur conserve également un cache local isolé par utilisateur et par atelier pour certaines données, ainsi que des données de compatibilité héritées. Le serveur reste la source distante pour les opérations métier synchronisées, mais toutes les préférences et fonctions périphériques ne sont pas encore centralisées.
-
-- Les données de marketplace et certaines informations d'onboarding restent locales au navigateur.
-- Des enregistrements hérités identifiés par leurs anciens préfixes peuvent encore être conservés localement lors de la synchronisation.
-- Le cache local ne constitue **pas** une sauvegarde serveur.
-
-**Ne videz pas les données du navigateur et ne désinstallez pas l'application pour forcer une mise à jour sans avoir d'abord exporté et vérifié les données locales.** Cela pourrait supprimer des éléments hérités qui ne sont pas encore présents sur le serveur.
-
-## Développement et vérifications
+## Développement et CI
 
 Prérequis : Node.js 20 ou supérieur et npm.
 
@@ -49,52 +48,47 @@ npm test
 npm run build
 ```
 
-Le build lance également `scripts/verify-build.mjs` en postbuild. Ce contrôle vérifie la présence, les références et la mise en cache des quatre illustrations requises.
+Le build exécute également `scripts/verify-build.mjs` en postbuild. Ce contrôle vérifie les illustrations requises.
 
-La CI GitHub exécute l'audit des dépendances, les tests et le build. L'installation reproductible utilise `npm ci` avec le lockfile versionné.
+La CI GitHub exécute l'audit des dépendances, les tests unitaires et le build. Le dernier contrôle consulté sur le commit `923576733baf404a87baab9ef04d98c8f72507c5` a réussi pour ces trois étapes.
 
-## Déploiement Render
+## Déploiement officiel
 
-Le service statique Render existant est `yere-main-preview`, relié au dépôt `aydiarra-star/yere` et à la branche `main`, avec publication du dossier `dist` et déploiement automatique sur commit.
+Le service Render officiel est `srv-dbguo8vf3r2c73amvbmg`, relié au dépôt `aydiarra-star/yere` et à la branche `main`. Il publie le dossier `dist` à l'adresse :
 
-Commande de build recommandée pour ce dépôt :
+https://yere-main-preview.onrender.com
 
-```bash
-npm ci && npm test && npm run build
-```
+Après chaque déploiement, vérifier le commit réellement déployé, le statut `live`, les journaux disponibles et les parcours touchés par les changements. Un déploiement réussi ne prouve pas que tous les parcours métier fonctionnent.
 
-Répertoire de publication : `dist`.
+## Contrôles avant ouverture commerciale
 
-Après chaque déploiement, contrôler :
-1. le commit réellement déployé et le statut `live` ;
-2. les journaux de build et les erreurs d'exécution ;
-3. l'accueil de l'application ;
-4. les ressources `/images/delivery-reference.webp`, `/images/payment-reference.webp` et `/images/production-reference.webp` ;
-5. l'authentification et les parcours métier avec des comptes de test.
-
-## Contrôles de mise en service
-
-Avant de déclarer l'application pleinement prête pour tous les ateliers, effectuer les essais de bout en bout avec des comptes distincts :
+Poursuivre les essais avec des comptes de test et un environnement isolé :
 - création de compte, connexion, déconnexion et récupération du mot de passe ;
-- création d'atelier et accès après reconnexion sur un autre appareil ;
-- invitation, réception dans la boîte de réception de l'application, acceptation et refus ;
+- création d'atelier et reconnexion sur un autre appareil ;
+- invitation, acceptation, refus et révocation d'accès ;
 - création d'un client, ajout de plusieurs mensurations et historique ;
-- création d'une commande avec et sans acompte selon le rôle ;
-- ajout de paiement, calcul du solde et visibilité financière réservée au propriétaire ;
-- dépenses, annulation motivée, stock, mouvements et achats fournisseurs ;
-- attribution de tâches, mise à jour par le tailleur et historique ;
+- création et suivi d'une commande, avec acompte et paiements partiels ;
+- vérification que caisse, dépenses, soldes et achats fournisseurs restent réservés au propriétaire ;
+- dépenses, annulations motivées, stock, mouvements et achats fournisseurs ;
+- attribution de tâches et suivi par les membres de l'équipe ;
 - impossibilité pour un compte d'un autre atelier d'accéder aux données ;
-- vérification qu'un employé ne peut ni consulter ni modifier les données financières protégées.
+- Market : affichage public, détail des annonces, images, inscription acheteur et contact vendeur ;
+- abonnement et parcours PayTech en environnement de test, puis validation séparée avant tout paiement réel.
 
-Les contrôles automatisés et les tests SQL d'intégration sont utiles, mais ne remplacent pas ces essais dans un navigateur avec de vrais comptes de test.
+Ne jamais créer de fausses données clients dans les ateliers réels.
 
-## Sauvegardes et sécurité opérationnelle
+## Sécurité, sauvegardes et limites connues
 
-Les sauvegardes de la base doivent être vérifiées dans le tableau de bord Supabase selon le plan actif. Un export local ou un contrôle de fichier chiffré n'est pas, à lui seul, la preuve qu'une restauration complète a réussi. Ne lancez jamais une restauration sur la base de production pour un simple test.
+Les points suivants restent à suivre et ne doivent pas être présentés comme validés :
+- la restauration complète d'une sauvegarde Supabase n'a pas encore été testée dans un environnement isolé ;
+- six alertes concernant des fonctions `SECURITY DEFINER` nécessitent une revue individuelle de leur code, de leurs contrôles d'accès et de leurs droits d'exécution ;
+- la protection Supabase contre les mots de passe compromis était signalée désactivée lors du dernier audit ; son activation nécessite une décision et une vérification dédiées ;
+- la validation visuelle des logos de paiement, notamment le logo original Wave, reste à confirmer ;
+- les essais réels de bout en bout sur les parcours d'authentification, de permissions, de Market et de paiement restent nécessaires.
 
-L'avis Supabase relevé lors du dernier audit indique que la protection contre les mots de passe compromis (Leaked Password Protection) est désactivée. Il est recommandé de l'activer dans les réglages Auth si cette option est disponible sur le plan utilisé. Les avis d'index inutilisés sont informatifs : ne supprimez pas ces index sans mesure et analyse de charge.
+Ne jamais tester une restauration sur la base de production. Ne jamais vider le stockage du navigateur pour résoudre un problème sans avoir vérifié et sauvegardé les éléments locaux à préserver.
 
-## Documentation du produit
+## Documentation du projet
 
 - [Prompt maître](docs/PROMPT_MAITRE.md)
 - [Cahier des charges maître](docs/CAHIER_DES_CHARGES_MAITRE.md)
@@ -106,10 +100,10 @@ L'avis Supabase relevé lors du dernier audit indique que la protection contre l
 - [Charte graphique](docs/CHARTE_GRAPHIQUE.md)
 - [Plan du mode hors ligne](docs/PLAN_MODE_HORS_LIGNE.md)
 
-## Principes
+## Principes de maintenance
 
-- Simplicité d'utilisation sur téléphone, y compris avec une connexion limitée.
-- Confidentialité et isolation stricte entre ateliers.
-- Les informations financières ne sont accessibles qu'aux rôles autorisés.
-- Préserver les données existantes avant toute migration ou modification de stockage.
+- Préserver les données et les fonctionnalités déjà en place.
+- Privilégier les corrections ciblées et les tests de non-régression.
+- Garder une interface simple, lisible et responsive sur téléphone.
+- Maintenir l'isolation stricte entre ateliers et la confidentialité financière.
 - Ne jamais annoncer une fonctionnalité comme opérationnelle sans vérification.
