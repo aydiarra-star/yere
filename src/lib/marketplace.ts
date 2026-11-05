@@ -387,9 +387,14 @@ export async function sendMarketplaceMessage(
   if (data !== true) throw new Error("Le message n'a pas été envoyé.");
 }
 
-export type PublicMarketplaceListing = MarketplaceListing & { sellerName: string; sellerCity: string; photoUrls: string[] };
+export type PublicMarketplaceListing = MarketplaceListing & { sellerName: string; sellerCity: string; sellerType: MarketplaceSeller["sellerType"]; photoUrls: string[] };
+export type MarketplaceSellerKindFilter = "tous" | MarketplaceSeller["sellerType"];
 
-type PublicSellerRow = { id: string; nom_entreprise: string; ville: string; statut: "actif" | "suspendu" };
+export function matchesMarketplaceSellerKind(sellerType: MarketplaceSeller["sellerType"], filter: MarketplaceSellerKindFilter): boolean {
+  return filter === "tous" || sellerType === filter;
+}
+
+type PublicSellerRow = { id: string; nom_entreprise: string; ville: string; statut: "actif" | "suspendu"; type_vendeur: MarketplaceSeller["sellerType"] };
 
 /** Public catalogue: only published listings and non-sensitive seller fields are requested. */
 export async function listPublicMarketplaceListings(): Promise<PublicMarketplaceListing[]> {
@@ -402,7 +407,7 @@ export async function listPublicMarketplaceListings(): Promise<PublicMarketplace
   const sellerIds = [...new Set(rows.map((row) => row.vendeur_id))];
   const sellerFilter = sellerIds.map((id) => encodeURIComponent(id)).join(",");
   const sellersResponse = await publicFetch(
-    `rest/v1/marketplace_vendeur?select=id,nom_entreprise,ville,statut&id=in.(${sellerFilter})&statut=eq.actif`
+    `rest/v1/marketplace_vendeur?select=id,nom_entreprise,ville,statut,type_vendeur&id=in.(${sellerFilter})&statut=eq.actif`
   );
   const sellersData = await readJson(sellersResponse);
   if (!Array.isArray(sellersData)) throw new Error("Informations publiques des vendeurs invalides.");
@@ -410,7 +415,7 @@ export async function listPublicMarketplaceListings(): Promise<PublicMarketplace
   const publicListings = rows.flatMap((row) => {
     const seller = sellers.get(row.vendeur_id);
     if (!seller) return [];
-    return [{ ...mapListing(row), sellerName: seller.nom_entreprise, sellerCity: seller.ville }];
+    return [{ ...mapListing(row), sellerName: seller.nom_entreprise, sellerCity: seller.ville, sellerType: seller.type_vendeur }];
   });
   return Promise.all(publicListings.map(async (listing) => ({
     ...listing,
