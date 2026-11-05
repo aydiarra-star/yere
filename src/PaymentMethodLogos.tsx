@@ -9,21 +9,25 @@ const methods = [
   },
   {
     name: "Orange Money",
+    wordmark: undefined,
     src: "https://upload.wikimedia.org/wikipedia/commons/1/19/Logo_Orange_Money.svg",
     className: "payment-logo-orange",
   },
   {
     name: "Visa",
+    wordmark: undefined,
     src: "/images/payments/visa.svg",
     className: "payment-logo-visa",
   },
   {
     name: "Mastercard",
+    wordmark: undefined,
     src: "/images/payments/mastercard.svg",
     className: "payment-logo-mastercard",
   },
   {
     name: "Free Money",
+    wordmark: undefined,
     src: "https://www.boasenegal.com/wp-content/uploads/2020/04/fee-money.png",
     className: "payment-logo-free",
   },
