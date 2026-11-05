@@ -7,7 +7,7 @@ const { authenticatedFetch, publicFetch } = vi.hoisted(() => ({
 
 vi.mock("./supabaseAuth", () => ({ authenticatedFetch, publicFetch, projectUrl: "https://supabase.example.test" }));
 
-import { createMarketplaceSeller, getMyMarketplaceSeller, saveMarketplaceListing, listMyMarketplaceListings, deleteMarketplaceListing } from "./marketplace";
+import { createMarketplaceSeller, getMyMarketplaceSeller, saveMarketplaceListing, listMyMarketplaceListings, deleteMarketplaceListing, listPublicMarketplaceListings, matchesMarketplaceSellerKind } from "./marketplace";
 import type { YereSession } from "./supabaseAuth";
 
 const session = {
@@ -199,5 +199,45 @@ describe("marketplace listing photo persistence", () => {
     expect(result).toEqual({ deleted: false, archived: true, photosCleaned: true });
     expect(authenticatedFetch.mock.calls[1][2]).toMatchObject({ method: "PATCH" });
     expect(JSON.parse(String(authenticatedFetch.mock.calls[1][2].body)).statut).toBe("archivee");
+  });
+});
+
+
+describe("Marketplace seller type discovery", () => {
+  it("matches all sellers when no type filter is selected", () => {
+    expect(matchesMarketplaceSellerKind("atelier", "tous")).toBe(true);
+    expect(matchesMarketplaceSellerKind("fournisseur", "tous")).toBe(true);
+  });
+
+  it("keeps ateliers and independent suppliers in their own filter", () => {
+    expect(matchesMarketplaceSellerKind("atelier", "atelier")).toBe(true);
+    expect(matchesMarketplaceSellerKind("fournisseur", "fournisseur")).toBe(true);
+    expect(matchesMarketplaceSellerKind("atelier", "fournisseur")).toBe(false);
+    expect(matchesMarketplaceSellerKind("fournisseur", "atelier")).toBe(false);
+  });
+});
+
+
+describe("public Marketplace seller classification", () => {
+  beforeEach(() => publicFetch.mockReset());
+
+  it("returns the public seller type without exposing private seller contacts", async () => {
+    publicFetch
+      .mockResolvedValueOnce(jsonResponse([{
+        id: "listing-atelier-1", vendeur_id: "seller-atelier-1", titre: "Boubou sur mesure", categorie: "Boubous",
+        description: "Création artisanale", prix_fcfa: 45000, unite: "piece", ville: "Dakar", photos: [],
+        mode_vente: "contact_direct", statut: "publiee", stock_disponible: null, created_at: "2026-11-05T10:00:00Z"
+      }]))
+      .mockResolvedValueOnce(jsonResponse([{
+        id: "seller-atelier-1", nom_entreprise: "Atelier Test", ville: "Dakar", statut: "actif", type_vendeur: "atelier"
+      }]));
+
+    const listings = await listPublicMarketplaceListings();
+
+    expect(listings).toHaveLength(1);
+    expect(listings[0]).toMatchObject({ sellerName: "Atelier Test", sellerType: "atelier", title: "Boubou sur mesure" });
+    expect(publicFetch.mock.calls[1][0]).toContain("type_vendeur");
+    expect(publicFetch.mock.calls[1][0]).not.toContain("telephone");
+    expect(publicFetch.mock.calls[1][0]).not.toContain("nom_contact");
   });
 });
