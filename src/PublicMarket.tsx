@@ -116,6 +116,7 @@ export default function PublicMarket() {
           clearSession();
           setSession(null);
           setSeller(null);
+          setMyListings([]);
           setAtelierChoices([]);
           setOrders([]);
           setConversations([]);
@@ -192,6 +193,7 @@ export default function PublicMarket() {
         clearSession();
         setSession(null);
         setSeller(null);
+        setMyListings([]);
         setAtelierChoices([]);
         setOrders([]);
         setConversations([]);
@@ -468,7 +470,7 @@ export default function PublicMarket() {
     <main className="yere-market-app">
       <header className="pm-header">
         <a className="pm-brand" href="/" aria-label="YÉRÉ Market, accueil"><img className="pm-mark" src="/images/yere-logo.png" alt="" /><span><b>YÉRÉ</b><small>MARKET</small></span></a>
-        <nav className="pm-nav"><a href="#catalogue">Catalogue</a><a href="#vendeurs">Vendeurs</a>{session && <><a href="#commandes">Mes commandes</a><a href="#messages">Messages</a></>}</nav>
+        <nav className="pm-nav"><a href="#catalogue">Catalogue</a><a href="#vendeurs">Vendeurs</a>{session && <><a href="#commandes">Mes commandes</a>{seller && <a href="#gestion-annonces">Mes annonces</a>}<a href="#messages">Messages</a></>}</nav>
         <div className="pm-header-actions">
           {session ? <><span className="pm-user">{session.user.email}</span><button className="pm-outline pm-account-access" type="button" onClick={() => document.getElementById(seller ? "gestion-annonces" : "commandes")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Mon compte</button><button className="pm-outline" type="button" onClick={() => void handleSignOut()} disabled={busy}>Déconnexion</button></> :
             <button className="pm-outline" type="button" onClick={() => { setShowAccount((v) => !v); setError(""); }}>Se connecter</button>}
