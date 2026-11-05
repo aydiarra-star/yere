@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 
 type AtelierRole = "proprietaire" | "gestionnaire" | "employe";
-type Props = { role: AtelierRole; onBack: () => void; serverSyncStatus: "idle" | "loading" | "ready" | "error" };
+type SettingsDestination = "account" | "team" | "clients" | "orders" | "stock" | "marketplace";
+type Props = { role: AtelierRole; onBack: () => void; onNavigate: (destination: SettingsDestination) => void; serverSyncStatus: "idle" | "loading" | "ready" | "error" };
 
 type SettingItem = { title: string; description: string; icon: string; status?: "available" | "planned"; details: string[] };
 type SettingSection = { title: string; description: string; icon: string; items: SettingItem[] };
@@ -40,7 +41,7 @@ const sections: SettingSection[] = [
   ]}
 ];
 
-export default function SettingsCenter({ role, onBack, serverSyncStatus }: Props) {
+export default function SettingsCenter({ role, onBack, onNavigate, serverSyncStatus }: Props) {
   const [online, setOnline] = useState(() => typeof navigator === "undefined" ? true : navigator.onLine);
   const [selected, setSelected] = useState<SettingItem | null>(null);
   const [expanded, setExpanded] = useState<string>("Mon compte");
@@ -54,7 +55,7 @@ export default function SettingsCenter({ role, onBack, serverSyncStatus }: Props
 
   const roleLabel = role === "proprietaire" ? "Propriétaire" : role === "gestionnaire" ? "Gestionnaire" : "Employé";
   const itemCount = sections.reduce((total, section) => total + section.items.length, 0);
-  const plannedCount = sections.reduce((total, section) => total + section.items.filter(item => item.status === "planned").length, 0);
+  const plannedCount = sections.reduce((total, section) => total + section.items.filter(item => item.status === "planned").length, 0);\n  const destinations: Record<string, SettingsDestination> = { "Profil et coordonnées": "account", "Informations de l’atelier": "account", "Membres et invitations": "team", "Rôles et autorisations": "team", "Bien démarrer avec YÉRÉ": "clients", "Clients et mensurations": "clients", "Commandes et suivi de confection": "orders", "Stock et fournisseurs": "stock", "Marketplace": "marketplace" };
 
   return (
     <section className="content-card dtech-settings" aria-labelledby="dtech-settings-title">
