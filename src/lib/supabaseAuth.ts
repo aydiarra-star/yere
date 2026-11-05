@@ -9,6 +9,11 @@ export type YereSession = {
 };
 
 const SESSION_KEY = "yere.auth.session.v1";
+
+// Supabase rotates refresh tokens. Parallel API requests must share one refresh,
+// otherwise the first request rotates the token and the others reuse a rejected token.
+let refreshInFlight: Promise<YereSession> | null = null;
+
 export const projectUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 
@@ -125,11 +130,37 @@ export async function signIn(email: string, password: string): Promise<YereSessi
 }
 
 export async function refreshSession(session: YereSession): Promise<YereSession> {
-  const response = await fetch(apiUrl("auth/v1/token?grant_type=refresh_token"), { method: "POST", headers: headers(), body: JSON.stringify({ refresh_token: session.refresh_token }) });
-  const next = toSession(await parseResponse(response));
-  if (!next) throw new Error("La session a expiré. Connectez-vous à nouveau.");
-  saveSession(next);
-  return next;
+  // Another request may already have rotated this session while this request was queued.
+  const latest = readSession();
+  if (latest && latest.user.id === session.user.id
+    && latest.refresh_token !== session.refresh_token
+    && latest.expires_at * 1000 > Date.now() + 60_000) {
+    return latest;
+  }
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = (async () => {
+    // Re-check after acquiring the in-tab single-flight slot.
+    const current = readSession();
+    if (current && current.user.id === session.user.id
+      && current.refresh_token !== session.refresh_token
+      && current.expires_at * 1000 > Date.now() + 60_000) {
+      return current;
+    }
+    const response = await fetch(apiUrl("auth/v1/token?grant_type=refresh_token"), {
+      method: "POST", headers: headers(), body: JSON.stringify({ refresh_token: current?.user.id === session.user.id ? current.refresh_token : session.refresh_token })
+    });
+    const refreshed = toSession(await parseResponse(response));
+    if (!refreshed) throw new Error("La session a expiré. Connectez-vous à nouveau.");
+    saveSession(refreshed);
+    return refreshed;
+  })();
+
+  try {
+    return await refreshInFlight;
+  } finally {
+    refreshInFlight = null;
+  }
 }
 
 export async function signOut(session: YereSession): Promise<void> {
