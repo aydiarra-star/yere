@@ -291,9 +291,11 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
   async function submitAtelier(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!session) return;
-    setBusy(true); setError("");
+    let atelierCreated = false;
+    setBusy(true); setError(""); setBootstrapError("");
     try {
       const id = await createAtelier(session, { nom: atelierName.trim(), telephone: phone.trim(), ville: city.trim() });
+      atelierCreated = true;
       const workspaces = await listMyAteliers(session);
       setWorkspaces(workspaces);
       const created = workspaces.find((item) => item.id === id);
@@ -306,7 +308,11 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
       // is initialized with the new tenant ID and its owner role.
       window.location.reload();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Création de l'atelier impossible.");
+      const detail = cause instanceof Error ? cause.message : "Création de l'atelier impossible.";
+      // The server may already have created the atelier. Preserve that fact and
+      // offer workspace verification instead of inviting a duplicate submission.
+      if (atelierCreated) setBootstrapError(detail);
+      else setError(detail);
     } finally { setBusy(false); }
   }
 
