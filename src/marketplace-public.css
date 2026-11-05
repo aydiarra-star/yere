@@ -566,3 +566,17 @@
 @media(max-width:620px){.pm-seller-filters{gap:6px;margin-top:0}.pm-seller-filters button{min-height:36px;padding:8px 11px}.pm-workspace-cross-sell{align-items:stretch;flex-direction:column;padding:17px}.pm-workspace-cross-sell>a{text-align:center}}
 
 .pm-product-meta{flex-wrap:wrap;align-items:center}
+
+
+/* Explicit marketplace delivery confirmation */
+.pm-delivery-confirm {
+  margin-top: 0.65rem;
+  min-height: 44px;
+  width: 100%;
+}
+.pm-delivery-confirmed {
+  margin: 0.65rem 0;
+  color: #13294b;
+  font-size: 0.9rem;
+  font-weight: 600;
+}

@@ -49,6 +49,7 @@ export type MarketplaceOrder = {
   status: "recue" | "acceptee" | "preparee" | "expediee" | "livree" | "annulee";
   paymentStatus: "non_paye" | "a_payer" | "en_attente" | "paye" | "echec" | "rembourse";
   createdAt: string;
+  deliveredAt: string | null;
 };
 
 type SellerRow = {
@@ -65,7 +66,7 @@ type OrderRow = {
   id: string; reference: string; annonce_id: string; vendeur_id: string; acheteur_user_id: string;
   quantite: number; prix_unitaire_fcfa: number; total_fcfa: number; nom_acheteur: string;
   telephone_acheteur: string; ville_livraison: string; note_acheteur: string; statut: MarketplaceOrder["status"];
-  paiement_statut: MarketplaceOrder["paymentStatus"]; created_at: string;
+  paiement_statut: MarketplaceOrder["paymentStatus"]; created_at: string; date_livraison: string | null;
 };
 
 async function readJson(response: Response): Promise<unknown> {
@@ -94,7 +95,7 @@ function mapOrder(row: OrderRow): MarketplaceOrder {
     buyerUserId: row.acheteur_user_id, quantity: Number(row.quantite), unitPriceXof: Number(row.prix_unitaire_fcfa),
     totalXof: Number(row.total_fcfa), buyerName: row.nom_acheteur, buyerPhone: row.telephone_acheteur,
     deliveryCity: row.ville_livraison, buyerNote: row.note_acheteur, status: row.statut,
-    paymentStatus: row.paiement_statut, createdAt: row.created_at };
+    paymentStatus: row.paiement_statut, createdAt: row.created_at, deliveredAt: row.date_livraison ?? null };
 }
 
 export async function getMyMarketplaceSeller(session: YereSession): Promise<MarketplaceSeller | null> {
@@ -301,7 +302,7 @@ export async function createMarketplaceOrder(session: YereSession, input: {
 
 export async function listMyMarketplaceOrders(session: YereSession): Promise<MarketplaceOrder[]> {
   const response = await authenticatedFetch(session,
-    "rest/v1/marketplace_commande?select=id,reference,annonce_id,vendeur_id,acheteur_user_id,quantite,prix_unitaire_fcfa,total_fcfa,nom_acheteur,telephone_acheteur,ville_livraison,note_acheteur,statut,paiement_statut,created_at&order=created_at.desc");
+    "rest/v1/marketplace_commande?select=id,reference,annonce_id,vendeur_id,acheteur_user_id,quantite,prix_unitaire_fcfa,total_fcfa,nom_acheteur,telephone_acheteur,ville_livraison,note_acheteur,statut,paiement_statut,created_at,date_livraison&order=created_at.desc");
   const data = await readJson(response);
   if (!Array.isArray(data)) throw new Error("Historique des commandes marketplace invalide.");
   return (data as OrderRow[]).map(mapOrder);
