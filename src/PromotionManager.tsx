@@ -142,7 +142,7 @@ export default function PromotionManager({ clients, orders, canManage }: { clien
       </div>
       <label>Clients concernés<select value={audience} onChange={(event) => setAudience(event.target.value as typeof audience)}><option value="tous">Tous les clients ({clients.length})</option><option value="anciens">Sans commande depuis 90 jours</option><option value="inactifs">Sans commande depuis 180 jours</option></select></label>
       <label>Message à personnaliser<textarea rows={4} maxLength={1200} value={message} onChange={(event) => setMessage(event.target.value)} /></label>
-      <p className="promotion-hint">Variables : {"{nom}"}, {"{offre}"}, {"{remise}"}, {"{date_fin}"}. Offre valable uniquement sur les nouvelles commandes pendant la période indiquée. Les commandes déjà enregistrées ne changent jamais de prix.</p>
+      <p className="promotion-hint">Variables : {"{nom}"}, {"{offre}"}, {"{remise}"}, {"{date_fin}"}. Offre valable uniquement sur les nouvelles commandes pendant la période indiquée. Le propriétaire confirme et saisit le prix remisé lors de la nouvelle commande ; les commandes déjà enregistrées ne changent jamais de prix.</p>
       <div className="promotion-form-footer"><span>{audienceClients.length} client(s) ciblé(s)</span><button className="primary-button" type="submit" disabled={busy || loading}>{busy ? "Enregistrement…" : "Créer la promotion"}</button></div>
     </form>
     <div className="promotion-history"><h3>Historique des promotions</h3>
@@ -155,7 +155,7 @@ export default function PromotionManager({ clients, orders, canManage }: { clien
           <button type="button" className="promotion-history-toggle" aria-expanded={expanded} onClick={() => setExpandedId(expanded ? null : promotion.id)}>
             <span><b>{promotion.titre}</b><small>{discountLabel(promotion)} · du {promotion.date_debut} au {promotion.date_fin}</small></span><span className="promotion-progress">{counts.commande}/{contacts.length} commande(s) <i>{expanded ? "−" : "+"}</i></span>
           </button>
-          {expanded && <div className="promotion-recipients"><p className="promotion-hint">Aucun envoi automatique. Envoyez vous-même chaque message, puis mettez à jour le suivi.</p>
+          {expanded && <div className="promotion-recipients"><p className="promotion-hint">Aucun envoi automatique. Contactez uniquement les clients qui acceptent de recevoir des offres ; envoyez vous-même chaque message, puis mettez à jour le suivi.</p>
             {contacts.map((contact) => {
               const client = clients.find((item) => item.id === contact.clientId);
               if (!client) return <p key={contact.clientId} className="promotion-hint">Un client de cette campagne n’est plus présent dans le répertoire.</p>;
