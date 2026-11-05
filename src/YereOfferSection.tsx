@@ -121,10 +121,7 @@ export default function YereOfferSection({ onClientSpace }: Props) {
                 <div className="pm-yere-feature-list">{group.features.map(([title, description]) => <FeatureRow key={title} title={title} description={description} />)}</div>
               </section>)}
             </div>
-            <div className="pm-yere-pricing">
-              <div><span className="pm-yere-pricing-label">UNE OFFRE SIMPLE POUR L’ATELIER</span><div className="pm-yere-price">5 000 <small>FCFA / mois</small></div><p>Après 2 mois d’essai gratuit · Toute l’équipe incluse</p></div>
-              <a className="pm-yere-action" href="#abonnement">Découvrir mon espace <span>→</span></a>
-            </div>
+            
             <p className="pm-yere-access-note"><span>●</span> Les informations financières de l’atelier sont réservées au propriétaire.</p>
           </article>
 
