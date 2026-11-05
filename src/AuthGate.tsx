@@ -10,6 +10,12 @@ import "./auth-gate.css";
 type Atelier = { id: string; nom: string; telephone: string | null; ville: string | null; mode_organisation: "independent" | "collaborators" | "team" };
 type Props = { children: ReactNode; initialProfessionalLogin?: boolean };
 
+function isInvalidRefreshTokenError(value: unknown): boolean {
+  const detail = value instanceof Error ? value.message : String(value ?? "");
+  return /invalid refresh token|refresh token not found|refresh_token_not_found/i.test(detail);
+}
+
+
 function seedLocalProfile(userId: string, atelier: Atelier) {
   const suffix = `::${userId}`;
   window.sessionStorage.setItem("yere-user-scope", userId);
@@ -158,7 +164,7 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
           // A rejected refresh token is not a temporary network outage. Clear only
           // the invalid authentication credential and return to the public Market,
           // preserving all atelier archives and server-side business records.
-          if (/invalid refresh token|refresh token not found|refresh_token_not_found/i.test(detail)) {
+          if (isInvalidRefreshTokenError(detail)) {
             clearSession();
             setSession(null);
             setWorkspaces([]);
@@ -235,6 +241,17 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
       }
     } catch (cause) {
       const detail = cause instanceof Error ? cause.message : "Connexion impossible. Réessayez.";
+      if (isInvalidRefreshTokenError(detail)) {
+        clearSession();
+        setSession(null);
+        setAtelier(null);
+        setWorkspaces([]);
+        setPendingInvitations([]);
+        setBootstrapError("");
+        setShowProfessionalAuth(false);
+        setError("Votre ancienne session a expiré. Le Market reste accessible ; reconnectez-vous pour retrouver votre atelier.");
+        return;
+      }
       const saved = readSession();
       if (saved) {
         setSession(saved);
@@ -307,7 +324,18 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
       setSession(current);
       await loadWorkspace(current);
     } catch (cause) {
-      setBootstrapError(cause instanceof Error ? cause.message : "La vérification du serveur a échoué. Réessayez lorsque la connexion sera rétablie.");
+      if (isInvalidRefreshTokenError(cause)) {
+        clearSession();
+        setSession(null);
+        setAtelier(null);
+        setWorkspaces([]);
+        setPendingInvitations([]);
+        setBootstrapError("");
+        setShowProfessionalAuth(false);
+        setError("Votre ancienne session a expiré. Le Market est de nouveau accessible ; reconnectez-vous pour retrouver votre atelier.");
+      } else {
+        setBootstrapError(cause instanceof Error ? cause.message : "La vérification du serveur a échoué. Réessayez lorsque la connexion sera rétablie.");
+      }
     } finally { setBusy(false); }
   }
 
