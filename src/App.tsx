@@ -1281,7 +1281,7 @@ function App() {
           </section>}
 
           {view === "account" && <section className="content-card account-page">
-            <div className="section-heading account-section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div><button type="button" className="secondary-button" onClick={() => setView("settings")}>Ouvrir les paramètres</button></div>
+            <div className="section-heading account-section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div></div>
             <div id="yere-profile-account-controls" className="profile-account-controls-slot" />
             <form className="account-form" onSubmit={(event) => { event.preventDefault(); void (async () => { const session = readSession(); const atelierId = window.sessionStorage.getItem("yere-active-atelier"); const profile = normalizeAtelierProfile(atelier); if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; } if (!profile.name.trim()) { setNotice("Le nom de l’atelier est obligatoire."); return; } try { await updateAtelierProfile(session, atelierId, { nom: profile.name, telephone: profile.phone, ville: profile.city, mode_organisation: profile.workMode ?? "independent" }); setAtelier(profile); setNotice("Profil de l’atelier enregistré et confirmé par Supabase."); } catch (cause) { setNotice(cause instanceof Error ? `Profil non enregistré : ${cause.message}` : "Impossible d’enregistrer le profil sur le serveur."); } })(); }}>
               <div className="profile-profession" aria-label="Métier YÉRÉ"><span>Métier</span><strong>Tailleur</strong><small>YÉRÉ est actuellement dédié aux tailleurs.</small></div>
@@ -1295,7 +1295,7 @@ function App() {
             {isAtelierOwner && <section className="team-panel" aria-labelledby="subscription-title">
               <YereSubscriptionCard />
               <div className="content-card team-panel">
-                <div className="section-heading"><div><h3 id="subscription-title">Votre abonnement</h3><p>Un abonnement par atelier, toute l’équipe incluse.</p></div></div>
+                <div className="section-heading"><div><h3 id="subscription-title">Votre abonnement</h3><p>Un abonnement par atelier, toute l’équipe incluse.</p></div><button type="button" className="secondary-button" onClick={() => setView("settings")}>⚙ Paramètres de l’atelier</button></div>
                 {subscriptionLoading ? <p role="status">Chargement du statut de l’abonnement…</p>
                   : subscriptionLoadError ? <p role="alert">Statut indisponible : {subscriptionLoadError}</p>
                   : atelierSubscription ? <>
@@ -1303,9 +1303,7 @@ function App() {
                     <p><strong>Fin de l’essai :</strong> {new Date(atelierSubscription.trialEndsAt).toLocaleDateString("fr-FR")}</p>
                     {atelierSubscription.nextDueAt && <p><strong>Prochaine échéance :</strong> {new Date(atelierSubscription.nextDueAt).toLocaleDateString("fr-FR")}</p>}
                     <h4>Historique des paiements</h4>
-                    {subscriptionPayments.length === 0 ? <p>Aucun paiement enregistré.</p>
-                      : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Montant</th><th>Statut</th><th>Moyen</th></tr></thead><tbody>{subscriptionPayments.map((payment) => <tr key={payment.id}><td>{new Date(payment.createdAt).toLocaleDateString("fr-FR")}</td><td>{formatXof(payment.amountXof)}</td><td>{({en_attente:"En attente",confirme:"Confirmé",echec:"Échec",rembourse:"Remboursé",annule:"Annulé"} as Record<SubscriptionPayment["status"],string>)[payment.status]}</td><td>{payment.method ?? "—"}</td></tr>)}</tbody></table></div>}
-                  </> : <p>Aucun abonnement n’est rattaché à cet atelier. Contactez l’assistance avant toute souscription.</p>}
+                    {subscriptionPayments.length === 0 ? <p>Auc                    <p className="privacy-note">Votre abonnement et son échéance sont suivis ici. Les détails des transactions ne sont pas affichés dans cet espace.</p>ption.</p>}
               </div>
             </section>}
             <section className="content-card team-panel" aria-labelledby="team-title">
