@@ -1302,8 +1302,7 @@ function App() {
                     <p><strong>Statut :</strong> {({essai:"Période d’essai",actif:"Actif",paiement_requis:"Paiement requis",en_retard:"Paiement en retard",suspendu:"Suspendu",resilie:"Résilié"} as Record<AtelierSubscription["status"],string>)[atelierSubscription.status]}</p>
                     <p><strong>Fin de l’essai :</strong> {new Date(atelierSubscription.trialEndsAt).toLocaleDateString("fr-FR")}</p>
                     {atelierSubscription.nextDueAt && <p><strong>Prochaine échéance :</strong> {new Date(atelierSubscription.nextDueAt).toLocaleDateString("fr-FR")}</p>}
-                    <h4>Historique des paiements</h4>
-                    {subscriptionPayments.length === 0 ? <p>Auc                    <p className="privacy-note">Votre abonnement et son échéance sont suivis ici. Les détails des transactions ne sont pas affichés dans cet espace.</p>ption.</p>}
+                    <p className="privacy-note">Votre abonnement et son échéance sont suivis ici. Les détails des transactions ne sont pas affichés dans cet espace.</p>
               </div>
             </section>}
             <section className="content-card team-panel" aria-labelledby="team-title">
