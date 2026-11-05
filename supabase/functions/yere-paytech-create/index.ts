@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { isPayTechCheckoutUrl } from "../_shared/paytech-url.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -91,7 +92,7 @@ Deno.serve(async (req: Request) => {
     const pendingRows = await pendingResponse.json();
     const pending = Array.isArray(pendingRows) ? pendingRows[0] : null;
     const pendingDetails = pending?.details && typeof pending.details === "object" ? pending.details : {};
-    if (typeof pendingDetails.redirect_url === "string" && pendingDetails.env === env) {
+    if (isPayTechCheckoutUrl(pendingDetails.redirect_url) && pendingDetails.env === env) {
       return json({ redirectUrl: pendingDetails.redirect_url, reference: pending.reference_interne, reused: true });
     }
 
@@ -136,8 +137,7 @@ Deno.serve(async (req: Request) => {
       }),
     });
     const payment = await paymentResponse.json().catch(() => ({}));
-    if (!paymentResponse.ok || payment.success !== 1 || typeof payment.redirect_url !== "string"
-      || !payment.redirect_url.startsWith("https://paytech.sn/")) {
+    if (!paymentResponse.ok || payment.success !== 1 || !isPayTechCheckoutUrl(payment.redirect_url)) {
       await fetch(`${supabaseUrl}/rest/v1/abonnement_paiement?reference_interne=eq.${encodeURIComponent(reference)}`, {
         method: "PATCH",
         headers: { ...adminHeaders, Prefer: "return=minimal" },
