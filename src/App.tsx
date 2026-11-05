@@ -9,7 +9,6 @@ import { usePersistentState } from "./usePersistentState";
 import { createAtelierClient, createAtelierOrder, saveAtelierOrderFinancialTerms, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
 import { readSession, updateAtelierProfile } from "./lib/supabaseAuth";
 import { getAtelierSubscription, listAtelierSubscriptionPayments, type AtelierSubscription, type SubscriptionPayment } from "./lib/atelierSubscription";
-import PayTechSubscriptionButton from "./PayTechSubscriptionButton";
 import { createAtelierTask, listAtelierTasks, updateAtelierTask, type AtelierTask, type AtelierTaskStatus } from "./lib/atelierTasks";
 import { cancelAtelierInvitation, createAtelierInvitation, deactivateAtelierMember, reactivateAtelierMember, listAtelierInvitations, listAtelierMembers, updateAtelierMemberRole, updateAtelierMemberProfile, type AtelierInvitation, type AtelierMember, requireActiveAtelierMember } from "./lib/atelierTeam";
 import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, getAtelierSupplierProfile, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, saveAtelierSupplierProfile, type AtelierSupplier } from "./lib/atelierSuppliers";
@@ -1306,7 +1305,6 @@ function App() {
                     <h4>Historique des paiements</h4>
                     {subscriptionPayments.length === 0 ? <p>Aucun paiement enregistré.</p>
                       : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Montant</th><th>Statut</th><th>Moyen</th></tr></thead><tbody>{subscriptionPayments.map((payment) => <tr key={payment.id}><td>{new Date(payment.createdAt).toLocaleDateString("fr-FR")}</td><td>{formatXof(payment.amountXof)}</td><td>{({en_attente:"En attente",confirme:"Confirmé",echec:"Échec",rembourse:"Remboursé",annule:"Annulé"} as Record<SubscriptionPayment["status"],string>)[payment.status]}</td><td>{payment.method ?? "—"}</td></tr>)}</tbody></table></div>}
-                    <PayTechSubscriptionButton />
                   </> : <p>Aucun abonnement n’est rattaché à cet atelier. Contactez l’assistance avant toute souscription.</p>}
               </div>
             </section>}
