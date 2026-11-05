@@ -1303,6 +1303,7 @@ function App() {
                     <p><strong>Fin de l’essai :</strong> {new Date(atelierSubscription.trialEndsAt).toLocaleDateString("fr-FR")}</p>
                     {atelierSubscription.nextDueAt && <p><strong>Prochaine échéance :</strong> {new Date(atelierSubscription.nextDueAt).toLocaleDateString("fr-FR")}</p>}
                     <p className="privacy-note">Votre abonnement et son échéance sont suivis ici. Les détails des transactions ne sont pas affichés dans cet espace.</p>
+                    </>
               </div>
             </section>}
             <section className="content-card team-panel" aria-labelledby="team-title">
