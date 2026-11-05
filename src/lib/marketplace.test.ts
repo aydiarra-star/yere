@@ -7,7 +7,7 @@ const { authenticatedFetch, publicFetch } = vi.hoisted(() => ({
 
 vi.mock("./supabaseAuth", () => ({ authenticatedFetch, publicFetch, projectUrl: "https://supabase.example.test" }));
 
-import { createMarketplaceSeller, getMyMarketplaceSeller, saveMarketplaceListing, listMyMarketplaceListings, deleteMarketplaceListing } from "./marketplace";
+import { createMarketplaceSeller, getMyMarketplaceSeller, saveMarketplaceListing, listMyMarketplaceListings, deleteMarketplaceListing, matchesMarketplaceSellerKind } from "./marketplace";
 import type { YereSession } from "./supabaseAuth";
 
 const session = {
@@ -199,5 +199,20 @@ describe("marketplace listing photo persistence", () => {
     expect(result).toEqual({ deleted: false, archived: true, photosCleaned: true });
     expect(authenticatedFetch.mock.calls[1][2]).toMatchObject({ method: "PATCH" });
     expect(JSON.parse(String(authenticatedFetch.mock.calls[1][2].body)).statut).toBe("archivee");
+  });
+});
+
+
+describe("Marketplace seller type discovery", () => {
+  it("matches all sellers when no type filter is selected", () => {
+    expect(matchesMarketplaceSellerKind("atelier", "tous")).toBe(true);
+    expect(matchesMarketplaceSellerKind("fournisseur", "tous")).toBe(true);
+  });
+
+  it("keeps ateliers and independent suppliers in their own filter", () => {
+    expect(matchesMarketplaceSellerKind("atelier", "atelier")).toBe(true);
+    expect(matchesMarketplaceSellerKind("fournisseur", "fournisseur")).toBe(true);
+    expect(matchesMarketplaceSellerKind("atelier", "fournisseur")).toBe(false);
+    expect(matchesMarketplaceSellerKind("fournisseur", "atelier")).toBe(false);
   });
 });
