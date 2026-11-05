@@ -319,6 +319,7 @@ export default function PublicMarket() {
       setError("Une annonce peut contenir cinq photos maximum.");
       return;
     }
+    const wasEditing = editingListingId !== null;
     setBusy(true); setError(""); setNotice("");
     let uploadedPhotos: string[] = [];
     try {
@@ -341,7 +342,7 @@ export default function PublicMarket() {
       await refreshCatalogue();
       setMyListings(await listMyMarketplaceListings(session, seller.id));
       resetListingEditor();
-      setNotice(editingListingId ? "Votre annonce a été mise à jour." : "Votre offre et ses photos sont publiées dans le Market.");
+      setNotice(wasEditing ? "Votre annonce a été mise à jour." : "Votre offre et ses photos sont publiées dans le Market.");
     } catch (cause) {
       if (uploadedPhotos.length) {
         try { await deleteMarketplacePhotos(session, uploadedPhotos); } catch { /* keep original listing error */ }
