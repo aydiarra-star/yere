@@ -3251,3 +3251,40 @@ main.main-content .page-wrap .tailor-priority-card .tailor-card-art{
 .dtech-settings-actions .primary-button{background:#13294b;border-color:#13294b}
 @keyframes dtech-detail-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:760px){.dtech-settings-hero{padding:21px 16px 16px}.dtech-settings-top{gap:10px}.dtech-settings-top h2{font-size:21px}.dtech-settings-top p:not(.eyebrow){font-size:10px}.dtech-editor-mark{min-width:55px;min-height:52px;font-size:12px}.dtech-settings-metrics{margin-top:16px;padding-top:12px}.dtech-settings-layout{grid-template-columns:1fr;gap:15px;padding:14px}.dtech-settings-nav{display:flex;overflow-x:auto;gap:6px;padding:8px;scrollbar-width:thin}.dtech-settings-nav-label,.dtech-settings-role{display:none}.dtech-settings-nav>button{width:auto;min-width:max-content;padding:8px 10px;border:1px solid #e8edf3;background:#fff}.dtech-settings-nav>button.active{border-color:#cbd6e5;background:#e9eef7}.dtech-settings-nav>button small{display:none}.dtech-settings-item{padding:10px;gap:8px}.dtech-settings-item-icon{width:32px;height:32px;font-size:15px}.dtech-settings-item-copy strong{font-size:9px}.dtech-settings-item-copy small{font-size:8px}.dtech-item-status{font-size:7px;padding:4px 6px}.dtech-settings-section-heading h3{font-size:16px}.dtech-offline-card{margin:0 14px 14px;padding:13px}.dtech-settings-about{padding:0 14px;flex-wrap:wrap;gap:10px}.dtech-settings-about>div{padding:0 10px}.dtech-settings>.privacy-note{padding:0 14px}.dtech-settings-actions{padding:13px 14px 0}.dtech-settings-actions button{width:100%}}
+
+
+/* Atelier promotions */
+.promotion-panel{padding-bottom:22px}
+.promotion-panel>.section-heading{align-items:flex-start}
+.promotion-count{font-size:10px;color:#66758b;border:1px solid #dce3ec;border-radius:20px;padding:6px 10px;white-space:nowrap}
+.promotion-form{display:grid;gap:13px;padding:18px;background:#f7f9fc;border:1px solid #e3e8f0;border-radius:11px;margin:0 0 22px}
+.promotion-form h3,.promotion-history h3{font-size:13px;color:#172b4d;margin:0 0 2px}
+.promotion-form label{display:grid;gap:6px;font-size:10px;font-weight:600;color:#52627a;min-width:0}
+.promotion-form input,.promotion-form select,.promotion-form textarea,.promotion-recipient-actions select{width:100%;min-width:0;border:1px solid #dce3ec;border-radius:7px;background:#fff;color:#26364d;padding:10px;font:inherit;font-size:11px}
+.promotion-form textarea{resize:vertical;line-height:1.6}
+.promotion-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.promotion-hint{font-size:9px;line-height:1.55;color:#7c8999;margin:0}
+.promotion-form-footer{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.promotion-form-footer>span{font-size:10px;color:#62718a}
+.promotion-error{background:#fff4f2;border:1px solid #f2d3ce;color:#9a3c32;border-radius:7px;padding:10px;font-size:10px}
+.promotion-history{display:grid;gap:10px}
+.promotion-history-card{border:1px solid #e6eaf0;border-radius:9px;overflow:hidden}
+.promotion-history-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;border:0;background:#fff;padding:13px}
+.promotion-history-toggle>span:first-child{min-width:0}
+.promotion-history-toggle b,.promotion-history-toggle small{display:block}
+.promotion-history-toggle b{font-size:11px;color:#26364d}
+.promotion-history-toggle small{font-size:9px;color:#7b899a;margin-top:5px}
+.promotion-progress{font-size:9px;color:#526784;white-space:nowrap}
+.promotion-progress i{font-style:normal;font-size:15px;margin-left:8px}
+.promotion-recipients{border-top:1px solid #edf0f4;padding:12px;display:grid;gap:12px}
+.promotion-recipient{display:grid;gap:8px;padding:10px 0;border-bottom:1px solid #edf0f4}
+.promotion-recipient>div:first-child b,.promotion-recipient>div:first-child small{display:block}
+.promotion-recipient>div:first-child b{font-size:10px;color:#2c3c52}
+.promotion-recipient>div:first-child small{font-size:9px;color:#8390a0;margin-top:3px}
+.promotion-recipient-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.promotion-recipient-actions .secondary-button{font-size:9px;padding:7px 9px;text-decoration:none}
+.promotion-recipient-actions select{width:auto;max-width:160px;padding:7px;font-size:9px}
+.promotion-recipient-actions .text-button{font-size:9px}
+.promotion-message summary{font-size:9px;color:#60718a;cursor:pointer}
+.promotion-message p{font-size:10px;line-height:1.6;color:#45566d;background:#f7f9fc;padding:9px;border-radius:7px}
+@media(max-width:760px){.promotion-form-grid{grid-template-columns:1fr}.promotion-form{padding:13px}.promotion-form-footer{align-items:flex-start;flex-direction:column}.promotion-form-footer .primary-button{width:100%}.promotion-history-toggle{align-items:flex-start;flex-direction:column}.promotion-recipient-actions{align-items:stretch}.promotion-recipient-actions select{max-width:none;flex:1}.promotion-recipient-actions .secondary-button{display:inline-flex;align-items:center;justify-content:center}}
