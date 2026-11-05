@@ -450,7 +450,7 @@ function mapMarketplaceReview(row: MarketplaceReviewRow): MarketplaceReview {
 
 export async function listMarketplaceSellerReviews(sellerId: string): Promise<MarketplaceReview[]> {
   const response = await publicFetch(
-    `rest/v1/marketplace_avis?select=id,vendeur_id,note,criteres,commentaire,reponse_vendeur,repondu_at,created_at&vendeur_id=eq.${encodeURIComponent(sellerId)}&statut=eq.publiee&order=created_at.desc&limit=50`
+    `rest/v1/marketplace_avis?select=id,vendeur_id,note,criteres,commentaire,reponse_vendeur,repondu_at,created_at&vendeur_id=eq.${encodeURIComponent(sellerId)}&order=created_at.desc&limit=50`
   );
   const data = await readJson(response);
   if (!Array.isArray(data)) throw new Error("Les avis de ce vendeur n'ont pas pu être chargés.");
