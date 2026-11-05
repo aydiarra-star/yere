@@ -31,3 +31,5 @@
 .pm-review-reply-form{display:grid;gap:8px;margin-top:10px}
 .pm-review-reply-form .pm-outline{justify-self:start;color:#283568;border-color:#cbd2e6}
 @media(max-width:620px){.pm-review-form-criteria{grid-template-columns:1fr}.pm-reviews-heading{align-items:flex-start}.pm-review-summary{flex:0 0 auto}}
+
+.pm-order{flex-wrap:wrap}
