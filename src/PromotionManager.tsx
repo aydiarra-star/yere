@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import type { Client } from "./domain";
+import type { Client, Order } from "./domain";
 import { authenticatedFetch, readSession } from "./lib/supabaseAuth";
 
 type ContactStatus = "a_contacter" | "contacte" | "interesse" | "commande";
@@ -34,7 +34,7 @@ function internationalPhone(phone: string): string | null {
   return digits.length >= 8 && digits.length <= 15 ? digits : null;
 }
 
-export default function PromotionManager({ clients, canManage }: { clients: Client[]; canManage: boolean }) {
+export default function PromotionManager({ clients, orders, canManage }: { clients: Client[]; orders: Order[]; canManage: boolean }) {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -53,11 +53,17 @@ export default function PromotionManager({ clients, canManage }: { clients: Clie
   const audienceClients = useMemo(() => {
     if (audience === "tous") return clients;
     const cutoff = new Date(Date.now() - (audience === "anciens" ? 90 : 180) * 86400000).toISOString().slice(0, 10);
+    const latestByClient = new Map<string, string>();
+    for (const order of orders) {
+      if (!order.orderedAt) continue;
+      const previous = latestByClient.get(order.clientId);
+      if (!previous || order.orderedAt > previous) latestByClient.set(order.clientId, order.orderedAt);
+    }
     return clients.filter((client) => {
-      const dated = (client as Client & { lastOrderAt?: string }).lastOrderAt;
-      return !dated || dated <= cutoff;
+      const lastOrder = latestByClient.get(client.id);
+      return Boolean(lastOrder && lastOrder <= cutoff);
     });
-  }, [clients, audience]);
+  }, [clients, orders, audience]);
 
   useEffect(() => {
     let active = true;
@@ -134,7 +140,7 @@ export default function PromotionManager({ clients, canManage }: { clients: Clie
         <label>Début de l’offre<input required type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></label>
         <label>Fin de l’offre<input required type="date" min={startDate} value={endDate} onChange={(event) => setEndDate(event.target.value)} /></label>
       </div>
-      <label>Clients concernés<select value={audience} onChange={(event) => setAudience(event.target.value as typeof audience)}><option value="tous">Tous les clients ({clients.length})</option><option value="anciens">Clients à recontacter</option><option value="inactifs">Clients inactifs</option></select></label>
+      <label>Clients concernés<select value={audience} onChange={(event) => setAudience(event.target.value as typeof audience)}><option value="tous">Tous les clients ({clients.length})</option><option value="anciens">Sans commande depuis 90 jours</option><option value="inactifs">Sans commande depuis 180 jours</option></select></label>
       <label>Message à personnaliser<textarea rows={4} maxLength={1200} value={message} onChange={(event) => setMessage(event.target.value)} /></label>
       <p className="promotion-hint">Variables : {"{nom}"}, {"{offre}"}, {"{remise}"}, {"{date_fin}"}. Offre valable uniquement sur les nouvelles commandes pendant la période indiquée. Les commandes déjà enregistrées ne changent jamais de prix.</p>
       <div className="promotion-form-footer"><span>{audienceClients.length} client(s) ciblé(s)</span><button className="primary-button" type="submit" disabled={busy || loading}>{busy ? "Enregistrement…" : "Créer la promotion"}</button></div>
