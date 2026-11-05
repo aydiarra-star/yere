@@ -111,16 +111,6 @@ begin
 end $$;
 reset role;
 
--- A new atelier receives one two-month trial at the agreed 5,000 FCFA price.
--- Capture the conversation ID as the database owner before switching to the unrelated user.
-select set_config(
-  'yere.test_conversation_id',
-  (select id::text from public.marketplace_conversation
-   where acheteur_user_id='71000000-0000-4000-8000-000000000002'
-   limit 1),
-  true
-);
-
 set local role authenticated;
 select set_config('request.jwt.claim.sub','71000000-0000-4000-8000-000000000003',true);
 select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
@@ -179,6 +169,16 @@ begin
   end if;
 end $$;
 reset role;
+
+-- Capture the conversation ID after the buyer has created it, before switching
+-- to the seller and unrelated account roles later in this transaction.
+select set_config(
+  'yere.test_conversation_id',
+  (select id::text from public.marketplace_conversation
+   where acheteur_user_id='71000000-0000-4000-8000-000000000002'
+   limit 1),
+  true
+);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','71000000-0000-4000-8000-000000000001',true);
