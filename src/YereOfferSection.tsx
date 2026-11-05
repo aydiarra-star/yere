@@ -86,7 +86,7 @@ export default function YereOfferSection({ onClientSpace }: Props) {
             <h2 id="pm-yere-offer-title">Tout ce que YÉRÉ offre au <em>tailleur</em> et au <em>client.</em></h2>
             <p>Un univers pensé pour celles et ceux qui créent, cousent, vendent et portent la mode. Les bons outils pour les ateliers. De belles découvertes pour les clients.</p>
             <div className="pm-yere-hero-actions">
-              <a className="pm-yere-primary-link" href="#abonnement">Je suis tailleur <span>↗</span></a>
+              <a className="pm-yere-primary-link" href="/?espace=professionnel">Je suis tailleur <span>↗</span></a>
               <button className="pm-yere-secondary-link" type="button" onClick={onClientSpace}>Je suis client <span>↗</span></button>
             </div>
           </div>
@@ -158,7 +158,7 @@ export default function YereOfferSection({ onClientSpace }: Props) {
 
         <footer className="pm-yere-final-cta">
           <div><span className="pm-yere-eyebrow">YÉRÉ · LA COUTURE CONNECTÉE</span><h3>Votre talent a sa place. Vos découvertes commencent ici.</h3><p>Entrez dans l’univers YÉRÉ et choisissez votre espace.</p></div>
-          <div className="pm-yere-final-actions"><a href="#abonnement">Je suis tailleur <span>↗</span></a><button type="button" onClick={onClientSpace}>Je suis client <span>↗</span></button></div>
+          <div className="pm-yere-final-actions"><a href="/?espace=professionnel">Je suis tailleur <span>↗</span></a><button type="button" onClick={onClientSpace}>Je suis client <span>↗</span></button></div>
         </footer>
       </div>
     </section>
