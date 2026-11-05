@@ -24,8 +24,8 @@ function discountLabel(p: Pick<Promotion, "type_remise" | "valeur">): string {
 }
 function personalizedMessage(template: string, client: Client, promotion: Promotion): string {
   const end = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(new Date(promotion.date_fin + "T12:00:00"));
-  return template.replaceAll("{nom}", client.name).replaceAll("{offre}", promotion.titre)
-    .replaceAll("{remise}", discountLabel(promotion)).replaceAll("{date_fin}", end);
+  return template.replace(/\\{nom\\}/g, () => client.name).replace(/\\{offre\\}/g, () => promotion.titre)
+    .replace(/\\{remise\\}/g, () => discountLabel(promotion)).replace(/\\{date_fin\\}/g, () => end);
 }
 function internationalPhone(phone: string): string | null {
   const value = phone.trim();
