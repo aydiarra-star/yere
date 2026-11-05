@@ -83,33 +83,49 @@ export default function PublicMarket() {
   useEffect(() => {
     let active = true;
     void (async () => {
+      if (!supabaseReady) {
+        setError("Le Market n’est pas encore configuré sur ce déploiement.");
+        setLoading(false);
+        return;
+      }
+
+      const recoveryCallback = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") === "recovery";
+      if (recoveryCallback) { setPasswordRecovery(true); setShowAccount(true); }
+
+      // Restore the optional customer session separately from the public catalogue.
+      // A rejected old refresh token must never prevent anonymous visitors from seeing listings.
       try {
-        if (!supabaseReady) throw new Error("Le Market n’est pas encore configuré sur ce déploiement.");
-        const recoveryCallback = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") === "recovery";
-        if (recoveryCallback) { setPasswordRecovery(true); setShowAccount(true); }
         const callback = await consumeAuthCallback();
         let current = callback ?? readSession();
-        if (current && current.expires_at * 1000 <= Date.now() + 60_000) current = await refreshSession(current);
+        if (current && current.expires_at * 1000 <= Date.now() + 60_000) {
+          current = await refreshSession(current);
+        }
         if (active && current) {
           setSession(current);
           await loadAccount(current);
         }
+      } catch (cause) {
+        if (!active) return;
+        const detail = cause instanceof Error ? cause.message : String(cause ?? "");
+        if (/invalid refresh token|refresh token not found|refresh_token_not_found/i.test(detail)) {
+          clearSession();
+          setSession(null);
+          setSeller(null);
+          setAtelierChoices([]);
+          setOrders([]);
+          setConversations([]);
+          // Expected recovery path: no stale-session warning on the public Market.
+          setError("");
+        } else {
+          setError(detail || "La connexion au compte n’a pas pu être rétablie. Le catalogue public reste disponible.");
+        }
+      }
+
+      // Always load public listings, even if restoring an old account session failed.
+      try {
         await refreshCatalogue();
       } catch (cause) {
-        if (active) {
-          const detail = cause instanceof Error ? cause.message : "Impossible de charger le Market.";
-          if (/invalid refresh token|refresh token not found|refresh_token_not_found/i.test(detail)) {
-            clearSession();
-            setSession(null);
-            setSeller(null);
-            setAtelierChoices([]);
-            setOrders([]);
-            setConversations([]);
-            setError("Votre ancienne session a expiré. Le Market reste accessible ; reconnectez-vous si vous souhaitez retrouver votre compte.");
-          } else {
-            setError(detail);
-          }
-        }
+        if (active) setError(cause instanceof Error ? cause.message : "Impossible de charger les annonces publiques.");
       } finally {
         if (active) setLoading(false);
       }
@@ -391,23 +407,23 @@ export default function PublicMarket() {
         </div>
       </header>
 
-      <section className="pm-hero">
-        <div className="pm-hero-copy"><span className="pm-eyebrow">LE MARCHÉ DE LA COUTURE</span><h1>La mode et la mercerie<br/><em>à portée de main.</em></h1><p>Découvrez les créations des ateliers, trouvez tissus et fournitures, et échangez directement avec les vendeurs.</p><a className="pm-hero-button" href="#catalogue">Explorer le catalogue <span>→</span></a><div className="pm-hero-trust"><span>✦ Créations & tenues</span><span>✦ Tissus & mercerie</span><span>✦ Vendeurs indépendants</span></div></div>
-        <div className="pm-hero-art" aria-hidden="true"><div className="pm-art-circle"></div><div className="pm-art-card pm-art-card-one"><span>YÉRÉ</span><b>Le savoir-faire<br/>à l’honneur</b><small>MODE · TISSUS · MERCERIE</small></div><div className="pm-art-card pm-art-card-two"><span>✦</span><b>Créé avec soin</b><small>PAR LES ARTISANS</small></div></div>
-      </section>
-
       {showAccount && <section className="pm-panel pm-account-panel"><div><span className="pm-eyebrow">ESPACE CLIENT · SÉNÉGAL & DIASPORA</span><h2>{authMode === "recovery" ? "Récupérer mon compte" : authMode === "login" ? "Heureux de vous retrouver." : "Créer un compte Market"}</h2><p>Inscrivez-vous depuis votre pays avec une adresse e-mail. Aucun numéro sénégalais, atelier ou boutique n’est nécessaire.</p></div>{passwordRecovery ? <form onSubmit={submitRecoveredPassword}><label>Nouveau mot de passe<input type="password" minLength={8} required autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></label><label>Confirmer le mot de passe<input type="password" minLength={8} required autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} /></label><button className="pm-cta" type="submit" disabled={busy}>{busy ? "Modification…" : "Enregistrer le nouveau mot de passe"}</button></form> : <form onSubmit={submitAuth}><label>E-mail<input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>{authMode !== "recovery" && <label>Mot de passe<input type="password" minLength={8} required autoComplete={authMode === "login" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} /></label>}<button className="pm-cta" type="submit" disabled={busy}>{busy ? "Veuillez patienter…" : authMode === "recovery" ? "Envoyer le lien de récupération" : authMode === "login" ? "Se connecter" : "Créer mon compte"}</button>{authMode === "login" && <button type="button" className="pm-text-button" onClick={() => setAuthMode("recovery")}>Mot de passe oublié ?</button>}<button type="button" className="pm-text-button" onClick={() => setAuthMode(authMode === "signup" ? "login" : "signup")}>{authMode === "signup" ? "J’ai déjà un compte" : "Créer un compte"}</button></form>}</section>}
 
       {error && <p className="pm-alert pm-error" role="alert">{error}</p>}
       {notice && <p className="pm-alert pm-notice" role="status">{notice}</p>}
-
-      <YereSubscriptionCard />
 
       <section id="catalogue" className="pm-catalogue">
         <div className="pm-section-heading"><div><span className="pm-eyebrow">LA SÉLECTION YÉRÉ</span><h2>Explorez le Market</h2><p>Des offres publiées par des vendeurs inscrits sur YÉRÉ.</p></div><label className="pm-search"><span>⌕</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un article, une ville…" /></label></div>
         <div className="pm-categories">{categories.map((item) => <button key={item} type="button" className={category === item ? "is-active" : ""} onClick={() => setCategory(item)}>{item}</button>)}</div>
         {loading ? <div className="pm-empty">Chargement du catalogue…</div> : visibleListings.length === 0 ? <div className="pm-empty"><span>✦</span><h3>Le catalogue est prêt à accueillir ses premiers articles.</h3><p>Il n’y a pas encore d’annonce publiée sur YÉRÉ Market. Les articles apparaîtront ici dès qu’un fournisseur ou un atelier aura créé sa boutique et publié une offre.</p><a href="#vendeurs">Ouvrir une boutique et publier un article →</a></div> :
           <div className="pm-products">{visibleListings.map((item) => <article className="pm-product pm-product-clickable" key={item.id} role="button" tabIndex={0} aria-label={"Voir le détail de " + item.title} onClick={() => { setDetailListing(item); setDetailPhotoZoomed(false); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDetailListing(item); setDetailPhotoZoomed(false); } }}><div className="pm-product-art">{item.photoUrls[0] ? <img className="pm-product-photo" src={item.photoUrls[0]} alt={item.title} loading="lazy" /> : <><span>{item.category.toLowerCase().includes("tissu") ? "TISSUS" : item.category.toUpperCase()}</span><b>Y</b></>}</div><div className="pm-product-copy"><small>{item.category}</small><h3>{item.title}</h3><p>{item.description || "Une offre proposée par un vendeur YÉRÉ."}</p><strong>{money(item.priceXof)}</strong><div className="pm-product-meta"><span>{item.sellerName}</span><span>{item.city || item.sellerCity}</span></div><div className="pm-product-actions"><button type="button" className="pm-buy" onClick={(e) => { e.stopPropagation(); setSelectedListing(item); setError(""); if (!session) setShowAccount(true); }}>Commander <span>→</span></button><button type="button" className="pm-contact" onClick={(e) => { e.stopPropagation(); setContactListing(item); setContactMessage(""); setError(""); }}>Contacter le vendeur</button></div></div></article>)}</div>}
+      </section>
+
+      <YereSubscriptionCard />
+
+      <section className="pm-hero">
+        <div className="pm-hero-copy"><span className="pm-eyebrow">LE MARCHÉ DE LA COUTURE</span><h1>La mode et la mercerie<br/><em>à portée de main.</em></h1><p>Découvrez les créations des ateliers, trouvez tissus et fournitures, et échangez directement avec les vendeurs.</p><a className="pm-hero-button" href="#catalogue">Explorer le catalogue <span>→</span></a><div className="pm-hero-trust"><span>✦ Créations & tenues</span><span>✦ Tissus & mercerie</span><span>✦ Vendeurs indépendants</span></div></div>
+        <div className="pm-hero-art" aria-hidden="true"><div className="pm-art-circle"></div><div className="pm-art-card pm-art-card-one"><span>YÉRÉ</span><b>Le savoir-faire<br/>à l’honneur</b><small>MODE · TISSUS · MERCERIE</small></div><div className="pm-art-card pm-art-card-two"><span>✦</span><b>Créé avec soin</b><small>PAR LES ARTISANS</small></div></div>
       </section>
 
       <div className="pm-account-overview">
