@@ -99,3 +99,7 @@
   font-weight: 700;
   text-align: center;
 }
+
+.payment-logo-wave.is-image-error .payment-method-wordmark {
+  display: none;
+}
