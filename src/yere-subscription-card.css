@@ -13,3 +13,7 @@
 .yere-subscription-price>span{font-size:clamp(18px,2.4vw,28px);font-weight:750}
 .yere-subscription-trial{margin:10px 0 0;padding-top:14px;border-top:1px solid #e9edf3;text-align:center;color:#526078;font-size:13px;font-weight:650;line-height:1.5}
 @media(max-width:650px){.yere-subscription-card{margin:20px 0;padding:14px;border-radius:16px}.yere-subscription-banner{align-items:flex-start;padding:15px;gap:11px}.yere-subscription-banner>span{font-size:30px}.yere-subscription-body{grid-template-columns:1fr;gap:18px;padding:18px 2px 8px}.yere-subscription-benefits{gap:10px}.yere-subscription-price{padding:16px}.yere-subscription-trial{font-size:12px}}
+
+.yere-subscription-access{display:flex;align-items:center;justify-content:center;gap:12px;width:min(100%,560px);min-height:54px;margin:18px auto 0;padding:12px 20px;border-radius:12px;background:#0b1f3a;color:#fff;text-decoration:none;text-align:center;font-size:17px;font-weight:800;box-shadow:0 6px 16px rgba(11,31,58,.18)}
+.yere-subscription-access:hover{background:#13294b}
+.yere-subscription-access span{color:#d8b46a;font-size:22px}
