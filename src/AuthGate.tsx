@@ -155,6 +155,18 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
         if (active) {
           setAtelier(null);
           const detail = cause instanceof Error ? cause.message : "Impossible de vérifier votre espace auprès du serveur.";
+          // A rejected refresh token is not a temporary network outage. Clear only
+          // the invalid authentication credential and return to the public Market,
+          // preserving all atelier archives and server-side business records.
+          if (/invalid refresh token|refresh token not found|refresh_token_not_found/i.test(detail)) {
+            clearSession();
+            setSession(null);
+            setWorkspaces([]);
+            setBootstrapError("");
+            setError("");
+            setShowProfessionalAuth(false);
+            return;
+          }
           if (saved) {
             // A network/bootstrap failure is not proof that the account is signed out.
             // Keep the credential locally, but do not expose atelier data until the server revalidates access.
