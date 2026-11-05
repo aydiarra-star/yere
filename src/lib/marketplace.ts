@@ -423,3 +423,91 @@ export async function listPublicMarketplaceListings(): Promise<PublicMarketplace
       .filter((url): url is string => url !== null)
   })));
 }
+
+
+export type MarketplaceReview = {
+  id: string;
+  orderId?: string;
+  sellerId: string;
+  rating: number;
+  criteria: Record<string, number>;
+  comment: string;
+  sellerReply: string | null;
+  repliedAt: string | null;
+  createdAt: string;
+};
+
+type MarketplaceReviewRow = {
+  id: string; commande_id?: string; vendeur_id: string; note: number; criteres: Record<string, number>;
+  commentaire: string; reponse_vendeur: string | null; repondu_at: string | null; created_at: string;
+};
+
+function mapMarketplaceReview(row: MarketplaceReviewRow): MarketplaceReview {
+  return { id: row.id, orderId: row.commande_id, sellerId: row.vendeur_id, rating: Number(row.note),
+    criteria: row.criteres ?? {}, comment: row.commentaire ?? "", sellerReply: row.reponse_vendeur ?? null,
+    repliedAt: row.repondu_at ?? null, createdAt: row.created_at };
+}
+
+export async function listMarketplaceSellerReviews(sellerId: string): Promise<MarketplaceReview[]> {
+  const response = await publicFetch(
+    `rest/v1/marketplace_avis?select=id,vendeur_id,note,criteres,commentaire,reponse_vendeur,repondu_at,created_at&vendeur_id=eq.${encodeURIComponent(sellerId)}&order=created_at.desc&limit=50`
+  );
+  const data = await readJson(response);
+  if (!Array.isArray(data)) throw new Error("Les avis de ce vendeur n'ont pas pu être chargés.");
+  return (data as MarketplaceReviewRow[]).map(mapMarketplaceReview);
+}
+
+export async function getMarketplaceReviewForOrder(session: YereSession, orderId: string): Promise<MarketplaceReview | null> {
+  const response = await authenticatedFetch(session,
+    `rest/v1/marketplace_avis?select=id,commande_id,vendeur_id,note,criteres,commentaire,reponse_vendeur,repondu_at,created_at&commande_id=eq.${encodeURIComponent(orderId)}&limit=1`);
+  const data = await readJson(response);
+  if (!Array.isArray(data)) throw new Error("Impossible de vérifier l'avis de cette commande.");
+  return data.length ? mapMarketplaceReview(data[0] as MarketplaceReviewRow) : null;
+}
+
+export async function getMarketplaceSellerType(session: YereSession, sellerId: string): Promise<MarketplaceSeller["sellerType"]> {
+  const response = await authenticatedFetch(session,
+    `rest/v1/marketplace_vendeur?select=type_vendeur&id=eq.${encodeURIComponent(sellerId)}&limit=1`);
+  const data = await readJson(response);
+  if (!Array.isArray(data) || !data[0]?.type_vendeur) throw new Error("Le profil du vendeur n'a pas été retrouvé.");
+  return data[0].type_vendeur as MarketplaceSeller["sellerType"];
+}
+
+export async function createMarketplaceReview(session: YereSession, input: {
+  orderId: string; sellerId: string; rating: number; criteria: Record<string, number>; comment: string;
+}): Promise<void> {
+  if (!Number.isInteger(input.rating) || input.rating < 1 || input.rating > 5) throw new Error("Choisissez une note entre 1 et 5 étoiles.");
+  if (input.comment.trim().length > 1200) throw new Error("Votre commentaire est trop long.");
+  for (const [label, value] of Object.entries(input.criteria)) {
+    if (!Number.isInteger(value) || value < 1 || value > 5) throw new Error(`Note invalide pour : ${label}.`);
+  }
+  const data = await readJson(await authenticatedFetch(session, "rest/v1/marketplace_avis?select=id", {
+    method: "POST", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ commande_id: input.orderId, vendeur_id: input.sellerId, note: input.rating,
+      criteres: input.criteria, commentaire: input.comment.trim() })
+  }));
+  if (!Array.isArray(data) || !data[0]?.id) throw new Error("Votre avis n'a pas été confirmé par le serveur.");
+}
+
+export async function replyToMarketplaceReview(session: YereSession, reviewId: string, reply: string): Promise<void> {
+  const text = reply.trim();
+  if (!text || text.length > 1200) throw new Error("La réponse doit contenir entre 1 et 1 200 caractères.");
+  const data = await readJson(await authenticatedFetch(session,
+    `rest/v1/marketplace_avis?id=eq.${encodeURIComponent(reviewId)}&select=id,reponse_vendeur,repondu_at`,
+    { method: "PATCH", headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ reponse_vendeur: text, repondu_at: new Date().toISOString() }) }));
+  if (!Array.isArray(data) || !data[0]?.id) throw new Error("La réponse du vendeur n'a pas été enregistrée.");
+}
+
+export async function reportMarketplaceReview(session: YereSession, reviewId: string, reason: "faux_avis" | "insulte" | "conflit_interet" | "autre" = "autre"): Promise<void> {
+  await readJson(await authenticatedFetch(session, "rest/v1/marketplace_avis_signalement", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ avis_id: reviewId, motif: reason })
+  }));
+}
+
+export function summarizeMarketplaceReviews(reviews: Array<Pick<MarketplaceReview, "rating">>): { count: number; average: number } {
+  if (!reviews.length) return { count: 0, average: 0 };
+  const total = reviews.reduce((sum, review) => sum + review.rating, 0);
+  return { count: reviews.length, average: Math.round((total / reviews.length) * 10) / 10 };
+}
