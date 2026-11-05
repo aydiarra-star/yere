@@ -148,6 +148,23 @@ export async function listMarketplaceListings(session: YereSession, includeOwnDr
   return (data as ListingRow[]).map(mapListing);
 }
 
+export async function listMyMarketplaceListings(
+  session: YereSession,
+  sellerId: string
+): Promise<Array<MarketplaceListing & { photoUrls: string[] }>> {
+  const fields = "id,vendeur_id,titre,categorie,description,prix_fcfa,unite,ville,photos,mode_vente,statut,stock_disponible,created_at";
+  const statuses = "or=(statut.eq.publiee,statut.eq.brouillon,statut.eq.indisponible,statut.eq.archivee)";
+  const response = await authenticatedFetch(session,
+    `rest/v1/marketplace_annonce?select=${fields}&vendeur_id=eq.${encodeURIComponent(sellerId)}&${statuses}&order=created_at.desc`);
+  const data = await readJson(response);
+  if (!Array.isArray(data)) throw new Error("Vos annonces n'ont pas pu être chargées.");
+  return Promise.all((data as ListingRow[]).map(async (row) => ({
+    ...mapListing(row),
+    photoUrls: (await Promise.all((row.photos ?? []).map((path) => createMarketplacePhotoSignedUrl(path, session))))
+      .filter((url): url is string => url !== null)
+  })));
+}
+
 export async function saveMarketplaceListing(session: YereSession, input: {
   id?: string; sellerId: string; title: string; category: string; description: string; priceXof: number;
   unit: MarketplaceListing["unit"]; city: string; photos: string[]; saleMode: MarketplaceListing["saleMode"];
@@ -173,6 +190,34 @@ export async function saveMarketplaceListing(session: YereSession, input: {
     throw new Error("L'annonce a été créée, mais ses photos n'ont pas été confirmées par le serveur. Réessayez avant de quitter cette page.");
   }
   return String(data[0].id);
+}
+
+export async function deleteMarketplaceListing(
+  session: YereSession,
+  listing: MarketplaceListing
+): Promise<{ deleted: boolean; archived: boolean; photosCleaned: boolean }> {
+  const url = `rest/v1/marketplace_annonce?id=eq.${encodeURIComponent(listing.id)}&vendeur_id=eq.${encodeURIComponent(listing.sellerId)}`;
+  try {
+    const data = await readJson(await authenticatedFetch(session, url, {
+      method: "DELETE", headers: { Prefer: "return=representation" }
+    }));
+    if (!Array.isArray(data) || !data.some((row: { id?: string }) => row.id === listing.id)) {
+      throw new Error("Annonce introuvable ou vous n'avez pas l'autorisation de la supprimer.");
+    }
+    let photosCleaned = true;
+    try { await deleteMarketplacePhotos(session, listing.photos); } catch { photosCleaned = false; }
+    return { deleted: true, archived: false, photosCleaned };
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : String(cause);
+    if (!/23503|foreign key|référence|referenced/i.test(message)) throw cause;
+    // Orders keep a permanent reference to their listing. Preserve that history by archiving it.
+    await saveMarketplaceListing(session, {
+      id: listing.id, sellerId: listing.sellerId, title: listing.title, category: listing.category,
+      description: listing.description, priceXof: listing.priceXof, unit: listing.unit, city: listing.city,
+      photos: listing.photos, saleMode: listing.saleMode, status: "archivee", stockAvailable: listing.stockAvailable
+    });
+    return { deleted: false, archived: true, photosCleaned: true };
+  }
 }
 
 const MARKETPLACE_PHOTO_BUCKET = "yere-market-photos";
