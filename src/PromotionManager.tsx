@@ -40,6 +40,7 @@ export default function PromotionManager({ clients, orders, canManage }: { clien
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [title, setTitle] = useState("");
+  const [occasion, setOccasion] = useState("");
   const [discountType, setDiscountType] = useState<"pourcentage" | "montant">("pourcentage");
   const [discountValue, setDiscountValue] = useState("20");
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -133,7 +134,8 @@ export default function PromotionManager({ clients, orders, canManage }: { clien
     {error && <p className="promotion-error" role="alert">{error}</p>}
     <form className="promotion-form" onSubmit={createPromotion}>
       <h3>Créer une promotion</h3>
-      <label>Nom de l’offre<input required maxLength={100} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ex. Offre spéciale du mois" /></label>
+      <label>Occasion<select value={occasion} onChange={(event) => { setOccasion(event.target.value); if (event.target.value) setTitle((current) => current || event.target.value); }}><option value="">Choisir une occasion (facultatif)</option><option value="Tabaski">Tabaski</option><option value="Korité">Korité</option><option value="Fête des mères">Fête des mères</option><option value="Rentrée">Rentrée</option><option value="Fin de mois">Fin de mois</option><option value="Offre spéciale">Autre occasion</option></select></label>
+      <label>Nom de l’offre<input required maxLength={100} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ex. Offre spéciale Tabaski" /></label>
       <div className="promotion-form-grid">
         <label>Type de réduction<select value={discountType} onChange={(event) => setDiscountType(event.target.value as "pourcentage" | "montant")}><option value="pourcentage">Pourcentage</option><option value="montant">Montant fixe (FCFA)</option></select></label>
         <label>Réduction<input required type="number" min="1" max={discountType === "pourcentage" ? 100 : undefined} step="1" value={discountValue} onChange={(event) => setDiscountValue(event.target.value)} /></label>
@@ -155,7 +157,7 @@ export default function PromotionManager({ clients, orders, canManage }: { clien
           <button type="button" className="promotion-history-toggle" aria-expanded={expanded} onClick={() => setExpandedId(expanded ? null : promotion.id)}>
             <span><b>{promotion.titre}</b><small>{discountLabel(promotion)} · du {promotion.date_debut} au {promotion.date_fin}</small></span><span className="promotion-progress">{counts.commande}/{contacts.length} commande(s) <i>{expanded ? "−" : "+"}</i></span>
           </button>
-          {expanded && <div className="promotion-recipients"><p className="promotion-hint">Aucun envoi automatique. Contactez uniquement les clients qui acceptent de recevoir des offres ; envoyez vous-même chaque message, puis mettez à jour le suivi.</p>
+          {expanded && <div className="promotion-recipients"><p className="promotion-hint">Les clients sont déjà sélectionnés selon le ciblage de la campagne. Appuyez sur WhatsApp pour ouvrir chaque conversation avec son message personnalisé prêt à envoyer. Vérifiez le message et appuyez sur Envoyer dans WhatsApp ; contactez uniquement les clients qui acceptent de recevoir des offres.</p>
             {contacts.map((contact) => {
               const client = clients.find((item) => item.id === contact.clientId);
               if (!client) return <p key={contact.clientId} className="promotion-hint">Un client de cette campagne n’est plus présent dans le répertoire.</p>;
