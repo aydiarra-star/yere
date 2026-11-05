@@ -77,15 +77,22 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
   }, [pendingInvitations.length]);
 
   async function loadWorkspace(activeSession: YereSession) {
-    const [workspaces, invitations] = await Promise.all([
-      listMyAteliers(activeSession), listMyAtelierInvitations(activeSession)
-    ]);
+    // Atelier membership is essential to opening the workspace; the invitation
+    // inbox is optional. A temporary invitation/RLS failure must not lock out
+    // an owner or employee whose atelier access was already confirmed.
+    const workspaces = await listMyAteliers(activeSession);
     setWorkspaces(workspaces);
-    setPendingInvitations(invitations.filter((item) =>
-      item.email.toLowerCase() === (activeSession.user.email ?? "").toLowerCase()
-      && !item.declinedAt
-      && new Date(item.expiresAt).getTime() > Date.now()
-    ));
+    try {
+      const invitations = await listMyAtelierInvitations(activeSession);
+      setPendingInvitations(invitations.filter((item) =>
+        item.email.toLowerCase() === (activeSession.user.email ?? "").toLowerCase()
+        && !item.declinedAt
+        && new Date(item.expiresAt).getTime() > Date.now()
+      ));
+    } catch {
+      // Keep the atelier available; the invitation inbox can be refreshed later.
+      setPendingInvitations([]);
+    }
     setBootstrapError("");
     const savedAtelierId = window.sessionStorage.getItem("yere-active-atelier");
     const selectedAtelier = workspaces.find((item) => item.id === savedAtelierId) ?? workspaces[0];
