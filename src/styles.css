@@ -3139,3 +3139,36 @@ main.main-content .page-wrap .tailor-priority-card .tailor-card-art{
 
 .team-invitation-status{display:grid;justify-items:end;gap:5px;font-size:.85rem;color:var(--muted,#6d756f)}
 .team-invitation-status .text-button{font-size:.82rem;padding:0}
+
+
+/* DTech settings centre */
+.dtech-settings{display:grid;gap:22px}
+.dtech-settings-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.dtech-settings-top h2{margin:0 0 8px;color:#0B1F3A}
+.dtech-settings-top p:not(.eyebrow){margin:0;color:#5c6573;max-width:680px;line-height:1.6}
+.dtech-editor-mark{display:inline-flex;align-items:center;justify-content:center;min-width:74px;padding:10px 14px;border:1px solid #D8B46A;border-radius:12px;color:#0B1F3A;font-weight:900;letter-spacing:.04em;background:#fff}
+.dtech-settings-status{display:grid;grid-template-columns:10px auto;align-items:center;gap:4px 10px;padding:14px 16px;border:1px solid #dfe4eb;border-radius:13px;background:#f8fafc;color:#0B1F3A;font-weight:750}
+.dtech-settings-status small{grid-column:2;color:#687386;font-weight:500;line-height:1.5}
+.dtech-status-dot{width:9px;height:9px;border-radius:50%;background:#9aa3af}
+.dtech-status-dot.is-online{background:#247a54}
+.dtech-status-dot.is-offline{background:#bd7923}
+.dtech-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.dtech-settings-card{min-width:0;padding:18px;border:1px solid #e1e5eb;border-radius:14px;background:#fff}
+.dtech-settings-card h3,.dtech-offline-card h3{margin:0 0 7px;color:#0B1F3A;font-size:1.04rem}
+.dtech-settings-card p,.dtech-offline-card p{margin:0 0 12px;color:#657083;line-height:1.55;font-size:.92rem}
+.dtech-settings-card ul,.dtech-offline-card ul{display:grid;gap:8px;margin:0;padding-left:19px;color:#26354a;line-height:1.45;font-size:.9rem}
+.dtech-offline-card{display:grid;gap:12px;padding:18px;border:1px solid #d9e0e9;border-radius:14px;background:#f7f9fc}
+.dtech-settings-about{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.dtech-settings-about>div{display:grid;gap:5px;padding:13px;border-radius:12px;background:#f5f6f8}
+.dtech-settings-about span{font-size:.78rem;color:#687386}
+.dtech-settings-about strong{color:#0B1F3A}
+@media(max-width:640px){.dtech-settings-grid{grid-template-columns:1fr}.dtech-settings-about{grid-template-columns:1fr}.dtech-settings-top{align-items:center}.dtech-settings{padding:16px}}
+
+.dtech-settings-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dtech-settings-actions .primary-button,.dtech-settings-actions .secondary-button{min-height:44px}
+@media(max-width:640px){.dtech-settings-actions{display:grid;grid-template-columns:1fr}.dtech-settings-actions button{width:100%}}
+
+/* Contraste renforcé pour l’accès au centre des paramètres */
+.account-section-heading > .secondary-button { background: #0B1F3A; border-color: #0B1F3A; color: #fff; font-weight: 700; }
+.account-section-heading > .secondary-button:hover { background: #13294B; border-color: #13294B; }
+.account-section-heading > .secondary-button:focus-visible { outline: 3px solid #D8B46A; outline-offset: 3px; }

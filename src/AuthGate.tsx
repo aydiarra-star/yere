@@ -2,7 +2,8 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { clearSession, consumeAuthCallback, createAtelier, listMyAteliers, readSession, refreshSession, requestPasswordRecovery, signIn, signOut, signUp, supabaseReady, updatePassword, type YereSession } from "./lib/supabaseAuth";
 import { acceptAtelierInvitation, declineAtelierInvitation, listMyAtelierInvitations, type AtelierInvitation } from "./lib/atelierTeam";
-import { resolvePersistentStorageKey } from "./usePersistentState";
+import { resolvePersistentStorageKey, writeServerSeedPreservingArchive } from "./usePersistentState";
+import { purgeUserOfflineVault } from "./lib/offlineVault";
 import PublicMarketplace from "./PublicMarketplace";
 import "./auth-gate.css";
 
@@ -13,10 +14,22 @@ function seedLocalProfile(userId: string, atelier: Atelier) {
   const suffix = `::${userId}`;
   window.sessionStorage.setItem("yere-user-scope", userId);
   window.sessionStorage.setItem("yere-active-atelier", atelier.id);
-  window.localStorage.setItem(resolvePersistentStorageKey("yere-demo-atelier-v1", userId, atelier.id, "atelier"), JSON.stringify({
+  const profileKey = resolvePersistentStorageKey("yere-demo-atelier-v1", userId, atelier.id, "atelier");
+  const profileValue = JSON.stringify({
     name: atelier.nom, phone: atelier.telephone ?? "", city: atelier.ville ?? "", activity: "tailleur", workMode: atelier.mode_organisation, secondaryActivities: []
-  }));
-  window.localStorage.setItem(`yere-demo-onboarding-complete-v1${suffix}`, "true");
+  });
+  // Preserve any pre-existing local profile as a recovery archive before replacing it
+  // with server-confirmed metadata. Never destroy the only copy if storage is full.
+  if (!writeServerSeedPreservingArchive(window.localStorage, profileKey, profileValue)) {
+    throw new Error("YÉRÉ ne peut pas préserver les anciennes informations locales de cet atelier. Par sécurité, l’espace reste fermé. Libérez de l’espace de stockage puis réessayez.");
+  }
+  // This flag is only a local presentation hint; it must never prevent access
+  // after the server has already confirmed the account and atelier.
+  try {
+    window.localStorage.setItem(`yere-demo-onboarding-complete-v1${suffix}`, "true");
+  } catch {
+    // The server remains the source of truth; ignore a nonessential UI hint failure.
+  }
 }
 
 export default function AuthGate({ children, initialProfessionalLogin = false }: Props) {
@@ -28,6 +41,7 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
   const [inboxOpen, setInboxOpen] = useState(false);
   const [profileControlsTarget, setProfileControlsTarget] = useState<HTMLElement | null>(null);
   const [ready, setReady] = useState(false);
+  const [bootstrapError, setBootstrapError] = useState("");
   const [mode, setMode] = useState<"login" | "signup" | "recovery">("login");
   const [showProfessionalAuth, setShowProfessionalAuth] = useState(initialProfessionalLogin);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
@@ -66,6 +80,7 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
       && !item.declinedAt
       && new Date(item.expiresAt).getTime() > Date.now()
     ));
+    setBootstrapError("");
     const savedAtelierId = window.sessionStorage.getItem("yere-active-atelier");
     const selectedAtelier = workspaces.find((item) => item.id === savedAtelierId) ?? workspaces[0];
     if (selectedAtelier) {
@@ -125,21 +140,31 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
     let active = true;
     async function initialize() {
       if (!supabaseReady) { setReady(true); return; }
+      let saved: YereSession | null = null;
       try {
         const recoveryCallback = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") === "recovery";
         if (recoveryCallback) setPasswordRecovery(true);
         const callbackSession = await consumeAuthCallback();
-        const saved = callbackSession ?? readSession();
+        saved = callbackSession ?? readSession();
         if (!saved) { setReady(true); return; }
         const current = saved.expires_at * 1000 <= Date.now() + 60_000 ? await refreshSession(saved) : saved;
         if (!active) return;
         setSession(current);
         await loadWorkspace(current);
       } catch (cause) {
-        clearSession();
         if (active) {
-          setSession(null); setAtelier(null);
-          setError(cause instanceof Error ? cause.message : "La confirmation du compte a échoué. Demandez un nouveau lien.");
+          setAtelier(null);
+          const detail = cause instanceof Error ? cause.message : "Impossible de vérifier votre espace auprès du serveur.";
+          if (saved) {
+            // A network/bootstrap failure is not proof that the account is signed out.
+            // Keep the credential locally, but do not expose atelier data until the server revalidates access.
+            setSession(saved);
+            setBootstrapError(detail);
+          } else {
+            clearSession();
+            setSession(null);
+            setError(detail);
+          }
         }
       } finally {
         if (active) setReady(true);
@@ -177,7 +202,7 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
 
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setBusy(true); setError(""); setMessage("");
+    setBusy(true); setError(""); setMessage(""); setBootstrapError("");
     try {
       if (mode === "recovery") {
         await requestPasswordRecovery(email.trim().toLowerCase());
@@ -197,7 +222,15 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
         await loadWorkspace(next);
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Connexion impossible. Réessayez.");
+      const detail = cause instanceof Error ? cause.message : "Connexion impossible. Réessayez.";
+      const saved = readSession();
+      if (saved) {
+        setSession(saved);
+        setAtelier(null);
+        setBootstrapError(detail);
+      } else {
+        setError(detail);
+      }
     } finally { setBusy(false); }
   }
 
@@ -245,13 +278,40 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
     if (!session) return;
     const nextAtelier = workspaces.find((item) => item.id === nextAtelierId);
     if (!nextAtelier || nextAtelier.id === atelier?.id) return;
-    seedLocalProfile(session.user.id, nextAtelier);
-    window.location.reload();
+    try {
+      seedLocalProfile(session.user.id, nextAtelier);
+      window.location.reload();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Impossible de sécuriser le changement d’atelier.");
+    }
+  }
+
+  async function retryWorkspaceVerification() {
+    if (!session) return;
+    setBusy(true);
+    setBootstrapError("");
+    try {
+      const current = session.expires_at * 1000 <= Date.now() + 60_000 ? await refreshSession(session) : session;
+      setSession(current);
+      await loadWorkspace(current);
+    } catch (cause) {
+      setBootstrapError(cause instanceof Error ? cause.message : "La vérification du serveur a échoué. Réessayez lorsque la connexion sera rétablie.");
+    } finally { setBusy(false); }
   }
 
   async function handleSignOut() {
-    if (session) await signOut(session);
-    setSession(null); setAtelier(null); setWorkspaces([]); setMessage(""); setError("");
+    let cleanupWarning = "";
+    if (session) {
+      try {
+        await purgeUserOfflineVault(session.user.id);
+      } catch {
+        cleanupWarning = "La déconnexion a eu lieu, mais le nettoyage du cache chiffré n’a pas pu être confirmé. Reconnectez-vous à Internet et réessayez.";
+      }
+      try { await signOut(session); } catch {
+        // signOut clears the local Supabase session in its finally block.
+      }
+    }
+    setSession(null); setAtelier(null); setWorkspaces([]); setMessage(""); setError(cleanupWarning); setBootstrapError("");
     setShowProfessionalAuth(false);
   }
 
@@ -261,6 +321,21 @@ export default function AuthGate({ children, initialProfessionalLogin = false }:
   if (!session && !showProfessionalAuth && !passwordRecovery) return <PublicMarketplace onProfessionalLogin={() => setShowProfessionalAuth(true)} />;
 
   if (!supabaseReady) return <main className="auth-shell"><section className="auth-card"><img className="auth-mark" src="/images/yere-logo.png" alt="YÉRÉ" /><p className="eyebrow">YÉRÉ · ATELIER</p><h1>Connexion indisponible</h1><p>La configuration Supabase manque sur ce déploiement. Aucun compte ne peut être créé pour le moment.</p></section></main>;
+
+  if (session && bootstrapError && !atelier) return (
+    <main className="auth-shell">
+      <section className="auth-card auth-workspace-card">
+        <div className="auth-brand"><img className="auth-mark" src="/images/yere-logo.png" alt="YÉRÉ" /><span><strong>YÉRÉ</strong><small>ATELIER</small></span></div>
+        <p className="eyebrow">VÉRIFICATION DE SÉCURITÉ</p>
+        <h1>Connexion au serveur indisponible.</h1>
+        <p className="auth-intro">Votre session enregistrée est conservée. Par sécurité, YÉRÉ n’ouvre aucun atelier et n’affiche aucune donnée tant que le serveur n’a pas confirmé vos accès.</p>
+        <p className="auth-error" role="alert">{bootstrapError}</p>
+        <button className="primary-button auth-submit" type="button" disabled={busy} onClick={() => void retryWorkspaceVerification()}>{busy ? "Vérification…" : "Réessayer la vérification"} <span>→</span></button>
+        <button className="secondary-button" type="button" disabled={busy} onClick={() => void handleSignOut()}>Se déconnecter</button>
+        <p className="auth-footnote">Aucune donnée métier n’est enregistrée localement ni synchronisée sans confirmation du serveur.</p>
+      </section>
+    </main>
+  );
 
   if (passwordRecovery && session) return (
     <main className="auth-shell">

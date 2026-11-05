@@ -1,9 +1,6 @@
 import type { ReactNode } from "react";
 import { formatXof, type Order } from "./domain";
 import { illustrationUrl } from "./illustrations";
-import type { AtelierSubscription, SubscriptionPayment } from "./lib/atelierSubscription";
-import PayTechSubscriptionButton from "./PayTechSubscriptionButton";
-import "./home-subscription.css";
 
 type HomeDashboardProps = {
   atelierName: string;
@@ -23,10 +20,6 @@ type HomeDashboardProps = {
   onOpenMeasurements: () => void;
   onOpenTools: () => void;
   onConfigure: () => void;
-  subscription?: AtelierSubscription | null;
-  subscriptionPayments?: SubscriptionPayment[];
-  subscriptionLoading?: boolean;
-  subscriptionLoadError?: string;
 };
 
 type PriorityCardProps = {
@@ -41,8 +34,6 @@ type PriorityCardProps = {
   actionLabel: string;
   onOpen: () => void;
 };
-
-function formatSubscriptionPrice(value: number) { return new Intl.NumberFormat("fr-FR").format(value) + " FCFA"; }
 
 function PriorityIcon({ name }: { name: PriorityCardProps["icon"] }) {
   if (name === "delivery") {
@@ -86,7 +77,7 @@ function PriorityCard({ index, title, icon, badges, count, countLabel, detail, i
   </article>;
 }
 
-export default function HomeDashboard({ atelierName, isExample, today, deliveryCount, outstandingOrderCount, outstanding, showFinancials = true, canCreateOrders = true, activeOrderCount, inProductionOrder, onOpenDeliveries, onOpenPayments, onOpenProduction, onCreateOrder, onOpenMeasurements, onOpenTools, onConfigure, subscription, subscriptionPayments = [], subscriptionLoading = false, subscriptionLoadError = "" }: HomeDashboardProps) {
+export default function HomeDashboard({ atelierName, isExample, today, deliveryCount, outstandingOrderCount, outstanding, showFinancials = true, canCreateOrders = true, activeOrderCount, inProductionOrder, onOpenDeliveries, onOpenPayments, onOpenProduction, onCreateOrder, onOpenMeasurements, onOpenTools, onConfigure }: HomeDashboardProps) {
   const date = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" }).format(today);
   const deliveries = isExample ? 3 : deliveryCount;
   const invoices = isExample ? 2 : outstandingOrderCount;
@@ -104,23 +95,6 @@ export default function HomeDashboard({ atelierName, isExample, today, deliveryC
         </section>
 
 
-        {(subscription !== undefined || subscriptionLoading || subscriptionLoadError) ? <section className="home-subscription" aria-labelledby="home-subscription-title">
-          <div className="home-subscription-heading"><div><span className="home-subscription-kicker">VOTRE FORMULE YÉRÉ</span><h2 id="home-subscription-title">Abonnement YÉRÉ</h2><p>Un abonnement par atelier, toute l’équipe incluse.</p></div><span className="home-subscription-price">5 000 FCFA <small>/ mois</small></span></div>
-          {subscriptionLoading ? <p role="status">Chargement du statut de l’abonnement…</p>
-            : subscriptionLoadError ? <p role="alert">Statut indisponible : {subscriptionLoadError}</p>
-            : subscription ? <>
-              <div className="home-subscription-facts">
-                <div><span>Formule mensuelle</span><strong>{formatSubscriptionPrice(subscription.monthlyPriceXof)} / mois</strong><small>Deux premiers mois d’essai gratuits, puis 5 000 FCFA par atelier et par mois.</small></div>
-                <div><span>Statut</span><strong>{({essai:"Période d’essai",actif:"Actif",paiement_requis:"Paiement requis",en_retard:"Paiement en retard",suspendu:"Suspendu",resilie:"Résilié"} as Record<AtelierSubscription["status"],string>)[subscription.status]}</strong><small>Fin de l’essai : {new Date(subscription.trialEndsAt).toLocaleDateString("fr-FR")}</small></div>
-                {subscription.nextDueAt ? <div><span>Prochaine échéance</span><strong>{new Date(subscription.nextDueAt).toLocaleDateString("fr-FR")}</strong></div> : null}
-              </div>
-              <div className="home-subscription-history"><h3>Historique des paiements</h3>
-                {subscriptionPayments.length === 0 ? <p>Aucun paiement enregistré. Aucun paiement n’est demandé depuis cet écran pour le moment.</p>
-                  : <div className="home-subscription-payments">{subscriptionPayments.slice(0,3).map(payment => <div key={payment.id}><span>{new Date(payment.createdAt).toLocaleDateString("fr-FR")} · {payment.method ?? "Paiement"}</span><strong>{formatSubscriptionPrice(payment.amountXof)}</strong><small>{({en_attente:"En attente",confirme:"Confirmé",echec:"Échec",rembourse:"Remboursé",annule:"Annulé"} as Record<SubscriptionPayment["status"],string>)[payment.status]}</small></div>)}</div>}
-              </div>
-              <div className="home-subscription-payment"><PayTechSubscriptionButton /><p>Wave et les autres moyens éventuellement proposés apparaissent sur la page sécurisée PayTech.</p></div>
-            </> : <p>Aucun abonnement n’est rattaché à cet atelier. Contactez l’assistance avant toute souscription.</p>}
-        </section> : null}
         <section className="home-priorities" aria-labelledby="priorities-title">
           <div className="priorities-heading">
             <div><span className="section-marker" aria-hidden="true" /><h2 id="priorities-title">Vos priorités</h2><span className="priorities-today">AUJOURD’HUI</span></div>

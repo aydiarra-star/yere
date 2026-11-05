@@ -1,3 +1,5 @@
+import { assertNetworkForWrite } from "./offlineGuard";
+
 export type YereUser = { id: string; email?: string };
 export type YereSession = {
   access_token: string;
@@ -139,11 +141,16 @@ export async function signOut(session: YereSession): Promise<void> {
 }
 
 export async function publicFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  // Marketplace and other public API mutations must never be queued or faked offline.
+  assertNetworkForWrite(init.method, typeof navigator === "undefined" ? true : navigator.onLine);
   // Uses only the publishable key; public reads remain constrained by Supabase grants and RLS.
   return fetch(apiUrl(path), { ...init, headers: { ...headers(), ...(init.headers ?? {}) } });
 }
 
 export async function authenticatedFetch(session: YereSession, path: string, init: RequestInit = {}): Promise<Response> {
+  // Safe first milestone: keep already-loaded records readable in memory, but block
+  // every write before it leaves the device when offline. No local queue/replay exists.
+  assertNetworkForWrite(init.method, typeof navigator === "undefined" ? true : navigator.onLine);
   let active = readSession() ?? session;
   if (active.expires_at * 1000 <= Date.now() + 60_000) active = await refreshSession(active);
   const response = await fetch(apiUrl(path), {

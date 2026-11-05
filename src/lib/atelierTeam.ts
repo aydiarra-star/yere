@@ -12,6 +12,12 @@ export type AtelierMember = {
   experienceLevel: "debutant" | "intermediaire" | "experimente" | "maitre" | null;
   presentation: string;
 };
+/** Fail closed unless the current account has an active membership in the exact selected atelier. */
+export function requireActiveAtelierMember(members: AtelierMember[], userId: string, atelierId: string): AtelierMember {
+  const member = members.find((item) => item.userId === userId && item.atelierId === atelierId && item.active);
+  if (!member) throw new Error("Votre accès à cet atelier n’est pas actif. Les données de cet atelier restent bloquées.");
+  return member;
+}
 export type AtelierInvitation = {
   id: string;
   atelierId: string;

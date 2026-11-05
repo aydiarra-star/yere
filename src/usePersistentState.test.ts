@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isBrowserPersistenceEnabled, preserveRejectedStorageValue, resolvePersistentStorageKey } from "./usePersistentState";
+import { isBrowserPersistenceEnabled, preserveRejectedStorageValue, resolvePersistentStorageKey, writeServerSeedPreservingArchive } from "./usePersistentState";
 
 describe("resolvePersistentStorageKey", () => {
   it("keeps account-level preferences scoped to the user", () => {
@@ -109,6 +109,38 @@ describe("preserveRejectedStorageValue", () => {
   });
 });
 
+
+describe("writeServerSeedPreservingArchive", () => {
+  it("preserves a previous local profile before replacing it with server-confirmed metadata", () => {
+    const oldProfile = '{"name":"Ancien atelier","city":"Bakel"}';
+    const newProfile = '{"name":"Atelier serveur","city":"Dakar"}';
+    const storage = createStorage({ "atelier::user-a::atelier-a": oldProfile });
+
+    expect(writeServerSeedPreservingArchive(storage, "atelier::user-a::atelier-a", newProfile)).toBe(true);
+    expect(storage.values.get("atelier::user-a::atelier-a")).toBe(newProfile);
+    expect(storage.values.get("atelier::user-a::atelier-a.recovery")).toBe(oldProfile);
+  });
+
+  it("does not overwrite the only old profile when recovery storage is full", () => {
+    const key = "atelier::user-a::atelier-a";
+    const oldProfile = '{"name":"Ancien atelier"}';
+    const initial: Record<string, string> = { [key]: oldProfile };
+    for (let index = 1; index <= 100; index += 1) {
+      initial[index === 1 ? key + ".recovery" : key + ".recovery-" + index] = "archive " + index;
+    }
+    const storage = createStorage(initial);
+
+    expect(writeServerSeedPreservingArchive(storage, key, '{"name":"Nouveau atelier"}')).toBe(false);
+    expect(storage.values.get(key)).toBe(oldProfile);
+  });
+
+  it("does not create a recovery copy when no previous profile exists", () => {
+    const storage = createStorage();
+    expect(writeServerSeedPreservingArchive(storage, "atelier::user-a::atelier-a", '{"name":"Atelier"}')).toBe(true);
+    expect(storage.values.get("atelier::user-a::atelier-a")).toBe('{"name":"Atelier"}');
+    expect(storage.values.has("atelier::user-a::atelier-a.recovery")).toBe(false);
+  });
+});
 
 describe("isBrowserPersistenceEnabled", () => {
   it("keeps browser persistence only for local preferences and legacy atelier caches", () => {

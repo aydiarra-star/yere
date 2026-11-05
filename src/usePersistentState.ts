@@ -38,6 +38,23 @@ export function preserveRejectedStorageValue(
   return false;
 }
 
+/** Writes server-confirmed profile metadata only after preserving any prior browser value. */
+export function writeServerSeedPreservingArchive(
+  storage: StorageReaderWriter,
+  key: string,
+  serializedValue: string
+): boolean {
+  try {
+    const previous = storage.getItem(key);
+    if (previous !== null && previous !== serializedValue
+      && !preserveRejectedStorageValue(storage, key, previous)) return false;
+    storage.setItem(key, serializedValue);
+    return storage.getItem(key) === serializedValue;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Browser persistence for user-scoped preferences and atelier-scoped UI/profile cache only.
  * Server-owned business records must use the dedicated Supabase data layer and the `server` scope.

@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import HomeDashboard from "./HomeDashboard";
+import SettingsCenter from "./SettingsCenter";
 import { addOrderPayment, areClientOrderRelationsValid, areStockRelationsValid, balanceDue, createOrderMeasurementSnapshot, filterOrdersByDelivery, formatXof, getClientReminderSuggestions, isClientListValid, isExpenseListValid, isMeasurementValid, isOrderInputValid, isOrderListValid, isStockItemListValid, isStockMovementListValid, matchesClient, orderStatuses, retouchStages, saveMeasurementVersion, totalPaid, type Client, type Expense, type Measurement, type Order, type OrderDeliveryFilter, type OrderStatus, type RetouchStage, type StockItem, type StockMovement } from "./domain";
 import { emptyAtelier, isAtelierProfileValid, normalizeAtelierProfile, workModes, type AtelierProfile, type WorkMode } from "./atelierProfile";
 import { isMarketplaceListingListValid, type MarketplaceListing } from "./marketplace";
 import { usePersistentState } from "./usePersistentState";
 import { createAtelierClient, createAtelierOrder, saveAtelierOrderFinancialTerms, createAtelierExpense, createAtelierStockArticle, createAtelierStockMovement, listAtelierClients, listAtelierOrders, listAtelierExpenses, listAtelierStock, saveAtelierMeasurement, saveAtelierOrderStatus, saveAtelierPayment, voidAtelierExpense } from "./lib/atelierData";
 import { readSession, updateAtelierProfile } from "./lib/supabaseAuth";
-import { getAtelierSubscription, listAtelierSubscriptionPayments, type AtelierSubscription, type SubscriptionPayment } from "./lib/atelierSubscription";
-import PayTechSubscriptionButton from "./PayTechSubscriptionButton";
 import { createAtelierTask, listAtelierTasks, updateAtelierTask, type AtelierTask, type AtelierTaskStatus } from "./lib/atelierTasks";
-import { cancelAtelierInvitation, createAtelierInvitation, deactivateAtelierMember, reactivateAtelierMember, listAtelierInvitations, listAtelierMembers, updateAtelierMemberRole, updateAtelierMemberProfile, type AtelierInvitation, type AtelierMember } from "./lib/atelierTeam";
+import { cancelAtelierInvitation, createAtelierInvitation, deactivateAtelierMember, reactivateAtelierMember, listAtelierInvitations, listAtelierMembers, updateAtelierMemberRole, updateAtelierMemberProfile, type AtelierInvitation, type AtelierMember, requireActiveAtelierMember } from "./lib/atelierTeam";
 import { cancelAtelierSupplierPurchase, createAtelierSupplier, createAtelierSupplierPurchase, getAtelierSupplierProfile, listAtelierSupplierPurchases, listAtelierSuppliers, payAtelierSupplierPurchase, receiveAtelierSupplierPurchase, saveAtelierSupplierProfile, type AtelierSupplier } from "./lib/atelierSuppliers";
 import { addSupplierPurchasePayment, cancelSupplierPurchase, isSupplierPurchaseListValid, supplierPurchaseBalance, supplierPurchasePaidTotal, supplierPurchaseLineTotal, supplierPurchaseTotal, supplierPurchasesPaidTotal, type SupplierPurchase, type SupplierPurchaseLine } from "./supplierPurchases";
 
@@ -24,7 +23,7 @@ const measurementFieldsByGarment: Record<string, Array<[string, keyof Measuremen
   "Autre": [["Tour de poitrine", "bust"], ["Tour de taille", "waist"], ["Tour de hanches", "hips"], ["Épaules", "shoulder"], ["Longueur de manche", "sleeve"], ["Longueur du vêtement", "length"], ["Tour de bras (biceps)", "arm"], ["Tour de cou", "neck"], ["Tour de cuisse", "thigh"], ["Longueur de jambe / pantalon", "legLength"]]
 };
 
-type View = "overview" | "clients" | "orders" | "cash" | "stock" | "account" | "marketplace" | "reminders" | "suppliers";
+type View = "overview" | "clients" | "orders" | "cash" | "stock" | "account" | "settings" | "marketplace" | "reminders" | "suppliers";
 type SupplierProfile = { businessName: string; contactName: string; phone: string; city: string; category: string; shopName: string; description: string };
 const emptyListing: Omit<MarketplaceListing, "id"> = { sellerType: "tailor", title: "", category: "Vêtements prêts à vendre", price: "", description: "", sellerName: "", city: "", imageUrl: "", imageUrls: [] };
 const emptySupplier: SupplierProfile = { businessName: "", contactName: "", phone: "", city: "", category: "", shopName: "", description: "" };
@@ -129,10 +128,6 @@ function App() {
     readSession() && typeof window !== "undefined" && window.sessionStorage.getItem("yere-active-atelier") ? "loading" : "idle"
   );
   const [serverSyncError, setServerSyncError] = useState("");
-  const [atelierSubscription, setAtelierSubscription] = useState<AtelierSubscription | null>(null);
-  const [subscriptionPayments, setSubscriptionPayments] = useState<SubscriptionPayment[]>([]);
-  const [subscriptionLoadError, setSubscriptionLoadError] = useState("");
-  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
   useEffect(() => {
     if (onboardingStartedAt === null) setOnboardingStartedAt(Date.now());
@@ -141,24 +136,39 @@ function App() {
   useEffect(() => {
     const session = readSession();
     const atelierId = window.sessionStorage.getItem("yere-active-atelier");
-    if (!session || !atelierId) {
-      setServerSyncStatus("idle");
-      return;
-    }
     let active = true;
-    setServerSyncStatus("loading");
+    // Always clear the previous workspace, including when the session or selected
+    // atelier is missing. Legacy localStorage archives are deliberately untouched.
+    setServerSyncStatus(session && atelierId ? "loading" : "idle");
     setServerSyncError("");
+    setClients([]);
+    setOrders([]);
+    setExpenses([]);
+    setStockItems([]);
+    setStockMovements([]);
+    setSupplierDirectory([]);
+    setTeamMembers([]);
+    setTeamInvitations([]);
+    setAtelierTasks([]);
+    setSupplierPurchases([]);
+    setSupplier(emptySupplier);
+    setSelectedClient(null);
+    setTaskOrderId("");
+    setTaskAssigneeId("");
+    setNotice("");
+    if (!session || !atelierId) return () => { active = false; };
     void (async () => {
       try {
         // Load membership first: financial requests must never start before the role is known.
-        const [serverMembers, serverInvitations] = await Promise.all([
-          listAtelierMembers(session, atelierId), listAtelierInvitations(session, atelierId)
-        ]);
+        const serverMembers = await listAtelierMembers(session, atelierId);
         if (!active) return;
-        const currentMember = serverMembers.find((member) => member.userId === session.user.id && member.active);
-        const ownerAccess = currentMember?.role === "proprietaire";
-        const [serverClients, serverOrders, serverStock, serverSuppliers, serverSupplierProfile,
+        // Fail closed: no atelier records (especially financial records) are requested
+        // until the server confirms this account still has an active membership.
+        const currentMember = requireActiveAtelierMember(serverMembers, session.user.id, atelierId);
+        const ownerAccess = currentMember.role === "proprietaire";
+        const [serverInvitations, serverClients, serverOrders, serverStock, serverSuppliers, serverSupplierProfile,
           serverExpenses, serverPurchases, serverTasks] = await Promise.all([
+          listAtelierInvitations(session, atelierId),
           listAtelierClients(session, atelierId),
           listAtelierOrders(session, atelierId, ownerAccess),
           listAtelierStock(session, atelierId),
@@ -201,6 +211,19 @@ function App() {
           const message = cause instanceof Error
             ? cause.message
             : "Impossible de synchroniser les données de l'atelier avec le serveur.";
+          // A failed membership or data check must leave no previous workspace data in memory.
+          setClients([]);
+          setOrders([]);
+          setExpenses([]);
+          setStockItems([]);
+          setStockMovements([]);
+          setSupplierDirectory([]);
+          setTeamMembers([]);
+          setTeamInvitations([]);
+          setAtelierTasks([]);
+          setSupplierPurchases([]);
+          setSupplier(emptySupplier);
+          setSelectedClient(null);
           setServerSyncError(message);
           setServerSyncStatus("error");
           setNotice(`Impossible de synchroniser les données de l'atelier : ${message}`);
@@ -209,36 +232,6 @@ function App() {
     })();
     return () => { active = false; };
   }, [setClients, setOrders, setSupplierPurchases]);
-
-  useEffect(() => {
-    const ownerAccess = teamMembers.some((member) => member.userId === readSession()?.user.id && member.active && member.role === "proprietaire");
-    if (serverSyncStatus !== "ready" || !ownerAccess) {
-      setAtelierSubscription(null);
-      setSubscriptionPayments([]);
-      setSubscriptionLoadError("");
-      return;
-    }
-    const session = readSession();
-    const atelierId = window.sessionStorage.getItem("yere-active-atelier");
-    if (!session || !atelierId) return;
-    let active = true;
-    setSubscriptionLoading(true);
-    setSubscriptionLoadError("");
-    void (async () => {
-      try {
-        const subscription = await getAtelierSubscription(session, atelierId);
-        if (!active) return;
-        setAtelierSubscription(subscription);
-        const payments = subscription ? await listAtelierSubscriptionPayments(session, subscription.id) : [];
-        if (active) setSubscriptionPayments(payments);
-      } catch (cause) {
-        if (active) setSubscriptionLoadError(cause instanceof Error ? cause.message : "Impossible de lire l’abonnement.");
-      } finally {
-        if (active) setSubscriptionLoading(false);
-      }
-    })();
-    return () => { active = false; };
-  }, [serverSyncStatus, teamMembers]);
 
   useEffect(() => {
     if (!taskOrderId) setTaskOrderId(orders.find((order) => order.serverId)?.serverId ?? "");
@@ -1128,7 +1121,7 @@ function App() {
           </a>
           <div className="header-workspace"><span>VOTRE ESPACE</span><b>Atelier de couture</b></div>
           <nav className="desktop-nav" aria-label="Navigation principale">
-            {mobileNavItems.map((item) => <button key={item.id} type="button" className={(item.id === "more" ? (mobileMoreOpen || ["stock", "account", "reminders", "suppliers", "marketplace"].includes(view)) : view === item.id) ? "desktop-nav-item is-active" : "desktop-nav-item"} onClick={() => { if (item.id === "more") setMobileMoreOpen((open) => !open); else { setView(item.id); setMobileMoreOpen(false); } }} aria-current={item.id !== "more" && view === item.id ? "page" : undefined} aria-expanded={item.id === "more" ? mobileMoreOpen : undefined}>{item.label}</button>)}
+            {mobileNavItems.map((item) => <button key={item.id} type="button" className={(item.id === "more" ? (mobileMoreOpen || ["stock", "account", "settings", "reminders", "suppliers", "marketplace"].includes(view)) : view === item.id) ? "desktop-nav-item is-active" : "desktop-nav-item"} onClick={() => { if (item.id === "more") setMobileMoreOpen((open) => !open); else { setView(item.id); setMobileMoreOpen(false); } }} aria-current={item.id !== "more" && view === item.id ? "page" : undefined} aria-expanded={item.id === "more" ? mobileMoreOpen : undefined}>{item.label}</button>)}
           </nav>
           <button type="button" className="app-profile" onClick={openAccount} aria-label="Mon atelier : ouvrir le profil de l’atelier"><span><NavIcon name="user-filled" /></span><span className="profile-label">Mon atelier</span><span className="profile-chevron" aria-hidden="true">⌄</span></button>
         </div>
@@ -1139,8 +1132,8 @@ function App() {
           {view !== "overview" && <div className="welcome-row secondary-welcome">
             <div className="welcome-copy">
               <p className="secondary-eyebrow">VOTRE ESPACE ATELIER</p>
-              <h1 className="page-banner-title">{view === "clients" ? "Vos clients & mensurations" : view === "orders" ? "Suivi des commandes" : view === "cash" ? "La caisse de votre atelier" : view === "stock" ? "Gestion du stock" : view === "account" ? (atelier.name || "Votre compte atelier") : view === "marketplace" ? "La marketplace YÉRÉ" : view === "suppliers" ? "Espace fournisseurs" : "Faites revenir vos clients."}</h1>
-              <p className="page-subtitle">{view === "clients" ? "Retrouvez les fiches clients et leurs dernières mesures." : view === "orders" ? "Suivez chaque pièce, de la préparation à la livraison." : view === "cash" ? "Suivez les acomptes et les montants à récupérer." : view === "stock" ? "Gardez un œil sur les fournitures de l’atelier." : view === "account" ? "Votre profil d’atelier." : view === "marketplace" ? "Tailleurs et fournisseurs : présentez vos produits et vos créations dans la vitrine YÉRÉ." : view === "suppliers" ? "Gérez votre profil fournisseur et préparez votre boutique YÉRÉ." : "Des occasions concrètes de reprendre contact avec vos clients."}</p>
+              <h1 className="page-banner-title">{view === "clients" ? "Vos clients & mensurations" : view === "orders" ? "Suivi des commandes" : view === "cash" ? "La caisse de votre atelier" : view === "stock" ? "Gestion du stock" : view === "account" ? (atelier.name || "Votre compte atelier") : view === "settings" ? "Paramètres YÉRÉ" : view === "marketplace" ? "La marketplace YÉRÉ" : view === "suppliers" ? "Espace fournisseurs" : "Faites revenir vos clients."}</h1>
+              <p className="page-subtitle">{view === "clients" ? "Retrouvez les fiches clients et leurs dernières mesures." : view === "orders" ? "Suivez chaque pièce, de la préparation à la livraison." : view === "cash" ? "Suivez les acomptes et les montants à récupérer." : view === "stock" ? "Gardez un œil sur les fournitures de l’atelier." : view === "account" ? "Votre profil d’atelier." : view === "settings" ? "Réglages, assistance et informations de votre application." : view === "marketplace" ? "Tailleurs et fournisseurs : présentez vos produits et vos créations dans la vitrine YÉRÉ." : view === "suppliers" ? "Gérez votre profil fournisseur et préparez votre boutique YÉRÉ." : "Des occasions concrètes de reprendre contact avec vos clients."}</p>
             </div>
             {(["clients", "suppliers", "marketplace"].includes(view) || (view === "orders" && canCreateOrders)) && <button className="primary-button welcome-action" onClick={() => { if (view === "orders") createOrder(); else if (view === "suppliers") setView("marketplace"); else if (view === "marketplace") { setListingDraft({ ...emptyListing, sellerType: "tailor", sellerActivity: atelier.activity ?? "tailleur", category: "Vêtements prêts à vendre", sellerName: atelier.name, city: atelier.city }); setListingFormOpen(true); setNotice(""); } else { setShowForm(true); setView("clients"); } }}><span className="cta-scissors-icon" aria-hidden="true"><NavIcon name="tailor-scissors" /></span> {view === "orders" ? "Créer une commande" : view === "suppliers" ? "Créer ma boutique" : view === "marketplace" ? "Créer ma vitrine" : "Nouveau client"}</button>}
           </div>}
@@ -1164,10 +1157,6 @@ function App() {
             onOpenMeasurements={() => { setQuery(""); setSelectedClient(null); setView("clients"); setMobileMoreOpen(false); }}
             onOpenTools={() => setMobileMoreOpen(true)}
             onConfigure={() => setView("account")}
-            subscription={isAtelierOwner ? atelierSubscription : undefined}
-            subscriptionPayments={isAtelierOwner ? subscriptionPayments : []}
-            subscriptionLoading={isAtelierOwner && subscriptionLoading}
-            subscriptionLoadError={isAtelierOwner ? subscriptionLoadError : ""}
           />}
 
           {view === "clients" && <section className="content-card clients-card"><div className="section-heading"><div><h2>Répertoire clients</h2><p>{clients.length} fiche{clients.length > 1 ? "s" : ""} dans cet atelier</p></div><label className="search-box"><span>⌕</span><input autoFocus={view === "clients"} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher par nom ou téléphone" aria-label="Rechercher un client" /></label></div>
@@ -1250,7 +1239,7 @@ function App() {
           </section>}
 
           {view === "account" && <section className="content-card account-page">
-            <div className="section-heading account-section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div></div>
+            <div className="section-heading account-section-heading"><div><h2>Compte et profil de l’atelier</h2><p>Modifiez les informations de votre espace YÉRÉ.</p></div><button type="button" className="secondary-button" onClick={() => setView("settings")}>⚙ Paramètres de l’atelier</button></div>
             <div id="yere-profile-account-controls" className="profile-account-controls-slot" />
             <form className="account-form" onSubmit={(event) => { event.preventDefault(); void (async () => { const session = readSession(); const atelierId = window.sessionStorage.getItem("yere-active-atelier"); const profile = normalizeAtelierProfile(atelier); if (!session || !atelierId) { setNotice("Session ou atelier introuvable. Reconnectez-vous."); return; } if (!profile.name.trim()) { setNotice("Le nom de l’atelier est obligatoire."); return; } try { await updateAtelierProfile(session, atelierId, { nom: profile.name, telephone: profile.phone, ville: profile.city, mode_organisation: profile.workMode ?? "independent" }); setAtelier(profile); setNotice("Profil de l’atelier enregistré et confirmé par Supabase."); } catch (cause) { setNotice(cause instanceof Error ? `Profil non enregistré : ${cause.message}` : "Impossible d’enregistrer le profil sur le serveur."); } })(); }}>
               <div className="profile-profession" aria-label="Métier YÉRÉ"><span>Métier</span><strong>Tailleur</strong><small>YÉRÉ est actuellement dédié aux tailleurs.</small></div>
@@ -1261,21 +1250,6 @@ function App() {
               <label>Ville<input value={atelier.city} onChange={(event) => setAtelier((current) => ({ ...current, city: event.target.value }))} /></label>
               <button type="submit" className="primary-button">Enregistrer le profil</button>
             </form>
-            {isAtelierOwner && <section className="content-card team-panel" aria-labelledby="subscription-title">
-              <div className="section-heading"><div><h3 id="subscription-title">Abonnement YÉRÉ</h3><p>Un abonnement par atelier, toute l’équipe incluse.</p></div></div>
-              {subscriptionLoading ? <p role="status">Chargement du statut de l’abonnement…</p>
-                : subscriptionLoadError ? <p role="alert">Statut indisponible : {subscriptionLoadError}</p>
-                : atelierSubscription ? <>
-                  <div className="profile-profession"><span>Formule mensuelle</span><strong>{formatXof(atelierSubscription.monthlyPriceXof)} / mois</strong><small>Deux premiers mois d’essai gratuits, puis 5 000 FCFA par atelier et par mois.</small></div>
-                  <p><strong>Statut :</strong> {({essai:"Période d’essai",actif:"Actif",paiement_requis:"Paiement requis",en_retard:"Paiement en retard",suspendu:"Suspendu",resilie:"Résilié"} as Record<AtelierSubscription["status"],string>)[atelierSubscription.status]}</p>
-                  <p><strong>Fin de l’essai :</strong> {new Date(atelierSubscription.trialEndsAt).toLocaleDateString("fr-FR")}</p>
-                  {atelierSubscription.nextDueAt && <p><strong>Prochaine échéance :</strong> {new Date(atelierSubscription.nextDueAt).toLocaleDateString("fr-FR")}</p>}
-                  <h4>Historique des paiements</h4>
-                  {subscriptionPayments.length === 0 ? <p>Aucun paiement enregistré. Aucun paiement n’est demandé depuis cet écran pour le moment.</p>
-                    : <div className="table-wrap"><table><thead><tr><th>Date</th><th>Montant</th><th>Statut</th><th>Moyen</th></tr></thead><tbody>{subscriptionPayments.map((payment) => <tr key={payment.id}><td>{new Date(payment.createdAt).toLocaleDateString("fr-FR")}</td><td>{formatXof(payment.amountXof)}</td><td>{({en_attente:"En attente",confirme:"Confirmé",echec:"Échec",rembourse:"Remboursé",annule:"Annulé"} as Record<SubscriptionPayment["status"],string>)[payment.status]}</td><td>{payment.method ?? "—"}</td></tr>)}</tbody></table></div>}
-                  <PayTechSubscriptionButton />
-                </> : <p>Aucun abonnement n’est rattaché à cet atelier. Contactez l’assistance avant toute souscription.</p>}
-            </section>}
             <section className="content-card team-panel" aria-labelledby="team-title">
               <div className="section-heading"><div><h3 id="team-title">Équipe et accès à l’atelier</h3><p>Les droits sont contrôlés sur le serveur et chaque membre reste limité à cet atelier.</p></div><span className="marketplace-listing-count">{teamMembers.filter((member) => member.active).length} membre(s)</span></div>
               <div className="table-wrap"><table><thead><tr><th>Profil professionnel / compte</th><th>Rôle</th><th>État</th><th>Depuis</th>{isAtelierOwner ? <th>Actions</th> : null}</tr></thead><tbody>{teamMembers.map((member) => <tr key={member.userId}><td><strong>{member.professionalName || (member.role === "proprietaire" ? "Propriétaire de l’atelier" : member.role === "gestionnaire" ? "Gestionnaire" : "Profil à compléter")}</strong>{member.specialties.length ? <small>{member.specialties.join(" · ")}</small> : null}{member.experienceLevel ? <small>{({debutant:"Débutant",intermediaire:"Intermédiaire",experimente:"Expérimenté",maitre:"Maître tailleur"} as const)[member.experienceLevel]}</small> : null}{member.presentation ? <small>{member.presentation}</small> : null}<code>{member.userId.slice(0,8)}…{member.userId.slice(-4)}</code>{member.userId === currentUserId ? <small>Votre compte</small> : null}{isAtelierOwner && member.active && member.role === "employe" ? <TailorProfileEditor member={member} busy={teamBusy} onSave={saveTailorProfessionalProfile} /> : null}</td><td>{member.role === "proprietaire" ? "Propriétaire" : member.role === "gestionnaire" ? "Gestionnaire" : "Tailleur"}</td><td>{member.active ? "Actif" : "Désactivé"}</td><td>{new Intl.DateTimeFormat("fr-FR",{dateStyle:"medium"}).format(new Date(member.createdAt))}</td>{isAtelierOwner ? <td>{member.role !== "proprietaire" ? <div className="team-member-actions">{member.active ? <>{editingTeamRoleUserId === member.userId ? <><select aria-label={`Nouveau rôle de ${member.professionalName || "ce membre"}`} value={teamRoleDraft} disabled={teamBusy} onChange={(event) => setTeamRoleDraft(event.target.value as "gestionnaire" | "employe")}><option value="employe">Tailleur</option><option value="gestionnaire">Gestionnaire</option></select><button type="button" className="text-button" disabled={teamBusy || teamRoleDraft === member.role} onClick={() => void saveTeamMemberRole(member)}>Confirmer</button><button type="button" className="text-button" disabled={teamBusy} onClick={() => setEditingTeamRoleUserId(null)}>Annuler</button></> : <><button type="button" className="text-button" disabled={teamBusy} onClick={() => { setTeamRoleDraft(member.role === "gestionnaire" ? "gestionnaire" : "employe"); setEditingTeamRoleUserId(member.userId); }}>Modifier le rôle</button><button type="button" className="text-button" disabled={teamBusy} onClick={() => void deactivateTeamMember(member)}>Désactiver</button></>}</> : <><span className="privacy-note">Accès retiré</span><button type="button" className="text-button" disabled={teamBusy} onClick={() => void reactivateTeamMember(member)}>Rétablir l’accès</button></>}</div> : <span className="privacy-note">Compte propriétaire protégé</span>}</td> : null}</tr>)}</tbody></table></div>
@@ -1302,6 +1276,7 @@ function App() {
             <div className="account-secondary"><div><b>Relances clients</b><p>Consultez les suggestions de relance manuelle, sans envoi automatique.</p></div><button className="secondary-button" onClick={() => setView("reminders")}>Ouvrir les relances →</button></div>
             <p className="privacy-note">Le nom, le téléphone, la ville et l’organisation du travail de votre atelier sont enregistrés sur Supabase. Les données métier restent synchronisées dans leurs modules dédiés.</p>
           </section>}
+          {view === "settings" && <SettingsCenter role={isAtelierOwner ? "proprietaire" : teamMembers.some((member) => member.userId === currentUserId && member.active && member.role === "gestionnaire") ? "gestionnaire" : "employe"} serverSyncStatus={serverSyncStatus} onBack={() => setView("account")} />}
           {view === "stock" && <section className="stock-page">
             <div className="cash-summary-grid">
               <article className="content-card cash-summary"><span>Articles suivis</span><strong>{stockItems.length}</strong><small>Articles synchronisés sur le serveur</small></article>
@@ -1406,7 +1381,7 @@ function App() {
           <div className="more-grid">{([{ id: "stock", label: "Stock", description: "Tissus et fournitures", icon: "package" }, { id: "account", label: "Mon atelier", description: "Profil et sauvegarde", icon: "user-round" }, { id: "reminders", label: "Relances clients", description: "Gardez le contact", icon: "bell-ring" }, { id: "suppliers", label: "Fournisseurs", description: "Votre réseau professionnel", icon: "truck" }, { id: "marketplace", label: "Marketplace", description: "Votre vitrine YÉRÉ", icon: "store" }] as { id: View; label: string; description: string; icon: string }[]).map((item) => <button type="button" key={item.id} className={view === item.id ? "more-item is-active" : "more-item"} onClick={() => { if (item.id === "account") openAccount(); else { setView(item.id); setMobileMoreOpen(false); } }}><span className="more-item-icon"><NavIcon name={item.icon} /></span><span><b>{item.label}</b><small>{item.description}</small></span><span className="more-item-arrow" aria-hidden="true">↗</span></button>)}</div>
         </section>
       </div>}
-      <nav className={`app-dock ${isAtelierOwner ? "has-cash" : "without-cash"}`} aria-label="Navigation mobile">{mobileNavItems.map((item) => <button key={item.id} type="button" className={(item.id === "more" ? (mobileMoreOpen || ["stock", "account", "reminders", "suppliers", "marketplace"].includes(view)) : view === item.id) ? "dock-item is-active" : "dock-item"} onClick={() => { if (item.id === "more") setMobileMoreOpen((open) => !open); else { setView(item.id); setMobileMoreOpen(false); } }} aria-current={item.id !== "more" && view === item.id ? "page" : undefined} aria-expanded={item.id === "more" ? mobileMoreOpen : undefined}><span className="dock-icon"><NavIcon name={item.icon} /></span><small>{item.label}</small></button>)}</nav>
+      <nav className={`app-dock ${isAtelierOwner ? "has-cash" : "without-cash"}`} aria-label="Navigation mobile">{mobileNavItems.map((item) => <button key={item.id} type="button" className={(item.id === "more" ? (mobileMoreOpen || ["stock", "account", "settings", "reminders", "suppliers", "marketplace"].includes(view)) : view === item.id) ? "dock-item is-active" : "dock-item"} onClick={() => { if (item.id === "more") setMobileMoreOpen((open) => !open); else { setView(item.id); setMobileMoreOpen(false); } }} aria-current={item.id !== "more" && view === item.id ? "page" : undefined} aria-expanded={item.id === "more" ? mobileMoreOpen : undefined}><span className="dock-icon"><NavIcon name={item.icon} /></span><small>{item.label}</small></button>)}</nav>
     </div>
   );
 }
