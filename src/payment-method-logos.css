@@ -65,3 +65,37 @@
   .payment-methods-list { gap: .45rem; }
   .payment-method-logo { min-width: 70px; height: 44px; padding: .35rem .45rem; }
 }
+
+.payment-logo-wave {
+  gap: .25rem;
+}
+.payment-logo-wave img {
+  width: 23px;
+  height: 30px;
+  max-height: 30px;
+  object-fit: contain;
+}
+.payment-method-wordmark {
+  color: #1b5cff;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -.06em;
+}
+.payment-logo-free img {
+  width: 78px;
+  height: 34px;
+  max-height: 34px;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 3px;
+}
+.payment-method-logo.is-image-error img {
+  display: none;
+}
+.payment-method-logo.is-image-error::after {
+  content: attr(data-fallback);
+  color: #13294b;
+  font-size: .7rem;
+  font-weight: 700;
+  text-align: center;
+}
