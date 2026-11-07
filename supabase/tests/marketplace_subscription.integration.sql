@@ -259,4 +259,81 @@ begin
 end $$;
 reset role;
 
+
+-- PayTech callback database logic: service-role only, fixed XOF amount, idempotency and refund.
+-- No network request or real payment is made; the synthetic rows are rolled back.
+insert into public.abonnement_paiement (abonnement_id,montant_fcfa,devise,statut,reference_interne)
+select id,5000,'XOF','en_attente','CI-PAYTECH-SUB-001'
+from public.abonnement_atelier
+where atelier_id='72000000-0000-4000-8000-000000000003';
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub','71000000-0000-4000-8000-000000000003',true);
+select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
+do $paytech_acl$
+begin
+  begin
+    perform public.confirm_paytech_subscription_payment('CI-PAYTECH-SUB-001','provider-test','wave',5000,'sandbox');
+    raise exception 'FAIL: authenticated owner called the server-only PayTech confirmation RPC';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $paytech_acl$;
+reset role;
+
+set local role service_role;
+do $paytech_lifecycle$
+declare v_status text; v_method text; v_environment text; v_subscription_status text; v_period_end timestamptz;
+begin
+  begin
+    perform public.confirm_paytech_subscription_payment('CI-PAYTECH-SUB-001','provider-test','wave',4999,'sandbox');
+    raise exception 'FAIL: PayTech accepted a non-standard subscription amount';
+  exception when invalid_parameter_value then
+    null;
+  end;
+
+  if public.confirm_paytech_subscription_payment('CI-PAYTECH-SUB-001','provider-test','wave',5000,'sandbox') is not true then
+    raise exception 'FAIL: valid PayTech confirmation returned false';
+  end if;
+  if public.confirm_paytech_subscription_payment('CI-PAYTECH-SUB-001','provider-test','wave',5000,'sandbox') is not true then
+    raise exception 'FAIL: repeated PayTech confirmation was not idempotent';
+  end if;
+
+  select statut,moyen_paiement,details->>'environment'
+  into v_status,v_method,v_environment
+  from public.abonnement_paiement where reference_interne='CI-PAYTECH-SUB-001';
+  select statut,periode_fin into v_subscription_status,v_period_end
+  from public.abonnement_atelier
+  where atelier_id='72000000-0000-4000-8000-000000000003';
+  if v_status <> 'confirme' or v_method <> 'wave' or v_environment <> 'sandbox'
+     or v_subscription_status <> 'actif' or v_period_end is null then
+    raise exception 'FAIL: PayTech confirmation did not activate the subscription correctly';
+  end if;
+
+  begin
+    perform public.refund_paytech_subscription_payment('CI-PAYTECH-SUB-001',4999,'sandbox');
+    raise exception 'FAIL: PayTech accepted a non-standard refund amount';
+  exception when invalid_parameter_value then
+    null;
+  end;
+
+  if public.refund_paytech_subscription_payment('CI-PAYTECH-SUB-001',5000,'sandbox') is not true then
+    raise exception 'FAIL: valid PayTech refund returned false';
+  end if;
+  if public.refund_paytech_subscription_payment('CI-PAYTECH-SUB-001',5000,'sandbox') is not true then
+    raise exception 'FAIL: repeated PayTech refund was not idempotent';
+  end if;
+
+  select statut,details->>'refund_event' into v_status,v_environment
+  from public.abonnement_paiement where reference_interne='CI-PAYTECH-SUB-001';
+  select statut into v_subscription_status
+  from public.abonnement_atelier
+  where atelier_id='72000000-0000-4000-8000-000000000003';
+  if v_status <> 'rembourse' or v_environment <> 'refund_complete'
+     or v_subscription_status <> 'essai' then
+    raise exception 'FAIL: refund did not restore the valid remaining trial';
+  end if;
+end $paytech_lifecycle$;
+reset role;
+
 rollback;
