@@ -111,6 +111,22 @@ begin
   exception when insufficient_privilege then
     null;
   end;
+
+  -- Direct table writes must remain owner-only, not merely hidden from SELECT.
+  begin
+    insert into public.paiement (atelier_id,commande_id,montant_fcfa,cle_idempotence,created_by)
+    values ('20000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-000000000001',1000,'ci-manager-direct-payment',auth.uid());
+    raise exception 'FAIL: manager inserted a direct payment';
+  exception when insufficient_privilege then
+    null;
+  end;
+  begin
+    insert into public.depense (atelier_id,categorie,description,montant_fcfa,created_by)
+    values ('20000000-0000-4000-8000-000000000001','Test','Dépense directe interdite gestionnaire',1000,auth.uid());
+    raise exception 'FAIL: manager inserted a direct expense';
+  exception when insufficient_privilege then
+    null;
+  end;
 end $manager_order_finance$;
 
 do $manager$
@@ -207,6 +223,22 @@ begin
   if v_count <> 1 then
     raise exception 'FAIL: tailor cannot create a work order without financial terms';
   end if;
+
+  -- Direct payment and expense inserts are forbidden for employees as well.
+  begin
+    insert into public.paiement (atelier_id,commande_id,montant_fcfa,cle_idempotence,created_by)
+    values ('20000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-000000000001',1000,'ci-tailor-direct-payment',auth.uid());
+    raise exception 'FAIL: tailor inserted a direct payment';
+  exception when insufficient_privilege then
+    null;
+  end;
+  begin
+    insert into public.depense (atelier_id,categorie,description,montant_fcfa,created_by)
+    values ('20000000-0000-4000-8000-000000000001','Test','Dépense directe interdite employé',1000,auth.uid());
+    raise exception 'FAIL: tailor inserted a direct expense';
+  exception when insufficient_privilege then
+    null;
+  end;
 end $tailor_order_finance$;
 
 do $$
