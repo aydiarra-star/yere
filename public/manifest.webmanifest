@@ -3,9 +3,17 @@
   "short_name": "YÉRÉ",
   "description": "Clients, mensurations et commandes de couture, simplement.",
   "lang": "fr",
-  "start_url": "./",
+  "start_url": "./atelier",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f7f8fc",
-  "theme_color": "#171e49"
+  "theme_color": "#171e49",
+  "icons": [
+    {
+      "src": "./images/yere-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
 }
