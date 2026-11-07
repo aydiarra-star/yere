@@ -12,7 +12,7 @@ values
 set local role authenticated;
 select set_config('request.jwt.claim.sub','71000000-0000-4000-8000-000000000001',true);
 select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
-do $
+do $$
 declare v_seller_id uuid; v_annonce_id uuid;
 begin
   insert into public.marketplace_vendeur(user_id,type_vendeur,atelier_id,nom_entreprise,nom_contact,telephone,ville,categorie)
@@ -111,7 +111,7 @@ begin
     null;
   end;
 end $$;
-do $
+do $$
 declare v_id uuid; v_total bigint; v_qty integer;
 begin
   select public.creer_commande_marketplace(
