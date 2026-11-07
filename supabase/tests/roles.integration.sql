@@ -408,4 +408,194 @@ begin
 end $owner_two$;
 reset role;
 
+
+-- Invitation lifecycle: owner/manager permissions, recipient identity, acceptance, decline and cancellation.
+-- Synthetic accounts only; the outer transaction is rolled back.
+insert into auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+values
+ ('10000000-0000-4000-8000-000000000007','authenticated','authenticated','invitee@yere.test','',now(),'{}','{}',now(),now()),
+ ('10000000-0000-4000-8000-000000000008','authenticated','authenticated','declinee@yere.test','',now(),'{}','{}',now(),now()),
+ ('10000000-0000-4000-8000-000000000009','authenticated','authenticated','cancelled-invitee@yere.test','',now(),'{}','{}',now(),now()),
+ ('10000000-0000-4000-8000-000000000010','authenticated','authenticated','new-manager@yere.test','',now(),'{}','{}',now(),now()),
+ ('10000000-0000-4000-8000-000000000011','authenticated','authenticated','wrong-recipient@yere.test','',now(),'{}','{}',now(),now());
+
+-- Owner can invite employees and managers; duplicate active invitations are rejected.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000001',true);
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+do $owner_invites$
+declare v_employee uuid; v_decline uuid; v_manager uuid;
+begin
+  select id into v_employee
+  from public.create_atelier_invitation('20000000-0000-4000-8000-000000000001','invitee@yere.test','employe');
+  perform set_config('yere.test_invite_employee',v_employee::text,true);
+
+  begin
+    perform * from public.create_atelier_invitation('20000000-0000-4000-8000-000000000001','invitee@yere.test','employe');
+    raise exception 'FAIL: duplicate active invitation was accepted';
+  exception when unique_violation then
+    null;
+  end;
+
+  select id into v_decline
+  from public.create_atelier_invitation('20000000-0000-4000-8000-000000000001','declinee@yere.test','employe');
+  perform set_config('yere.test_invite_decline',v_decline::text,true);
+
+  select id into v_manager
+  from public.create_atelier_invitation('20000000-0000-4000-8000-000000000001','new-manager@yere.test','gestionnaire');
+  perform set_config('yere.test_invite_manager',v_manager::text,true);
+
+  begin
+    perform * from public.create_atelier_invitation('20000000-0000-4000-8000-000000000001','owner-role@yere.test','proprietaire');
+    raise exception 'FAIL: owner role was assignable through an invitation';
+  exception when invalid_parameter_value then
+    null;
+  end;
+end $owner_invites$;
+reset role;
+
+-- A manager may invite/cancel employees, but cannot appoint another manager.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000002',true);
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
+do $manager_invites$
+declare v_cancel uuid;
+begin
+  begin
+    perform * from public.create_atelier_invitation('20000000-0000-4000-8000-000000000001','unauthorized-manager@yere.test','gestionnaire');
+    raise exception 'FAIL: manager appointed another manager';
+  exception when insufficient_privilege then
+    null;
+  end;
+
+  select id into v_cancel
+  from public.create_atelier_invitation('20000000-0000-4000-8000-000000000001','cancelled-invitee@yere.test','employe');
+  perform set_config('yere.test_invite_cancel',v_cancel::text,true);
+
+  if public.cancel_atelier_invitation(v_cancel) is not true then
+    raise exception 'FAIL: manager could not cancel an employee invitation';
+  end if;
+end $manager_invites$;
+reset role;
+
+-- An employee cannot create invitations.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000003',true);
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
+do $employee_invites$
+begin
+  begin
+    perform * from public.create_atelier_invitation('20000000-0000-4000-8000-000000000001','employee-invite@yere.test','employe');
+    raise exception 'FAIL: employee created an invitation';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $employee_invites$;
+reset role;
+
+-- A different authenticated account cannot accept an invitation addressed to someone else.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000011',true);
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000011","role":"authenticated"}',true);
+do $wrong_recipient$
+begin
+  begin
+    perform public.accept_atelier_invitation(current_setting('yere.test_invite_employee')::uuid);
+    raise exception 'FAIL: invitation accepted by the wrong email account';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $wrong_recipient$;
+reset role;
+
+-- The intended employee can accept; a declined invitation cannot subsequently be accepted.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000007',true);
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000007","role":"authenticated"}',true);
+do $employee_accept$
+begin
+  if public.accept_atelier_invitation(current_setting('yere.test_invite_employee')::uuid) <> '20000000-0000-4000-8000-000000000001'::uuid then
+    raise exception 'FAIL: intended employee could not accept invitation';
+  end if;
+  if not exists (
+    select 1 from public.atelier_membre
+    where atelier_id='20000000-0000-4000-8000-000000000001'
+      and user_id='10000000-0000-4000-8000-000000000007'
+      and role='employe' and actif=true
+  ) then
+    raise exception 'FAIL: accepted invitation did not create the expected employee membership';
+  end if;
+  if not exists (
+    select 1 from public.invitation_atelier
+    where id=current_setting('yere.test_invite_employee')::uuid and accepted_at is not null
+  ) then
+    raise exception 'FAIL: accepted invitation was not marked as accepted';
+  end if;
+end $employee_accept$;
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000008',true);
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000008","role":"authenticated"}',true);
+do $invite_decline$
+begin
+  if public.decline_atelier_invitation(current_setting('yere.test_invite_decline')::uuid) is not true then
+    raise exception 'FAIL: intended recipient could not decline invitation';
+  end if;
+  if not exists (
+    select 1 from public.invitation_atelier
+    where id=current_setting('yere.test_invite_decline')::uuid and declined_at is not null
+  ) then
+    raise exception 'FAIL: declined invitation was not marked as declined';
+  end if;
+  begin
+    perform public.accept_atelier_invitation(current_setting('yere.test_invite_decline')::uuid);
+    raise exception 'FAIL: declined invitation was later accepted';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $invite_decline$;
+reset role;
+
+-- A cancelled invitation cannot be accepted by its intended recipient.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000009',true);
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000009","role":"authenticated"}',true);
+do $cancelled_invite$
+begin
+  begin
+    perform public.accept_atelier_invitation(current_setting('yere.test_invite_cancel')::uuid);
+    raise exception 'FAIL: cancelled invitation was accepted';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $cancelled_invite$;
+reset role;
+
+-- Only the owner can appoint a new manager; acceptance demotes the previous manager.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000010',true);
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000010","role":"authenticated"}',true);
+do $manager_accept$
+begin
+  perform public.accept_atelier_invitation(current_setting('yere.test_invite_manager')::uuid);
+  if not exists (
+    select 1 from public.atelier_membre
+    where atelier_id='20000000-0000-4000-8000-000000000001'
+      and user_id='10000000-0000-4000-8000-000000000010'
+      and role='gestionnaire' and actif=true
+  ) then
+    raise exception 'FAIL: invited manager did not receive manager membership';
+  end if;
+  if not exists (
+    select 1 from public.atelier_membre
+    where atelier_id='20000000-0000-4000-8000-000000000001'
+      and user_id='10000000-0000-4000-8000-000000000002'
+      and role='employe' and actif=true
+  ) then
+    raise exception 'FAIL: previous manager was not safely demoted after replacement';
+  end if;
+end $manager_accept$;
+reset role;
+
 rollback;
