@@ -525,12 +525,6 @@ begin
   ) then
     raise exception 'FAIL: accepted invitation did not create the expected employee membership';
   end if;
-  if not exists (
-    select 1 from public.invitation_atelier
-    where id=current_setting('yere.test_invite_employee')::uuid and accepted_at is not null
-  ) then
-    raise exception 'FAIL: accepted invitation was not marked as accepted';
-  end if;
 end $employee_accept$;
 reset role;
 
@@ -542,12 +536,6 @@ begin
   if public.decline_atelier_invitation(current_setting('yere.test_invite_decline')::uuid) is not true then
     raise exception 'FAIL: intended recipient could not decline invitation';
   end if;
-  if not exists (
-    select 1 from public.invitation_atelier
-    where id=current_setting('yere.test_invite_decline')::uuid and declined_at is not null
-  ) then
-    raise exception 'FAIL: declined invitation was not marked as declined';
-  end if;
   begin
     perform public.accept_atelier_invitation(current_setting('yere.test_invite_decline')::uuid);
     raise exception 'FAIL: declined invitation was later accepted';
@@ -555,6 +543,33 @@ begin
     null;
   end;
 end $invite_decline$;
+reset role;
+
+-- Owners can verify the final invitation states after recipients have responded.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000001',true);
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+do $owner_invitation_states$
+begin
+  if not exists (
+    select 1 from public.invitation_atelier
+    where id=current_setting('yere.test_invite_employee')::uuid and accepted_at is not null
+  ) then
+    raise exception 'FAIL: accepted invitation was not marked as accepted';
+  end if;
+  if not exists (
+    select 1 from public.invitation_atelier
+    where id=current_setting('yere.test_invite_decline')::uuid and declined_at is not null
+  ) then
+    raise exception 'FAIL: declined invitation was not marked as declined';
+  end if;
+  if not exists (
+    select 1 from public.invitation_atelier
+    where id=current_setting('yere.test_invite_cancel')::uuid and cancelled_at is not null
+  ) then
+    raise exception 'FAIL: cancelled invitation was not marked as cancelled';
+  end if;
+end $owner_invitation_states$;
 reset role;
 
 -- A cancelled invitation cannot be accepted by its intended recipient.
