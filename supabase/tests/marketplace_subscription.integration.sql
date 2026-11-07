@@ -13,19 +13,36 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub','71000000-0000-4000-8000-000000000001',true);
 select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 do $$
-declare v_seller_id uuid;
+declare v_seller_id uuid; v_annonce_id uuid;
 begin
   insert into public.marketplace_vendeur(user_id,type_vendeur,atelier_id,nom_entreprise,nom_contact,telephone,ville,categorie)
   values ('71000000-0000-4000-8000-000000000001','fournisseur',null,'Mercerie Test','Contact Test','770000000','Dakar','Tissus')
   returning id into v_seller_id;
   insert into public.marketplace_annonce(vendeur_id,titre,categorie,description,prix_fcfa,ville,mode_vente,statut,stock_disponible)
-  values (v_seller_id,'Wax test','Tissus','Annonce synthétique',2500,'Dakar','les_deux','publiee',10);
+  values (v_seller_id,'Wax test','Tissus','Annonce synthétique',2500,'Dakar','les_deux','publiee',10)
+  returning id into v_annonce_id;
   if not exists (
     select 1 from public.get_my_marketplace_seller_contact()
     where nom_contact='Contact Test' and telephone='770000000'
   ) then
     raise exception 'FAIL: seller cannot read their own contact through the secure RPC';
   end if;
+
+  if public.marketplace_vendeur_est_moi(v_seller_id) is not true then
+    raise exception 'FAIL: seller ownership helper did not recognize the seller';
+  end if;
+  begin
+    perform public.creer_commande_marketplace(v_annonce_id,1,'Vendeur test','770000000','Dakar','Auto-commande interdite');
+    raise exception 'FAIL: seller placed an order on their own listing';
+  exception when insufficient_privilege then
+    null;
+  end;
+  begin
+    perform public.ouvrir_conversation_marketplace(v_annonce_id,'Contact de ma propre boutique interdit');
+    raise exception 'FAIL: seller opened a conversation with their own listing';
+  exception when insufficient_privilege then
+    null;
+  end;
 
   update public.marketplace_vendeur set nom_entreprise='Mercerie Test Modifiée'
   where id=v_seller_id;
@@ -108,6 +125,16 @@ begin
   if (select count(*) from public.marketplace_commande where id=v_id) <> 1 then
     raise exception 'FAIL: buyer cannot read own marketplace order';
   end if;
+  if public.marketplace_vendeur_est_moi((select vendeur_id from public.marketplace_commande where id=v_id)) is not false then
+    raise exception 'FAIL: buyer was incorrectly recognized as the seller';
+  end if;
+  perform set_config('yere.test_order_id',v_id::text,true);
+  begin
+    perform public.changer_statut_commande_marketplace(v_id,'acceptee');
+    raise exception 'FAIL: buyer changed seller-controlled order status';
+  exception when insufficient_privilege then
+    null;
+  end;
 end $$;
 reset role;
 
@@ -195,6 +222,9 @@ begin
   if public.envoyer_message_marketplace(v_conversation,'Bonjour, oui, cet article est disponible.') is not true then
     raise exception 'FAIL: seller could not reply';
   end if;
+  if public.changer_statut_commande_marketplace(current_setting('yere.test_order_id')::uuid,'acceptee') is not true then
+    raise exception 'FAIL: active seller could not accept the buyer order';
+  end if;
 end $$;
 reset role;
 
@@ -217,6 +247,12 @@ begin
       'Message interdit depuis un compte tiers'
     );
     raise exception 'FAIL: unrelated account sent a message into another conversation';
+  exception when insufficient_privilege then
+    null;
+  end;
+  begin
+    perform public.changer_statut_commande_marketplace(current_setting('yere.test_order_id')::uuid,'preparee');
+    raise exception 'FAIL: unrelated account changed another seller order status';
   exception when insufficient_privilege then
     null;
   end;
